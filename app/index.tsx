@@ -1,16 +1,28 @@
-import { StyleSheet, Text, View, TouchableOpacity, Platform } from 'react-native';
+import { StyleSheet, Text, View, Pressable, Platform } from 'react-native';
 
 const LoginScreen = () => {
   return (
     <View style={[styles.container, Platform.OS === 'web' && styles.containerWeb]}>
       <Text style={[styles.title, Platform.OS === 'web' && styles.titleWeb]}>neighborfood</Text>
       <View style={styles.buttonContainer}>
-        <TouchableOpacity style={styles.button} activeOpacity={0.75} onPress={() => alert('login')}>
+        <Pressable
+          style={({ pressed }) => [
+            styles.button,
+            pressed && styles.buttonOpacity,
+          ]}
+          onPress={() => alert('login')}
+        >
           <Text style={styles.buttonText}>Login</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.button} activeOpacity={0.75} onPress={() => alert('sign up')}>
+        </Pressable>
+        <Pressable
+          style={({ pressed }) => [
+            styles.button,
+            pressed && styles.buttonOpacity,
+          ]}
+          onPress={() => alert('sign up')}
+        >
           <Text style={styles.buttonText}>Sign Up</Text>
-        </TouchableOpacity>
+        </Pressable>
       </View>
     </View>
   );
@@ -60,6 +72,9 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
     textAlign: 'center',
+  },
+  buttonOpacity: {
+    opacity: 0.8,
   },
 });
 
