@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, FlatList, StyleSheet } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, FlatList, StyleSheet, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
@@ -36,7 +36,7 @@ const MarketScreen = () => {
                     <TouchableOpacity onPress={() => router.back()}>
                         <Ionicons name="arrow-back" size={24} color="black" />
                     </TouchableOpacity>
-                <Text style={styles.title}>market</Text>
+                <Text style={Platform.select({ios: styles.title, web: styles.webTitle})}>market</Text>
                 <View style={styles.profileIcon} />
             </View>
 
@@ -84,8 +84,16 @@ const styles = StyleSheet.create({
         marginTop: 40,
     },
     title: {
-        fontSize: 24,
+        fontSize: 30,
         fontWeight: 'bold',
+        fontFamily: 'TitanOne',
+        color: '#fff',
+    },
+    webTitle: {
+        fontSize: 60,
+        fontWeight: 'bold',
+        fontFamily: 'TitanOne',
+        color: '#fff',
     },
     profileIcon: {
         width: 30,
@@ -108,6 +116,7 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderRadius: 20,
         paddingLeft: 30,
+        backgroundColor: 'white',
     },
     sortButton: {
         marginLeft: 8,
