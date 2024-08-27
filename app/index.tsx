@@ -1,27 +1,29 @@
 import { StyleSheet, Text, View, Pressable, Platform } from 'react-native';
-
+import { useRouter } from 'expo-router';
+import MarketScreen from './Market';
 const LoginScreen = () => {
+  const router = useRouter();
+
   return (
     <View style={[styles.container, Platform.OS === 'web' && styles.containerWeb]}>
       <Text style={[styles.title, Platform.OS === 'web' && styles.titleWeb]}>neighborfood</Text>
       <View style={styles.buttonContainer}>
+          <Pressable
+            style={({ pressed }) => [
+              styles.button,
+              pressed && styles.buttonOpacity,
+            ]}
+            onPress={() => router.navigate('/Market')}
+          >
+            <Text style={styles.buttonText}>Login</Text>
+          </Pressable>
         <Pressable
           style={({ pressed }) => [
             styles.button,
             pressed && styles.buttonOpacity,
           ]}
-          onPress={() => alert('login')}
         >
-          <Text style={styles.buttonText}>Login</Text>
-        </Pressable>
-        <Pressable
-          style={({ pressed }) => [
-            styles.button,
-            pressed && styles.buttonOpacity,
-          ]}
-          onPress={() => alert('sign up')}
-        >
-          <Text style={styles.buttonText}>Sign Up</Text>
+          <Text style={styles.buttonText} onPress={() => alert('sign up')}>Sign Up</Text>
         </Pressable>
       </View>
     </View>
