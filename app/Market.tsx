@@ -45,6 +45,7 @@ const MarketScreen = () => {
                 <TextInput
                     style={styles.searchInput}
                     placeholder="search"
+                    placeholderTextColor={'#ccc'}
                     value={searchQuery}
                     onChangeText={setSearchQuery}
                 />
@@ -117,6 +118,7 @@ const styles = StyleSheet.create({
         borderRadius: 20,
         paddingLeft: 30,
         backgroundColor: 'white',
+        color: '#00bfff',
     },
     sortButton: {
         marginLeft: 8,

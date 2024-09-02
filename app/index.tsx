@@ -45,7 +45,7 @@ const styles = StyleSheet.create({
     flexDirection: 'column',
   },
   title: {
-    fontSize: 40,
+    fontSize: 36,
     fontWeight: 'bold',
     fontFamily: 'TitanOne',
     color: '#fff',
