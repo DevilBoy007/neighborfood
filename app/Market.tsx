@@ -22,10 +22,10 @@ const MarketScreen = () => {
     const [searchQuery, setSearchQuery] = useState('');
 
     const shops = [
-        "[adj][noun]'s",
-        "Big Basket's",
-        "Appled Ann's",
-        "Happy Alan's"
+        "Ben's Beef",
+        "Big Baskets",
+        "Ann's Apples",
+        "Happy Alan's Produce"
     ]; // this is a placeholder for the list of shops which will eventually load from a data source
 
     const toggleView = () => setIsMapView(!isMapView);
@@ -138,8 +138,12 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     mapPlaceholder: {
-        fontSize: 24,
+        fontSize: 22,
         color: 'gray',
+        backgroundColor: 'white',
+        paddingVertical: 275,
+        paddingHorizontal: 140,
+        marginBottom: 75,
     },
     shopItem: {
         backgroundColor: 'white',
