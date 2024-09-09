@@ -20,6 +20,7 @@ const MarketScreen = () => {
     
     const [isMapView, setIsMapView] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
+    const [showSortOptions, setShowSortOptions] = useState(false);
 
     const shops = [
         "Ben's Beef",
@@ -37,7 +38,9 @@ const MarketScreen = () => {
                         <Ionicons name="arrow-back" size={24} color="black" />
                     </TouchableOpacity>
                 <Text style={Platform.select({ios: styles.title, web: styles.webTitle})}>market</Text>
-                <View style={styles.profileIcon} />
+                <TouchableOpacity onPress={() => router.navigate("/Menu")}>
+                    <View  style={styles.profileIcon}/>
+                </TouchableOpacity>
             </View>
 
             <View style={styles.searchContainer}>
