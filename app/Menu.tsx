@@ -2,6 +2,12 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, SafeAreaView, Image, ScrollView, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
+import chatIcon from '../assets/images/chat.png';
+import pollsIcon from '../assets/images/surveys.png';
+import marketIcon from '../assets/images/market.png';
+import tileIcon from '../assets/images/tiles.png';
+
+
 const MenuScreen = () => {
     const MenuButton = ({ icon, title }: { icon: string, title: string }) => (
         <TouchableOpacity style={styles.menuButton}>
@@ -40,17 +46,17 @@ const MenuScreen = () => {
                 </ScrollView>
 
                 <View style={styles.footer}>
-                    <TouchableOpacity style={styles.footerButton}>
-                        <Text style={styles.footerButtonText}>chat</Text>
+                    <TouchableOpacity style={styles.iconButton}>
+                        <Image style={[styles.iconButton,styles.icon]} source={chatIcon}/>
                     </TouchableOpacity>
-                    <TouchableOpacity style={styles.footerButton}>
-                        <Text style={styles.footerButtonText}>forum</Text>
+                    <TouchableOpacity style={styles.iconButton}>
+                        <Image style={[styles.iconButton,styles.icon]} source={pollsIcon}/>
                     </TouchableOpacity>
-                    <TouchableOpacity style={styles.homeButton}>
-                        <Ionicons name="home" size={24} color="white" />
+                    <TouchableOpacity style={styles.iconButton}>
+                        <Image style={[styles.iconButton, styles.icon]} source={marketIcon} />
                     </TouchableOpacity>
-                    <TouchableOpacity style={styles.menuButton}>
-                        <Ionicons name="menu" size={24} color="black" />
+                    <TouchableOpacity style={styles.iconButton}>
+                        <Image style={[styles.iconButton, styles.icon]} source={tileIcon} />
                     </TouchableOpacity>
                 </View>
             </View>
@@ -62,12 +68,6 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: '#B7FFB0',
-        ...Platform.select({
-            web: {
-                maxWidth: 1200,
-                marginHorizontal: 'auto',
-            },
-        }),
     },
     content: {
         flex: 1,
@@ -88,6 +88,7 @@ const styles = StyleSheet.create({
     },
     header: {
         padding: 10,
+        paddingTop: 100,
         ...Platform.select({
             web: {
                 flexDirection: 'row',
@@ -152,6 +153,7 @@ const styles = StyleSheet.create({
         }),
     },
     menuGrid: {
+        flexBasis: '50%',
         flexDirection: 'row',
         flexWrap: 'wrap',
         justifyContent: 'space-around',
@@ -215,35 +217,18 @@ const styles = StyleSheet.create({
             },
         }),
     },
-    footerButton: {
+    iconButton: {
         padding: 10,
         ...Platform.select({
             web: {
-                width: '100%',
                 marginBottom: 20,
             },
         }),
     },
-    footerButtonText: {
-        color: 'black',
-        ...Platform.select({
-            web: {
-                fontSize: 18,
-            },
-        }),
-    },
-    homeButton: {
-        backgroundColor: '#87CEFA',
-        padding: 10,
-        borderRadius: 30,
-        ...Platform.select({
-            web: {
-                width: '80%',
-                alignItems: 'center',
-                marginBottom: 20,
-            },
-        }),
-    },
+    icon: {
+        width: 50,
+        height: 50,
+    }
 });
 
 export default MenuScreen;
