@@ -138,6 +138,7 @@ const styles = StyleSheet.create({
             ios: {
                 borderColor: 'black',
                 borderWidth: 1,
+                borderRadius: 3,
             },
             web: {
                 marginBottom: 0,
