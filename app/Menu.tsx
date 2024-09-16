@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, SafeAreaView, Image, ScrollView, Platform, ImageBackground } from 'react-native';
+import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
 import chatIcon from '../assets/images/chat.png';
@@ -9,9 +10,12 @@ import tileIcon from '../assets/images/tiles.png';
 
 import tomatoImage from '../assets/images/tomatoes.png';
 import dillImage from '../assets/images/dill.jpeg';
+import bellPepperImage from '../assets/images/bellPeppers.jpeg';
+
 
 
 const MenuScreen = () => {
+    const router = useRouter();
     const MenuButton = ({ icon, title }: { icon: string, title: string }) => (
         <TouchableOpacity style={styles.menuButton}>
             <Text style={styles.menuButtonIcon}>{icon}</Text>
@@ -22,6 +26,7 @@ const MenuScreen = () => {
     const menuItems = [
         { name: 'tomatoes', image: tomatoImage },
         { name: 'dill', image: dillImage },
+        { name: 'bell peppers', image: bellPepperImage },
     ];
 
     return (
@@ -54,7 +59,7 @@ const MenuScreen = () => {
 
                     <View style={styles.menuGrid}>
                         <MenuButton icon="+" title="add item" />
-                        <MenuButton icon="manage items" title="manage items" />
+                        <MenuButton icon="manage shops" title="manage shops" />
                         <MenuButton icon="edit details" title="edit details" />
                         <MenuButton icon="order history" title="order history" />
                         <MenuButton icon="contact us" title="contact us" />
@@ -69,7 +74,7 @@ const MenuScreen = () => {
                     <TouchableOpacity style={styles.iconButton}>
                         <Image style={[styles.iconButton,styles.icon]} source={pollsIcon}/>
                     </TouchableOpacity>
-                    <TouchableOpacity style={styles.iconButton}>
+                    <TouchableOpacity style={styles.iconButton} onPress={()=>{router.push('/Market')}}>
                         <Image style={[styles.iconButton, styles.icon]} source={marketIcon} />
                     </TouchableOpacity>
                     <TouchableOpacity style={styles.iconButton}>
@@ -128,8 +133,12 @@ const styles = StyleSheet.create({
     communityNeedsContainer: {
         flexDirection: 'row',
         justifyContent: 'space-around',
-        marginBottom: 10,
+        padding: 10,
         ...Platform.select({
+            ios: {
+                borderColor: 'black',
+                borderWidth: 1,
+            },
             web: {
                 marginBottom: 0,
                 marginLeft: 20,
@@ -137,7 +146,7 @@ const styles = StyleSheet.create({
         }),
     },
     communityNeedButton: {
-        backgroundColor: '#87CEFA',
+        backgroundColor: '#00bfff',
         padding: 5,
         borderRadius: 5,
         ...Platform.select({
@@ -231,7 +240,6 @@ const styles = StyleSheet.create({
                 width: 200,
                 height: '100%',
                 justifyContent: 'center',
-                paddingTop: 50,
             },
         }),
     },
