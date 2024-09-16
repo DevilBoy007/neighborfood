@@ -1,11 +1,14 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, SafeAreaView, Image, ScrollView, Platform } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, SafeAreaView, Image, ScrollView, Platform, ImageBackground } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import chatIcon from '../assets/images/chat.png';
 import pollsIcon from '../assets/images/surveys.png';
 import marketIcon from '../assets/images/market.png';
 import tileIcon from '../assets/images/tiles.png';
+
+import tomatoImage from '../assets/images/tomatoes.png';
+import dillImage from '../assets/images/dill.jpeg';
 
 
 const MenuScreen = () => {
@@ -16,16 +19,30 @@ const MenuScreen = () => {
         </TouchableOpacity>
     );
 
+    const menuItems = [
+        { name: 'tomatoes', image: tomatoImage },
+        { name: 'dill', image: dillImage },
+    ];
+
     return (
         <SafeAreaView style={styles.container}>
             <View style={styles.content}>
                 <ScrollView contentContainerStyle={styles.scrollContent}>
                     <View style={styles.header}>
-                        <Text style={styles.headerText}>community needs | you're in Fountain Square, Indianapolis</Text>
+                        <Text style={styles.headerText}> <Text style={styles.boldText}>community needs</Text> | <Text style={styles.italicText}>you're in <TouchableOpacity><Text style={[styles.link, styles.italicText, styles.underlineText]}>Fountain Square, Indianapolis</Text></TouchableOpacity></Text></Text>
                         <View style={styles.communityNeedsContainer}>
-                            {['community need', 'community need', 'community need'].map((need, index) => (
+                            {menuItems.map((item, index) => (
                                 <TouchableOpacity key={index} style={styles.communityNeedButton}>
-                                    <Text style={styles.communityNeedText}>{need}</Text>
+                                {
+                                    Platform.select({
+                                        ios: 
+                                        <Text style={styles.communityNeedText}>{item.name}</Text>,
+                                        web: 
+                                        <ImageBackground source={item.image} style={{ width: 150, height: 150 }} resizeMode='cover'>
+                                            <Text style={styles.communityNeedText}>{item.name}</Text>
+                                        </ImageBackground>
+                                    })
+                                }
                                 </TouchableOpacity>
                             ))}
                         </View>
@@ -91,6 +108,7 @@ const styles = StyleSheet.create({
         paddingTop: 100,
         ...Platform.select({
             web: {
+                paddingTop: 25,
                 flexDirection: 'row',
                 alignItems: 'center',
                 justifyContent: 'space-between',
@@ -129,8 +147,10 @@ const styles = StyleSheet.create({
         }),
     },
     communityNeedText: {
-        color: 'white',
+        color: 'black',
+        fontFamily: 'TitanOne',
         fontSize: 12,
+        textAlign: 'center',
         ...Platform.select({
             web: {
                 fontSize: 14,
@@ -175,10 +195,8 @@ const styles = StyleSheet.create({
         borderRadius: 10,
         ...Platform.select({
             web: {
-                width: '30%',
-                maxWidth: 200,
-                aspectRatio: 'auto',
-                height: 150,
+                height: 250,
+                width: 250,
             },
         }),
     },
@@ -212,7 +230,7 @@ const styles = StyleSheet.create({
                 flexDirection: 'column',
                 width: 200,
                 height: '100%',
-                justifyContent: 'flex-start',
+                justifyContent: 'center',
                 paddingTop: 50,
             },
         }),
@@ -228,7 +246,19 @@ const styles = StyleSheet.create({
     icon: {
         width: 50,
         height: 50,
-    }
+    },
+    link: {
+        color: '#00bfff',
+    },
+    boldText: {
+        fontWeight: 'bold',
+    },
+    italicText: {
+        fontStyle: 'italic',
+    },
+    underlineText: {
+        textDecorationLine: 'underline',
+    },
 });
 
 export default MenuScreen;
