@@ -66,8 +66,24 @@ const MenuScreen = () => {
                         <MenuButton icon="!" title="report a problem" />
                     </View>
                 </ScrollView>
-
-                <View style={styles.footer}>
+                {Platform.OS === 'web' && 
+                        <View style={styles.footer}>
+                            <TouchableOpacity style={styles.iconButton}>
+                                <Image style={[styles.iconButton, styles.icon]} source={chatIcon} />
+                            </TouchableOpacity>
+                            <TouchableOpacity style={styles.iconButton}>
+                                <Image style={[styles.iconButton, styles.icon]} source={pollsIcon} />
+                            </TouchableOpacity>
+                            <TouchableOpacity style={styles.iconButton} onPress={() => { router.push('/Market') }}>
+                                <Image style={[styles.iconButton, styles.icon]} source={marketIcon} />
+                            </TouchableOpacity>
+                            <TouchableOpacity style={styles.iconButton}>
+                                <Image style={[styles.iconButton, styles.icon]} source={tileIcon} />
+                            </TouchableOpacity>
+                        </View>}
+            </View>
+            {Platform.OS !== 'web' &&
+                    <View style={styles.footer}>
                     <TouchableOpacity style={styles.iconButton}>
                         <Image style={[styles.iconButton,styles.icon]} source={chatIcon}/>
                     </TouchableOpacity>
@@ -80,8 +96,7 @@ const MenuScreen = () => {
                     <TouchableOpacity style={styles.iconButton}>
                         <Image style={[styles.iconButton, styles.icon]} source={tileIcon} />
                     </TouchableOpacity>
-                </View>
-            </View>
+                </View>}
         </SafeAreaView>
     );
 };
@@ -236,6 +251,12 @@ const styles = StyleSheet.create({
         backgroundColor: '#87CEFA',
         padding: 10,
         ...Platform.select({
+            ios: {
+                position: 'absolute',
+                bottom: 0,
+                left: 0,
+                right: 0,
+            },
             web: {
                 flexDirection: 'column',
                 width: 200,
@@ -255,6 +276,12 @@ const styles = StyleSheet.create({
     icon: {
         width: 50,
         height: 50,
+        ...Platform.select({
+            ios: {
+                width: 30,
+                height: 30,
+            },
+        }),
     },
     link: {
         color: '#00bfff',
