@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, SafeAreaView, Image, ScrollView, Platform, ImageBackground } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, SafeAreaView, Image, ScrollView, Platform, ImageBackground, ImageSourcePropType } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -7,6 +7,11 @@ import chatIcon from '../assets/images/chat.png';
 import pollsIcon from '../assets/images/surveys.png';
 import marketIcon from '../assets/images/market.png';
 import tileIcon from '../assets/images/tiles.png';
+import shopIcon from '../assets/images/shop.png';
+import receiptIcon from '../assets/images/receipt.png';
+import contactUsIcon from '../assets/images/contact.png';
+import dashboardIcon from '../assets/images/dashboard.png';
+import profileIcon from '../assets/images/user.png';
 
 import tomatoImage from '../assets/images/tomatoes.png';
 import dillImage from '../assets/images/dill.jpeg';
@@ -16,12 +21,24 @@ import bellPepperImage from '../assets/images/bellPeppers.jpeg';
 
 const MenuScreen = () => {
     const router = useRouter();
-    const MenuButton = ({ icon, title }: { icon: string, title: string }) => (
-        <TouchableOpacity style={styles.menuButton}>
-            <Text style={styles.menuButtonIcon}>{icon}</Text>
-            <Text style={styles.menuButtonText}>{title}</Text>
-        </TouchableOpacity>
-    );
+    const MenuButton = ({ icon, title }: { icon: ImageSourcePropType | string, title: string }) => {
+        if (typeof icon !== 'string') {
+            return (
+                <TouchableOpacity style={styles.menuButton}>
+                    <Image source={icon} style={styles.icon} />
+                    <Text style={styles.menuButtonText}>{title}</Text>
+                </TouchableOpacity>
+            );
+        }
+        else {
+            return (
+                <TouchableOpacity style={styles.menuButton}>
+                    <Text style={styles.menuButtonIcon}>{icon}</Text>
+                    <Text style={styles.menuButtonText}>{title}</Text>
+                </TouchableOpacity>
+            )
+        }
+    };
 
     const menuItems = [
         { name: 'tomatoes', image: tomatoImage },
@@ -53,7 +70,7 @@ const MenuScreen = () => {
                         </View>
                         {Platform.OS !== 'web' &&
                             <Image
-                            source={{ uri: 'https://via.placeholder.com/50' }}
+                            source={profileIcon}
                             style={styles.profileImage}
                         />
                         }
@@ -61,10 +78,10 @@ const MenuScreen = () => {
 
                     <View style={styles.menuGrid}>
                         <MenuButton icon="+" title="add item" />
-                        <MenuButton icon="manage shops" title="manage shops" />
-                        <MenuButton icon="edit details" title="edit details" />
-                        <MenuButton icon="order history" title="order history" />
-                        <MenuButton icon="contact us" title="contact us" />
+                        <MenuButton icon={shopIcon} title="manage shops" />
+                        <MenuButton icon={dashboardIcon} title="dashboard" />
+                        <MenuButton icon={receiptIcon} title="order history" />
+                        <MenuButton icon={contactUsIcon} title="contact us" />
                         <MenuButton icon="!" title="report a problem" />
                     </View>
                 </ScrollView>
@@ -72,7 +89,7 @@ const MenuScreen = () => {
                         <View style={styles.footer}>
                             <TouchableOpacity style={styles.iconButton}>
                                 <Image
-                                source={{ uri: 'https://via.placeholder.com/50' }}
+                                source={profileIcon}
                                 style={[styles.iconButton, styles.profileImage]}
                             />
                             </TouchableOpacity>
