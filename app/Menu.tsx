@@ -51,10 +51,12 @@ const MenuScreen = () => {
                                 </TouchableOpacity>
                             ))}
                         </View>
-                        <Image
+                        {Platform.OS !== 'web' &&
+                            <Image
                             source={{ uri: 'https://via.placeholder.com/50' }}
                             style={styles.profileImage}
                         />
+                        }
                     </View>
 
                     <View style={styles.menuGrid}>
@@ -68,6 +70,12 @@ const MenuScreen = () => {
                 </ScrollView>
                 {Platform.OS === 'web' && 
                         <View style={styles.footer}>
+                            <TouchableOpacity style={styles.iconButton}>
+                                <Image
+                                source={{ uri: 'https://via.placeholder.com/50' }}
+                                style={[styles.iconButton, styles.profileImage]}
+                            />
+                            </TouchableOpacity>
                             <TouchableOpacity style={styles.iconButton}>
                                 <Image style={[styles.iconButton, styles.icon]} source={chatIcon} />
                             </TouchableOpacity>
@@ -193,7 +201,10 @@ const styles = StyleSheet.create({
                 left: 10,
             },
             web: {
-                marginLeft: 20,
+                marginBottom: 30,
+                width: 100,
+                height: 100,
+                borderRadius: 50,
             },
         }),
     },
@@ -201,7 +212,7 @@ const styles = StyleSheet.create({
         flexBasis: '50%',
         flexDirection: 'row',
         flexWrap: 'wrap',
-        justifyContent: 'space-around',
+        justifyContent: 'space-between',
         padding: 10,
         ...Platform.select({
             web: {
@@ -246,7 +257,7 @@ const styles = StyleSheet.create({
     },
     footer: {
         flexDirection: 'row',
-        justifyContent: 'space-around',
+        justifyContent: 'space-evenly',
         alignItems: 'center',
         backgroundColor: '#87CEFA',
         padding: 10,
