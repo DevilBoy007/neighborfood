@@ -86,9 +86,14 @@ const MarketScreen = () => {
 
 const styles = StyleSheet.create({
     container: {
-        flex: 1,
         backgroundColor: '#B7FFB0',
-        marginLeft: Platform.select({web: 200}),
+        ...Platform.select({
+            web:{
+                minHeight: '100vh',
+                minWidth: '100%',
+                paddingRight: 175,
+            }
+        })
     },
     header: {
         flexDirection: 'row',

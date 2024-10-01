@@ -34,9 +34,6 @@ export default function RootLayout() {
       <View style={styles.container}>
         <Stack.Screen options={{ headerShown: false }} />
         <View style={styles.content}>
-          <Slot />
-        </View>
-      </View>
       {Platform.OS === 'web' &&
         <View style={styles.footer}>
           <TouchableOpacity style={styles.iconButton}>
@@ -58,6 +55,9 @@ export default function RootLayout() {
             <Image style={[styles.iconButton, styles.icon]} source={tileIcon} />
           </TouchableOpacity>
         </View>}
+          <Slot />
+        </View>
+      </View>
     {
       Platform.OS !== 'web' &&
         <View style={styles.footer}>
