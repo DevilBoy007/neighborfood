@@ -40,7 +40,7 @@ const MenuScreen = () => {
         }
     };
 
-    const menuItems = [
+    const communityNeedsList = [
         { name: 'tomatoes', image: tomatoImage },
         { name: 'dill', image: dillImage },
         { name: 'bell peppers', image: bellPepperImage },
@@ -54,7 +54,7 @@ const MenuScreen = () => {
                 <View style={styles.header}>
                     <Text style={styles.headerText}> <Text style={styles.boldText}>community needs</Text> | <Text style={styles.italicText}>you're in <TouchableOpacity><Text style={[styles.link, styles.italicText, styles.underlineText]}>Fountain Square, Indianapolis</Text></TouchableOpacity></Text></Text>
                     <View style={styles.communityNeedsContainer}>
-                        {menuItems.map((item, index) => (
+                        {communityNeedsList.map((item, index) => (
                             <TouchableOpacity key={index} style={styles.communityNeedButton}>
                             {
                                 Platform.select({
