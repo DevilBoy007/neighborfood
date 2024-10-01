@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, FlatList, StyleSheet, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
 
 // Placeholder for the Shop component
 const Shop = ({ name }: { name: string }) => (
@@ -32,15 +32,23 @@ const MarketScreen = () => {
     const toggleView = () => setIsMapView(!isMapView);
 
     return (
+        <>
         <View style={styles.container}>
             <View style={styles.header}>
                     <TouchableOpacity onPress={() => router.back()}>
                         <Ionicons name="arrow-back" size={24} color="black" />
                     </TouchableOpacity>
                 <Text style={Platform.select({ios: styles.title, web: styles.webTitle})}>market</Text>
-                <TouchableOpacity onPress={() => router.navigate("/Menu")}>
-                    <View  style={styles.profileIcon}/>
-                </TouchableOpacity>
+                {
+                Platform.select({
+                    ios: 
+                    <TouchableOpacity onPress={() => alert('profile')}>
+                        <View style={styles.profileIcon} />
+                    </TouchableOpacity>,
+                    web:
+                    <View/>
+                })
+                }
             </View>
 
             <View style={styles.searchContainer}>
@@ -72,6 +80,7 @@ const MarketScreen = () => {
                 />
             )}
         </View>
+        </>
     );
 };
 
@@ -79,6 +88,7 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: '#B7FFB0',
+        marginLeft: Platform.select({web: 200}),
     },
     header: {
         flexDirection: 'row',
@@ -136,7 +146,6 @@ const styles = StyleSheet.create({
         borderRadius: 20,
     },
     mapContainer: {
-        flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
     },
@@ -153,7 +162,7 @@ const styles = StyleSheet.create({
         color: 'gray',
         backgroundColor: 'white',
         paddingVertical: 240,
-        paddingHorizontal: 475,
+        paddingHorizontal: 425,
         marginBottom: 75,
         borderRadius: 6,
     },

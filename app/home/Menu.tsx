@@ -1,21 +1,21 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, SafeAreaView, Image, ScrollView, Platform, ImageBackground, ImageSourcePropType } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
-import chatIcon from '../assets/images/chat.png';
-import pollsIcon from '../assets/images/surveys.png';
-import marketIcon from '../assets/images/market.png';
-import tileIcon from '../assets/images/tiles.png';
-import shopIcon from '../assets/images/shop.png';
-import receiptIcon from '../assets/images/receipt.png';
-import contactUsIcon from '../assets/images/contact.png';
-import dashboardIcon from '../assets/images/dashboard.png';
-import profileIcon from '../assets/images/user.png';
+import chatIcon from '../../assets/images/chat.png';
+import pollsIcon from '../../assets/images/surveys.png';
+import marketIcon from '../../assets/images/market.png';
+import tileIcon from '../../assets/images/tiles.png';
+import shopIcon from '../../assets/images/shop.png';
+import receiptIcon from '../../assets/images/receipt.png';
+import contactUsIcon from '../../assets/images/contact.png';
+import dashboardIcon from '../../assets/images/dashboard.png';
+import profileIcon from '../../assets/images/user.png';
 
-import tomatoImage from '../assets/images/tomatoes.png';
-import dillImage from '../assets/images/dill.jpeg';
-import bellPepperImage from '../assets/images/bellPeppers.jpeg';
+import tomatoImage from '../../assets/images/tomatoes.png';
+import dillImage from '../../assets/images/dill.jpeg';
+import bellPepperImage from '../../assets/images/bellPeppers.jpeg';
 
 
 
@@ -47,97 +47,55 @@ const MenuScreen = () => {
     ];
 
     return (
-        <SafeAreaView style={styles.container}>
-            <View style={styles.content}>
-                <ScrollView contentContainerStyle={styles.scrollContent}>
-                    <View style={styles.header}>
-                        <Text style={styles.headerText}> <Text style={styles.boldText}>community needs</Text> | <Text style={styles.italicText}>you're in <TouchableOpacity><Text style={[styles.link, styles.italicText, styles.underlineText]}>Fountain Square, Indianapolis</Text></TouchableOpacity></Text></Text>
-                        <View style={styles.communityNeedsContainer}>
-                            {menuItems.map((item, index) => (
-                                <TouchableOpacity key={index} style={styles.communityNeedButton}>
-                                {
-                                    Platform.select({
-                                        ios: 
-                                        <Text style={styles.communityNeedText}>{item.name}</Text>,
-                                        web: 
-                                        <ImageBackground source={item.image} style={{ width: 150, height: 150 }} resizeMode='cover'>
-                                            <Text style={styles.communityNeedText}>{item.name}</Text>
-                                        </ImageBackground>
-                                    })
-                                }
-                                </TouchableOpacity>
-                            ))}
-                        </View>
-                        {Platform.OS !== 'web' &&
-                            <Image
-                            source={profileIcon}
-                            style={styles.profileImage}
-                        />
-                        }
+        <>
+        <View style={styles.container}>
+        <Stack.Screen options={{ headerShown: false }} />
+            <ScrollView contentContainerStyle={styles.scrollContent}>
+                <View style={styles.header}>
+                    <Text style={styles.headerText}> <Text style={styles.boldText}>community needs</Text> | <Text style={styles.italicText}>you're in <TouchableOpacity><Text style={[styles.link, styles.italicText, styles.underlineText]}>Fountain Square, Indianapolis</Text></TouchableOpacity></Text></Text>
+                    <View style={styles.communityNeedsContainer}>
+                        {menuItems.map((item, index) => (
+                            <TouchableOpacity key={index} style={styles.communityNeedButton}>
+                            {
+                                Platform.select({
+                                    ios: 
+                                    <Text style={styles.communityNeedText}>{item.name}</Text>,
+                                    web: 
+                                    <ImageBackground source={item.image} style={{ width: 150, height: 150 }} resizeMode='cover'>
+                                        <Text style={styles.communityNeedText}>{item.name}</Text>
+                                    </ImageBackground>
+                                })
+                            }
+                            </TouchableOpacity>
+                        ))}
                     </View>
+                    {Platform.OS !== 'web' &&
+                        <Image
+                        source={profileIcon}
+                        style={styles.profileImage}
+                    />
+                    }
+                </View>
 
-                    <View style={styles.menuGrid}>
-                        <MenuButton icon="+" title="add item" />
-                        <MenuButton icon={shopIcon} title="manage shops" />
-                        <MenuButton icon={dashboardIcon} title="dashboard" />
-                        <MenuButton icon={receiptIcon} title="order history" />
-                        <MenuButton icon={contactUsIcon} title="contact us" />
-                        <MenuButton icon="!" title="report a problem" />
-                    </View>
-                </ScrollView>
-                {Platform.OS === 'web' && 
-                        <View style={styles.footer}>
-                            <TouchableOpacity style={styles.iconButton}>
-                                <Image
-                                source={profileIcon}
-                                style={[styles.iconButton, styles.profileImage]}
-                            />
-                            </TouchableOpacity>
-                            <TouchableOpacity style={styles.iconButton}>
-                                <Image style={[styles.iconButton, styles.icon]} source={chatIcon} />
-                            </TouchableOpacity>
-                            <TouchableOpacity style={styles.iconButton}>
-                                <Image style={[styles.iconButton, styles.icon]} source={pollsIcon} />
-                            </TouchableOpacity>
-                            <TouchableOpacity style={styles.iconButton} onPress={() => { router.push('/Market') }}>
-                                <Image style={[styles.iconButton, styles.icon]} source={marketIcon} />
-                            </TouchableOpacity>
-                            <TouchableOpacity style={styles.iconButton}>
-                                <Image style={[styles.iconButton, styles.icon]} source={tileIcon} />
-                            </TouchableOpacity>
-                        </View>}
-            </View>
-            {Platform.OS !== 'web' &&
-                    <View style={styles.footer}>
-                    <TouchableOpacity style={styles.iconButton}>
-                        <Image style={[styles.iconButton,styles.icon]} source={chatIcon}/>
-                    </TouchableOpacity>
-                    <TouchableOpacity style={styles.iconButton}>
-                        <Image style={[styles.iconButton,styles.icon]} source={pollsIcon}/>
-                    </TouchableOpacity>
-                    <TouchableOpacity style={styles.iconButton} onPress={()=>{router.push('/Market')}}>
-                        <Image style={[styles.iconButton, styles.icon]} source={marketIcon} />
-                    </TouchableOpacity>
-                    <TouchableOpacity style={styles.iconButton}>
-                        <Image style={[styles.iconButton, styles.icon]} source={tileIcon} />
-                    </TouchableOpacity>
-                </View>}
-        </SafeAreaView>
+                <View style={styles.menuGrid}>
+                    <MenuButton icon="+" title="add item" />
+                    <MenuButton icon={shopIcon} title="manage shops" />
+                    <MenuButton icon={dashboardIcon} title="dashboard" />
+                    <MenuButton icon={receiptIcon} title="order history" />
+                    <MenuButton icon={contactUsIcon} title="contact us" />
+                    <MenuButton icon="!" title="report a problem" />
+                </View>
+            </ScrollView>
+        </View>
+        </>
     );
 };
 
 const styles = StyleSheet.create({
     container: {
+        paddingTop: 40,
         flex: 1,
         backgroundColor: '#B7FFB0',
-    },
-    content: {
-        flex: 1,
-        ...Platform.select({
-            web: {
-                flexDirection: 'row',
-            },
-        }),
     },
     scrollContent: {
         flexGrow: 1,
