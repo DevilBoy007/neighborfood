@@ -87,9 +87,9 @@ const MarketScreen = () => {
 const styles = StyleSheet.create({
     container: {
         backgroundColor: '#B7FFB0',
+        minHeight: '100%',
         ...Platform.select({
             web:{
-                minHeight: '100vh',
                 minWidth: '100%',
                 paddingRight: 175,
             }
