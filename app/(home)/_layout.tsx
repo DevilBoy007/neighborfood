@@ -1,6 +1,8 @@
 import { Slot, Stack, useRouter } from "expo-router";
 import { useFonts } from 'expo-font';
 import { View, StyleSheet, Platform, TouchableOpacity, Image } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { Drawer } from 'expo-router/drawer';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
 
@@ -31,17 +33,36 @@ export default function RootLayout() {
   }
   return (
     <>
-      <View style={styles.container}>
-        <Stack.Screen options={{ headerShown: false }} />
-        <View style={styles.content}>
-      {Platform.OS === 'web' &&
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <View style={styles.container}>
+          <Stack.Screen options={{ headerShown: false }} />
+          <View style={styles.content}>
+          {Platform.OS === 'web' &&
+            <View style={styles.footer}>
+              <TouchableOpacity style={styles.iconButton} onPress={ () => { alert('profile') }}>
+                <Image
+                  source={profileIcon}
+                  style={[styles.iconButton, styles.profileImage]}
+                />
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.iconButton}>
+                <Image style={[styles.iconButton, styles.icon]} source={chatIcon} />
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.iconButton}>
+                <Image style={[styles.iconButton, styles.icon]} source={pollsIcon} />
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.iconButton} onPress={() => { router.navigate('/Market') }}>
+                <Image style={[styles.iconButton, styles.icon]} source={marketIcon} />
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.iconButton} onPress={ () => router.navigate('/Menu')}>
+                <Image style={[styles.iconButton, styles.icon]} source={tileIcon} />
+              </TouchableOpacity>
+            </View>}
+            <Slot />
+          </View>
+        </View>
+        {Platform.OS !== 'web' &&
         <View style={styles.footer}>
-          <TouchableOpacity style={styles.iconButton} onPress={ () => { alert('profile') }}>
-            <Image
-              source={profileIcon}
-              style={[styles.iconButton, styles.profileImage]}
-            />
-          </TouchableOpacity>
           <TouchableOpacity style={styles.iconButton}>
             <Image style={[styles.iconButton, styles.icon]} source={chatIcon} />
           </TouchableOpacity>
@@ -54,27 +75,9 @@ export default function RootLayout() {
           <TouchableOpacity style={styles.iconButton} onPress={ () => router.navigate('/Menu')}>
             <Image style={[styles.iconButton, styles.icon]} source={tileIcon} />
           </TouchableOpacity>
-        </View>}
-          <Slot />
         </View>
-      </View>
-    {
-      Platform.OS !== 'web' &&
-        <View style={styles.footer}>
-          <TouchableOpacity style={styles.iconButton}>
-            <Image style={[styles.iconButton, styles.icon]} source={chatIcon} />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.iconButton}>
-            <Image style={[styles.iconButton, styles.icon]} source={pollsIcon} />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.iconButton} onPress={() => { router.navigate('/Market') }}>
-            <Image style={[styles.iconButton, styles.icon]} source={marketIcon} />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.iconButton} onPress={ () => router.navigate('/Menu')}>
-            <Image style={[styles.iconButton, styles.icon]} source={tileIcon} />
-          </TouchableOpacity>
-        </View>
-    }
+        }
+      </GestureHandlerRootView>
     </>
   );
 }
