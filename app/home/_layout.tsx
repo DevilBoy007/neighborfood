@@ -36,7 +36,7 @@ export default function RootLayout() {
         <View style={styles.content}>
       {Platform.OS === 'web' &&
         <View style={styles.footer}>
-          <TouchableOpacity style={styles.iconButton}>
+          <TouchableOpacity style={styles.iconButton} onPress={ () => { alert('profile') }}>
             <Image
               source={profileIcon}
               style={[styles.iconButton, styles.profileImage]}
@@ -48,10 +48,10 @@ export default function RootLayout() {
           <TouchableOpacity style={styles.iconButton}>
             <Image style={[styles.iconButton, styles.icon]} source={pollsIcon} />
           </TouchableOpacity>
-          <TouchableOpacity style={styles.iconButton} onPress={() => { router.push('/home/Market') }}>
+          <TouchableOpacity style={styles.iconButton} onPress={() => { router.navigate('/home/Market') }}>
             <Image style={[styles.iconButton, styles.icon]} source={marketIcon} />
           </TouchableOpacity>
-          <TouchableOpacity style={styles.iconButton} onPress={ () => router.push('/home/Menu')}>
+          <TouchableOpacity style={styles.iconButton} onPress={ () => router.navigate('/home/Menu')}>
             <Image style={[styles.iconButton, styles.icon]} source={tileIcon} />
           </TouchableOpacity>
         </View>}
@@ -67,10 +67,10 @@ export default function RootLayout() {
           <TouchableOpacity style={styles.iconButton}>
             <Image style={[styles.iconButton, styles.icon]} source={pollsIcon} />
           </TouchableOpacity>
-          <TouchableOpacity style={styles.iconButton} onPress={() => { router.push('/home/Market') }}>
+          <TouchableOpacity style={styles.iconButton} onPress={() => { router.navigate('/home/Market') }}>
             <Image style={[styles.iconButton, styles.icon]} source={marketIcon} />
           </TouchableOpacity>
-          <TouchableOpacity style={styles.iconButton} onPress={ () => router.push('/home/Menu')}>
+          <TouchableOpacity style={styles.iconButton} onPress={ () => router.navigate('/home/Menu')}>
             <Image style={[styles.iconButton, styles.icon]} source={tileIcon} />
           </TouchableOpacity>
         </View>
