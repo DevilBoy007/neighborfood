@@ -101,15 +101,15 @@ const styles = StyleSheet.create({
         marginTop: 40,
     },
     title: {
-        fontSize: Platform.select({ios: 30, web: 60}),
+        fontSize: Platform.select({ios: 30, web: 80}),
         fontWeight: 'bold',
         fontFamily: 'TitanOne',
         color: '#fff',
     },
     profileIcon: {
-        width: 30,
-        height: 30,
-        borderRadius: 15,
+        width: 50,
+        height: 50,
+        borderRadius: 25,
         backgroundColor: 'gray',
     },
     searchContainer: {
