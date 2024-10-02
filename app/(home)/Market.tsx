@@ -40,7 +40,7 @@ const MarketScreen = () => {
                 {
                 Platform.select({
                     ios: 
-                    <TouchableOpacity onPress={() => alert('profile')}>
+                    <TouchableOpacity onPress={() => alert('profile')} style={styles.profileIcon}>
                         <View style={styles.profileIcon} />
                     </TouchableOpacity>,
                     web:

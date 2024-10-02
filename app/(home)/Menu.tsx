@@ -53,7 +53,7 @@ const MenuScreen = () => {
             <ScrollView contentContainerStyle={styles.scrollContent}>
                 <View style={styles.header}>
                 {Platform.OS !== 'web' &&
-                    <Pressable onPress={() => alert('profile')}>
+                    <Pressable onPress={() => alert('profile')} style={styles.profileImage}>
                         <Image
                             source={profileIcon}
                             style={styles.profileImage}
