@@ -1,12 +1,9 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, SafeAreaView, Image, ScrollView, Platform, ImageBackground, ImageSourcePropType, Pressable } from 'react-native';
+import React, { useState, useRef } from 'react';
+import { Animated, View, Text, TouchableOpacity, StyleSheet, SafeAreaView, Image, ScrollView, Platform, ImageBackground, ImageSourcePropType, Pressable } from 'react-native';
 import { useRouter, Stack } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
 
-import chatIcon from '../../assets/images/chat.png';
-import pollsIcon from '../../assets/images/surveys.png';
-import marketIcon from '../../assets/images/market.png';
-import tileIcon from '../../assets/images/tiles.png';
+import EditDetails from '@/components/EditDetails';
+
 import shopIcon from '../../assets/images/shop.png';
 import receiptIcon from '../../assets/images/receipt.png';
 import contactUsIcon from '../../assets/images/contact.png';
@@ -39,13 +36,31 @@ const MenuScreen = () => {
             )
         }
     };
-
+    const [showEditDetails, setShowEditDetails] = useState(false);
     const communityNeedsList = [
         { name: 'tomatoes', image: tomatoImage },
         { name: 'dill', image: dillImage },
         { name: 'bell peppers', image: bellPepperImage },
     ];
-
+    const slideAnim = useRef(new Animated.Value(1000)).current;
+    const toggleEditDetails = () => {
+        if (showEditDetails) {
+            // Slide down
+            Animated.timing(slideAnim, {
+                toValue: 1000,
+                duration: 300,
+                useNativeDriver: true,
+            }).start(() => setShowEditDetails(false));
+        } else {
+            setShowEditDetails(true);
+            // Slide up
+            Animated.timing(slideAnim, {
+                toValue: 0,
+                duration: 300,
+                useNativeDriver: true,
+            }).start();
+        }
+    };
     return (
         <>
         <View style={styles.container}>
@@ -53,7 +68,7 @@ const MenuScreen = () => {
             <ScrollView contentContainerStyle={styles.scrollContent}>
                 <View style={styles.header}>
                 {Platform.OS !== 'web' &&
-                    <Pressable onPress={() => alert('profile')} style={styles.profileImage}>
+                    <Pressable onPress={ toggleEditDetails } style={styles.profileImage}>
                         <Image
                             source={profileIcon}
                             style={styles.profileImage}
@@ -88,6 +103,18 @@ const MenuScreen = () => {
                     <MenuButton icon="!" title="report a problem" />
                 </View>
             </ScrollView>
+            {showEditDetails && (
+                <Animated.View
+                    style={[
+                        styles.editDetailsContainer,
+                        {
+                            transform: [{ translateY: slideAnim }],
+                        },
+                    ]}
+                >
+                    <EditDetails onClose={toggleEditDetails} />
+                </Animated.View>
+            )}
         </View>
         </>
     );
@@ -218,36 +245,7 @@ const styles = StyleSheet.create({
                 fontSize: 16,
             },
         }),
-    },
-    footer: {
-        flexDirection: 'row',
-        justifyContent: 'space-evenly',
-        alignItems: 'center',
-        backgroundColor: '#87CEFA',
-        padding: 10,
-        ...Platform.select({
-            ios: {
-                position: 'absolute',
-                bottom: 0,
-                left: 0,
-                right: 0,
-            },
-            web: {
-                flexDirection: 'column',
-                width: 200,
-                height: '100%',
-                justifyContent: 'center',
-            },
-        }),
-    },
-    iconButton: {
-        padding: 10,
-        ...Platform.select({
-            web: {
-                marginBottom: 20,
-            },
-        }),
-    },
+    }, 
     icon: {
         width: 50,
         height: 50,
