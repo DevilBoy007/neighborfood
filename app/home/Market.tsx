@@ -70,7 +70,7 @@ const MarketScreen = () => {
 
             {isMapView ? (
                 <View style={styles.mapContainer}>
-                    <Text style={Platform.select({ios: styles.mapPlaceholder, web: styles.webMapPlaceholder})}>MAPBOX</Text>
+                    <Text style={Platform.select({ios: styles.mapPlaceholder, web: styles.mapPlaceholder})}>MAPBOX</Text>
                 </View>
             ) : (
                 <FlatList
@@ -153,23 +153,20 @@ const styles = StyleSheet.create({
     mapContainer: {
         justifyContent: 'center',
         alignItems: 'center',
+        ...Platform.select({
+            web: {
+                marginTop: 40,
+            }
+        })
     },
     mapPlaceholder: {
         fontSize: 22,
         color: 'gray',
         backgroundColor: 'white',
-        paddingVertical: 275,
-        paddingHorizontal: 140,
-        marginBottom: 75,
-    },
-    webMapPlaceholder: {
-        fontSize: 22,
-        color: 'gray',
-        backgroundColor: 'white',
-        paddingVertical: 240,
-        paddingHorizontal: 425,
         marginBottom: 75,
         borderRadius: 6,
+        paddingVertical: Platform.select({ios: 275, web: 240}),
+        paddingHorizontal: Platform.select({ios: 140, web: 425})
     },
     shopItem: {
         backgroundColor: 'white',

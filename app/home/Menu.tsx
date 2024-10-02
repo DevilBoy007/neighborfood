@@ -52,6 +52,12 @@ const MenuScreen = () => {
         <Stack.Screen options={{ headerShown: false }} />
             <ScrollView contentContainerStyle={styles.scrollContent}>
                 <View style={styles.header}>
+                {Platform.OS !== 'web' &&
+                    <Image
+                        source={profileIcon}
+                        style={styles.profileImage}
+                    />
+                }
                     <Text style={styles.headerText}> <Text style={styles.boldText}>community needs</Text> | <Text style={styles.italicText}>you're in <TouchableOpacity><Text style={[styles.link, styles.italicText, styles.underlineText]}>Fountain Square, Indianapolis</Text></TouchableOpacity></Text></Text>
                     <View style={styles.communityNeedsContainer}>
                         {communityNeedsList.map((item, index) => (
@@ -69,12 +75,6 @@ const MenuScreen = () => {
                             </TouchableOpacity>
                         ))}
                     </View>
-                    {Platform.OS !== 'web' &&
-                        <Image
-                        source={profileIcon}
-                        style={styles.profileImage}
-                    />
-                    }
                 </View>
 
                 <View style={styles.menuGrid}>
