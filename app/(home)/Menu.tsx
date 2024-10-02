@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, SafeAreaView, Image, ScrollView, Platform, ImageBackground, ImageSourcePropType } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, SafeAreaView, Image, ScrollView, Platform, ImageBackground, ImageSourcePropType, Pressable } from 'react-native';
 import { useRouter, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -53,10 +53,12 @@ const MenuScreen = () => {
             <ScrollView contentContainerStyle={styles.scrollContent}>
                 <View style={styles.header}>
                 {Platform.OS !== 'web' &&
-                    <Image
-                        source={profileIcon}
-                        style={styles.profileImage}
-                    />
+                    <Pressable onPress={() => alert('profile')}>
+                        <Image
+                            source={profileIcon}
+                            style={styles.profileImage}
+                        />
+                    </Pressable>
                 }
                     <Text style={styles.headerText}> <Text style={styles.boldText}>community needs</Text> | <Text style={styles.italicText}>you're in <TouchableOpacity><Text style={[styles.link, styles.italicText, styles.underlineText]}>Fountain Square, Indianapolis</Text></TouchableOpacity></Text></Text>
                     <View style={styles.communityNeedsContainer}>
@@ -108,7 +110,7 @@ const styles = StyleSheet.create({
     },
     header: {
         padding: 10,
-        paddingTop: 100,
+        paddingTop: 40,
         ...Platform.select({
             web: {
                 paddingTop: 25,
@@ -169,19 +171,6 @@ const styles = StyleSheet.create({
         width: 50,
         height: 50,
         borderRadius: 25,
-        ...Platform.select({
-            native: {
-                position: 'absolute',
-                top: 10,
-                left: 10,
-            },
-            web: {
-                marginBottom: 30,
-                width: 100,
-                height: 100,
-                borderRadius: 50,
-            },
-        }),
     },
     menuGrid: {
         flexBasis: '50%',
