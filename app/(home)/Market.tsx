@@ -35,10 +35,8 @@ const MarketScreen = () => {
         <>
         <View style={styles.container}>
             <View style={styles.header}>
-                    <TouchableOpacity onPress={() => router.back()}>
-                        <Ionicons name="arrow-back" size={24} color="black" />
-                    </TouchableOpacity>
-                <Text style={Platform.select({ios: styles.title, web: styles.webTitle})}>market</Text>
+                {Platform.OS !== 'web' && <View />}
+                <Text style={styles.title}>market</Text>
                 {
                 Platform.select({
                     ios: 
@@ -70,7 +68,7 @@ const MarketScreen = () => {
 
             {isMapView ? (
                 <View style={styles.mapContainer}>
-                    <Text style={Platform.select({ios: styles.mapPlaceholder, web: styles.mapPlaceholder})}>MAPBOX</Text>
+                    <Text style={styles.mapPlaceholder}>MAPBOX</Text>
                 </View>
             ) : (
                 <FlatList
@@ -98,18 +96,12 @@ const styles = StyleSheet.create({
     header: {
         flexDirection: 'row',
         alignItems: 'center',
-        justifyContent: 'space-between',
+        justifyContent: Platform.select({ ios: 'space-between', web: 'center' }),
         padding: 16,
         marginTop: 40,
     },
     title: {
-        fontSize: 30,
-        fontWeight: 'bold',
-        fontFamily: 'TitanOne',
-        color: '#fff',
-    },
-    webTitle: {
-        fontSize: 60,
+        fontSize: Platform.select({ios: 30, web: 60}),
         fontWeight: 'bold',
         fontFamily: 'TitanOne',
         color: '#fff',

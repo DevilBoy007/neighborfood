@@ -48,10 +48,10 @@ export default function RootLayout() {
           <TouchableOpacity style={styles.iconButton}>
             <Image style={[styles.iconButton, styles.icon]} source={pollsIcon} />
           </TouchableOpacity>
-          <TouchableOpacity style={styles.iconButton} onPress={() => { router.navigate('/home/Market') }}>
+          <TouchableOpacity style={styles.iconButton} onPress={() => { router.navigate('/Market') }}>
             <Image style={[styles.iconButton, styles.icon]} source={marketIcon} />
           </TouchableOpacity>
-          <TouchableOpacity style={styles.iconButton} onPress={ () => router.navigate('/home/Menu')}>
+          <TouchableOpacity style={styles.iconButton} onPress={ () => router.navigate('/Menu')}>
             <Image style={[styles.iconButton, styles.icon]} source={tileIcon} />
           </TouchableOpacity>
         </View>}
@@ -67,10 +67,10 @@ export default function RootLayout() {
           <TouchableOpacity style={styles.iconButton}>
             <Image style={[styles.iconButton, styles.icon]} source={pollsIcon} />
           </TouchableOpacity>
-          <TouchableOpacity style={styles.iconButton} onPress={() => { router.navigate('/home/Market') }}>
+          <TouchableOpacity style={styles.iconButton} onPress={() => { router.navigate('/Market') }}>
             <Image style={[styles.iconButton, styles.icon]} source={marketIcon} />
           </TouchableOpacity>
-          <TouchableOpacity style={styles.iconButton} onPress={ () => router.navigate('/home/Menu')}>
+          <TouchableOpacity style={styles.iconButton} onPress={ () => router.navigate('/Menu')}>
             <Image style={[styles.iconButton, styles.icon]} source={tileIcon} />
           </TouchableOpacity>
         </View>
