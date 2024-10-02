@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, FlatList, StyleSheet, Platform } from 'react-native';
+import React, { useState, useRef } from 'react';
+import { View, Text, TextInput, TouchableOpacity, FlatList, StyleSheet, Platform, Animated } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Stack, useRouter } from 'expo-router';
+
+import EditDetails from "@/components/EditDetails";
 
 // Placeholder for the Shop component
 const Shop = ({ name }: { name: string }) => (
@@ -16,12 +17,13 @@ const Shop = ({ name }: { name: string }) => (
 );
 
 const MarketScreen = () => {
-    const router = useRouter();
-    
+    const [showEditDetails, setShowEditDetails] = useState(false);
     const [isMapView, setIsMapView] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
     const [showSortOptions, setShowSortOptions] = useState(false);
-
+    
+    const slideAnim = useRef(new Animated.Value(1000)).current;
+    
     const shops = [
         "Ben's Beef",
         "Big Baskets",
@@ -30,7 +32,24 @@ const MarketScreen = () => {
     ]; // this is a placeholder for the list of shops which will eventually load from a data source
 
     const toggleView = () => setIsMapView(!isMapView);
-
+    const toggleEditDetails = () => {
+        if (showEditDetails) {
+        // Slide down
+        Animated.timing(slideAnim, {
+            toValue: 1000,
+            duration: 300,
+            useNativeDriver: true,
+        }).start(() => setShowEditDetails(false));
+        } else {
+        setShowEditDetails(true);
+        // Slide up
+        Animated.timing(slideAnim, {
+            toValue: 0,
+            duration: 300,
+            useNativeDriver: true,
+        }).start();
+        }
+    };
     return (
         <>
         <View style={styles.container}>
@@ -40,7 +59,7 @@ const MarketScreen = () => {
                 {
                 Platform.select({
                     ios: 
-                    <TouchableOpacity onPress={() => alert('profile')} style={styles.profileIcon}>
+                    <TouchableOpacity onPress={ toggleEditDetails } style={styles.profileIcon}>
                         <View style={styles.profileIcon} />
                     </TouchableOpacity>,
                     web:
@@ -78,6 +97,18 @@ const MarketScreen = () => {
                 />
             )}
         </View>
+        {showEditDetails && (
+        <Animated.View
+            style={[
+                styles.editDetailsContainer,
+                {
+                    transform: [{ translateY: slideAnim }],
+                },
+            ]}
+        >
+            <EditDetails onClose={toggleEditDetails} />
+        </Animated.View>
+        )}
         </>
     );
 };
@@ -159,6 +190,22 @@ const styles = StyleSheet.create({
         borderRadius: 6,
         paddingVertical: Platform.select({ios: 275, web: 240}),
         paddingHorizontal: Platform.select({ios: 140, web: 425})
+    },
+    editDetailsContainer: {
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        // Adjust the height as needed
+        height: '90%',
+    },
+    iconButton: {
+        padding: 10,
+        ...Platform.select({
+            web: {
+                marginBottom: 20,
+            },
+        }),
     },
     shopItem: {
         backgroundColor: 'white',
