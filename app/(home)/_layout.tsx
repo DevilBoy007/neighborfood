@@ -1,10 +1,11 @@
 import { Slot, Stack, useRouter } from "expo-router";
 import { useFonts } from 'expo-font';
-import { View, StyleSheet, Platform, TouchableOpacity, Image } from 'react-native';
+import { View, StyleSheet, Platform, TouchableOpacity, Image, Animated } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { Drawer } from 'expo-router/drawer';
 import * as SplashScreen from 'expo-splash-screen';
-import { useEffect } from 'react';
+import { useEffect, useState, useRef } from 'react';
+
+import EditDetails from "@/components/EditDetails";
 
 import chatIcon from '../../assets/images/chat.png';
 import pollsIcon from '../../assets/images/surveys.png';
@@ -22,11 +23,33 @@ export default function RootLayout() {
     TitanOne: require('../../assets/fonts/TitanOne-Regular.ttf'),
   });
 
+  const [showEditDetails, setShowEditDetails] = useState(false);
+  const slideAnim = useRef(new Animated.Value(1000)).current;
+
   useEffect(() => {
     if (loaded) {
       SplashScreen.hideAsync();
     }
   }, [loaded]);
+
+  const toggleEditDetails = () => {
+    if (showEditDetails) {
+      // Slide down
+      Animated.timing(slideAnim, {
+        toValue: 1000,
+        duration: 300,
+        useNativeDriver: true,
+      }).start(() => setShowEditDetails(false));
+    } else {
+      setShowEditDetails(true);
+      // Slide up
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: true,
+      }).start();
+    }
+  };
 
   if (!loaded) {
     return null;
@@ -39,7 +62,7 @@ export default function RootLayout() {
           <View style={styles.content}>
           {Platform.OS === 'web' &&
             <View style={styles.footer}>
-              <TouchableOpacity style={styles.iconButton} onPress={ () => { alert('profile') }}>
+              <TouchableOpacity style={styles.iconButton} onPress={ toggleEditDetails }>
                 <Image
                   source={profileIcon}
                   style={[styles.iconButton, styles.profileImage]}
@@ -75,8 +98,19 @@ export default function RootLayout() {
           <TouchableOpacity style={styles.iconButton} onPress={ () => router.navigate('/Menu')}>
             <Image style={[styles.iconButton, styles.icon]} source={tileIcon} />
           </TouchableOpacity>
-        </View>
-        }
+        </View>}
+        {showEditDetails && (
+          <Animated.View
+            style={[
+              styles.editDetailsContainer,
+              {
+                transform: [{ translateY: slideAnim }],
+              },
+            ]}
+          >
+            <EditDetails onClose={toggleEditDetails} />
+          </Animated.View>
+        )}
       </GestureHandlerRootView>
     </>
   );
@@ -132,6 +166,14 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
       },
     }),
+  },
+  editDetailsContainer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    // Adjust the height as needed
+    height: '90%',
   },
   iconButton: {
     padding: 10,
