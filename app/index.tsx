@@ -1,6 +1,5 @@
 import { StyleSheet, Text, View, Pressable, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
-import MarketScreen from './Market';
 const LoginScreen = () => {
   const router = useRouter();
 

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, FlatList, StyleSheet, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
 
 // Placeholder for the Shop component
 const Shop = ({ name }: { name: string }) => (
@@ -20,6 +20,7 @@ const MarketScreen = () => {
     
     const [isMapView, setIsMapView] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
+    const [showSortOptions, setShowSortOptions] = useState(false);
 
     const shops = [
         "Ben's Beef",
@@ -31,13 +32,21 @@ const MarketScreen = () => {
     const toggleView = () => setIsMapView(!isMapView);
 
     return (
+        <>
         <View style={styles.container}>
             <View style={styles.header}>
-                    <TouchableOpacity onPress={() => router.back()}>
-                        <Ionicons name="arrow-back" size={24} color="black" />
-                    </TouchableOpacity>
-                <Text style={Platform.select({ios: styles.title, web: styles.webTitle})}>market</Text>
-                <View style={styles.profileIcon} />
+                {Platform.OS !== 'web' && <View />}
+                <Text style={styles.title}>market</Text>
+                {
+                Platform.select({
+                    ios: 
+                    <TouchableOpacity onPress={() => alert('profile')}>
+                        <View style={styles.profileIcon} />
+                    </TouchableOpacity>,
+                    web:
+                    <View/>
+                })
+                }
             </View>
 
             <View style={styles.searchContainer}>
@@ -59,7 +68,7 @@ const MarketScreen = () => {
 
             {isMapView ? (
                 <View style={styles.mapContainer}>
-                    <Text style={Platform.select({ios: styles.mapPlaceholder, web: styles.webMapPlaceholder})}>MAPBOX</Text>
+                    <Text style={styles.mapPlaceholder}>MAPBOX</Text>
                 </View>
             ) : (
                 <FlatList
@@ -69,37 +78,38 @@ const MarketScreen = () => {
                 />
             )}
         </View>
+        </>
     );
 };
 
 const styles = StyleSheet.create({
     container: {
-        flex: 1,
         backgroundColor: '#B7FFB0',
+        minHeight: '100%',
+        ...Platform.select({
+            web:{
+                minWidth: '100%',
+                paddingRight: 175,
+            }
+        })
     },
     header: {
         flexDirection: 'row',
         alignItems: 'center',
-        justifyContent: 'space-between',
+        justifyContent: Platform.select({ ios: 'space-between', web: 'center' }),
         padding: 16,
         marginTop: 40,
     },
     title: {
-        fontSize: 30,
-        fontWeight: 'bold',
-        fontFamily: 'TitanOne',
-        color: '#fff',
-    },
-    webTitle: {
-        fontSize: 60,
+        fontSize: Platform.select({ios: 30, web: 80}),
         fontWeight: 'bold',
         fontFamily: 'TitanOne',
         color: '#fff',
     },
     profileIcon: {
-        width: 30,
-        height: 30,
-        borderRadius: 15,
+        width: 50,
+        height: 50,
+        borderRadius: 25,
         backgroundColor: 'gray',
     },
     searchContainer: {
@@ -133,26 +143,22 @@ const styles = StyleSheet.create({
         borderRadius: 20,
     },
     mapContainer: {
-        flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
+        ...Platform.select({
+            web: {
+                marginTop: 40,
+            }
+        })
     },
     mapPlaceholder: {
         fontSize: 22,
         color: 'gray',
         backgroundColor: 'white',
-        paddingVertical: 275,
-        paddingHorizontal: 140,
-        marginBottom: 75,
-    },
-    webMapPlaceholder: {
-        fontSize: 22,
-        color: 'gray',
-        backgroundColor: 'white',
-        paddingVertical: 240,
-        paddingHorizontal: 475,
         marginBottom: 75,
         borderRadius: 6,
+        paddingVertical: Platform.select({ios: 275, web: 240}),
+        paddingHorizontal: Platform.select({ios: 140, web: 425})
     },
     shopItem: {
         backgroundColor: 'white',
