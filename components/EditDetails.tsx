@@ -8,23 +8,23 @@ const EditDetails = ({ onClose }) => {
         <View style={styles.container}>
             <Text style={styles.title}>Edit Details</Text>
 
-            <TextInput style={styles.input} placeholder="email" />
+            <TextInput style={styles.input} placeholder="email" placeholderTextColor={'#999'}/>
 
             <View style={styles.row}>
-                <TextInput style={[styles.input, styles.halfInput]} placeholder="address" />
-                <TextInput style={[styles.input, styles.halfInput]} placeholder="city" />
+                <TextInput style={[styles.input, styles.halfInput]} placeholder="address" placeholderTextColor={'#999'}/>
+                <TextInput style={[styles.input, styles.halfInput]} placeholder="city" placeholderTextColor={'#999'}/>
             </View>
 
             <View style={styles.row}>
-                <TextInput style={[styles.input, styles.halfInput]} placeholder="state" />
-                <TextInput style={[styles.input, styles.halfInput]} placeholder="zip (optional)" />
+                <TextInput style={[styles.input, styles.halfInput]} placeholder="state" placeholderTextColor={'#999'}/>
+                <TextInput style={[styles.input, styles.halfInput]} placeholder="zip (optional)" placeholderTextColor={'#999'}/>
             </View>
 
             <Text style={styles.subtitle}>Login Info</Text>
 
-            <TextInput style={styles.input} placeholder="username" />
-            <TextInput style={styles.input} placeholder="password" secureTextEntry />
-            <TextInput style={styles.input} placeholder="confirm password" secureTextEntry />
+            <TextInput style={styles.input} placeholder="username" placeholderTextColor={'#999'}/>
+            <TextInput style={styles.input} placeholder="password" secureTextEntry placeholderTextColor={'#999'}/>
+            <TextInput style={styles.input} placeholder="confirm password" secureTextEntry placeholderTextColor={'#999'}/>
 
             <TouchableOpacity style={styles.saveButton} onPress={onClose}>
                 <Text style={styles.saveButtonText}>Save</Text>
@@ -42,18 +42,21 @@ const styles = StyleSheet.create({
         padding: 20,
     },
     title: {
+        fontFamily: 'TextMeOne',
         fontSize: 24,
         fontWeight: 'bold',
         marginBottom: 20,
         textAlign: 'center',
     },
     subtitle: {
+        fontFamily: 'TextMeOne',
         fontSize: 18,
         fontWeight: 'bold',
         marginTop: 20,
         marginBottom: 10,
     },
     input: {
+        fontFamily: 'TextMeOne',
         backgroundColor: 'white',
         padding: 10,
         borderRadius: 5,
@@ -74,7 +77,8 @@ const styles = StyleSheet.create({
         marginTop: 20,
     },
     saveButtonText: {
-        fontSize: 18,
+        fontFamily: 'TextMeOne',
+        fontSize: 30,
         fontWeight: 'bold',
     },
 });
