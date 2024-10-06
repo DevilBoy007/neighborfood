@@ -78,10 +78,10 @@ const MarketScreen = () => {
                     onChangeText={ setSearchQuery }
                 />
                 <TouchableOpacity style={ styles.textButton }>
-                    <Text >sort</Text>
+                    <Text style={{ fontFamily: 'TextMeOne' }}>sort</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={ styles.textButton } onPress={ toggleView }>
-                        <Text style={{ fontFamily: 'TextMeOne' }}>{ isMapView ? 'LIST' : 'MAP' }</Text>
+                    <Text style={{ fontFamily: 'TextMeOne' }}>{ isMapView ? 'list' : 'map' }</Text>
                 </TouchableOpacity>
             </View>
 
