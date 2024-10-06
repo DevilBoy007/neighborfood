@@ -68,32 +68,32 @@ const MarketScreen = () => {
                 }
             </View>
 
-            <View style={styles.searchContainer}>
-                <Ionicons name="search" size={20} color="gray" style={styles.searchIcon} />
+            <View style={ styles.searchContainer }>
+                <Ionicons name="search" size={ 20 } color="gray" style={ styles.searchIcon } />
                 <TextInput
-                    style={styles.searchInput}
+                    style= {styles.searchInput }
                     placeholder="search"
-                    placeholderTextColor={'#ccc'}
-                    value={searchQuery}
-                    onChangeText={setSearchQuery}
+                    placeholderTextColor={ '#999' }
+                    value={ searchQuery }
+                    onChangeText={ setSearchQuery }
                 />
-                <TouchableOpacity style={styles.sortButton}>
-                    <Text>sort</Text>
+                <TouchableOpacity style={ styles.textButton }>
+                    <Text >sort</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.viewToggle} onPress={toggleView}>
-                    <Text>{isMapView ? 'LIST' : 'MAP'}</Text>
+                <TouchableOpacity style={ styles.textButton } onPress={ toggleView }>
+                        <Text style={{ fontFamily: 'TextMeOne' }}>{ isMapView ? 'LIST' : 'MAP' }</Text>
                 </TouchableOpacity>
             </View>
 
             {isMapView ? (
-                <View style={styles.mapContainer}>
-                    <Text style={styles.mapPlaceholder}>MAPBOX</Text>
+                <View style={ styles.mapContainer }>
+                    <Text style={ styles.mapPlaceholder }>MAPBOX</Text>
                 </View>
             ) : (
                 <FlatList
-                    data={shops}
-                    renderItem={({ item }) => <Shop name={item} />}
-                    keyExtractor={(item) => item}
+                    data={ shops }
+                    renderItem={({ item }) => <Shop name={ item } />}
+                    keyExtractor={ ( item ) => item}
                 />
             )}
         </View>
@@ -106,7 +106,7 @@ const MarketScreen = () => {
                 },
             ]}
         >
-            <EditDetails onClose={toggleEditDetails} />
+            <EditDetails onClose={ toggleEditDetails } />
         </Animated.View>
         )}
         </>
@@ -160,14 +160,9 @@ const styles = StyleSheet.create({
         paddingLeft: 30,
         backgroundColor: 'white',
         color: '#00bfff',
+        fontFamily: 'TextMeOne',
     },
-    sortButton: {
-        marginLeft: 8,
-        padding: 8,
-        backgroundColor: 'white',
-        borderRadius: 20,
-    },
-    viewToggle: {
+    textButton: {
         marginLeft: 8,
         padding: 8,
         backgroundColor: 'white',
