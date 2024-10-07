@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, FlatList, StyleSheet, Platform, Animated } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -17,12 +17,9 @@ const Shop = ({ name }: { name: string }) => (
 );
 
 const MarketScreen = () => {
-    const [showEditDetails, setShowEditDetails] = useState(false);
     const [isMapView, setIsMapView] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
     const [showSortOptions, setShowSortOptions] = useState(false);
-    
-    const slideAnim = useRef(new Animated.Value(1000)).current;
     
     const shops = [
         "Ben's Beef",
@@ -32,40 +29,12 @@ const MarketScreen = () => {
     ]; // this is a placeholder for the list of shops which will eventually load from a data source
 
     const toggleView = () => setIsMapView(!isMapView);
-    const toggleEditDetails = () => {
-        if (showEditDetails) {
-        // Slide down
-        Animated.timing(slideAnim, {
-            toValue: 1000,
-            duration: 300,
-            useNativeDriver: true,
-        }).start(() => setShowEditDetails(false));
-        } else {
-        setShowEditDetails(true);
-        // Slide up
-        Animated.timing(slideAnim, {
-            toValue: 0,
-            duration: 300,
-            useNativeDriver: true,
-        }).start();
-        }
-    };
+    
     return (
         <>
         <View style={styles.container}>
             <View style={styles.header}>
-                {Platform.OS !== 'web' && <View />}
                 <Text style={styles.title}>market</Text>
-                {
-                Platform.select({
-                    ios: 
-                    <TouchableOpacity onPress={ toggleEditDetails } style={styles.profileIcon}>
-                        <View style={styles.profileIcon} />
-                    </TouchableOpacity>,
-                    web:
-                    <View/>
-                })
-                }
             </View>
 
             <View style={ styles.searchContainer }>
@@ -97,18 +66,6 @@ const MarketScreen = () => {
                 />
             )}
         </View>
-        {showEditDetails && (
-        <Animated.View
-            style={[
-                styles.editDetailsContainer,
-                {
-                    transform: [{ translateY: slideAnim }],
-                },
-            ]}
-        >
-            <EditDetails onClose={ toggleEditDetails } />
-        </Animated.View>
-        )}
         </>
     );
 };
@@ -126,8 +83,7 @@ const styles = StyleSheet.create({
     },
     header: {
         flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: Platform.select({ ios: 'space-between', web: 'center' }),
+        justifyContent: 'center',
         padding: 16,
         marginTop: 40,
     },

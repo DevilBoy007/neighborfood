@@ -36,45 +36,17 @@ const MenuScreen = () => {
             )
         }
     };
-    const [showEditDetails, setShowEditDetails] = useState(false);
     const communityNeedsList = [
         { name: 'tomatoes', image: tomatoImage },
         { name: 'dill', image: dillImage },
         { name: 'bell peppers', image: bellPepperImage },
     ];
-    const slideAnim = useRef(new Animated.Value(1000)).current;
-    const toggleEditDetails = () => {
-        if (showEditDetails) {
-            // Slide down
-            Animated.timing(slideAnim, {
-                toValue: 1000,
-                duration: 300,
-                useNativeDriver: true,
-            }).start(() => setShowEditDetails(false));
-        } else {
-            setShowEditDetails(true);
-            // Slide up
-            Animated.timing(slideAnim, {
-                toValue: 0,
-                duration: 300,
-                useNativeDriver: true,
-            }).start();
-        }
-    };
+    
     return (
         <>
         <View style={styles.container}>
-        <Stack.Screen options={{ headerShown: false }} />
             <ScrollView contentContainerStyle={styles.scrollContent}>
                 <View style={styles.header}>
-                {Platform.OS !== 'web' &&
-                    <Pressable onPress={ toggleEditDetails } style={styles.profileImage}>
-                        <Image
-                            source={profileIcon}
-                            style={styles.profileImage}
-                        />
-                    </Pressable>
-                }
                     <Text style={styles.headerText}> <Text style={styles.boldText}>community needs</Text> | <Text style={styles.italicText}>you're in <TouchableOpacity><Text style={[styles.link, styles.italicText, styles.underlineText]}>Fountain Square, Indianapolis</Text></TouchableOpacity></Text></Text>
                     <View style={styles.communityNeedsContainer}>
                         {communityNeedsList.map((item, index) => (
@@ -103,18 +75,6 @@ const MenuScreen = () => {
                     <MenuButton icon="!" title="report a problem" />
                 </View>
             </ScrollView>
-            {showEditDetails && (
-                <Animated.View
-                    style={[
-                        styles.editDetailsContainer,
-                        {
-                            transform: [{ translateY: slideAnim }],
-                        },
-                    ]}
-                >
-                    <EditDetails onClose={toggleEditDetails} />
-                </Animated.View>
-            )}
         </View>
         </>
     );
@@ -122,7 +82,8 @@ const MenuScreen = () => {
 
 const styles = StyleSheet.create({
     container: {
-        paddingTop: 40,
+        height: '100%',
+        paddingTop: Platform.OS === ('ios' || 'android') ? 70 : 0,
         flex: 1,
         backgroundColor: '#B7FFB0',
     },

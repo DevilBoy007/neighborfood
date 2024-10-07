@@ -1,9 +1,9 @@
 import { Slot, Stack, useRouter } from "expo-router";
 import { useFonts } from 'expo-font';
-import { View, StyleSheet, Platform, TouchableOpacity, Image, Animated } from 'react-native';
+import { View, StyleSheet, Platform, TouchableOpacity, Image, Pressable } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import * as SplashScreen from 'expo-splash-screen';
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 
 import EditDetails from "@/components/EditDetails";
 
@@ -25,7 +25,6 @@ export default function RootLayout() {
   });
 
   const [showEditDetails, setShowEditDetails] = useState(false);
-  const slideAnim = useRef(new Animated.Value(1000)).current;
 
   useEffect(() => {
     if (loaded) {
@@ -33,33 +32,27 @@ export default function RootLayout() {
     }
   }, [loaded]);
 
-  const toggleEditDetails = () => {
-    if (showEditDetails) {
-      // Slide down
-      Animated.timing(slideAnim, {
-        toValue: 1000,
-        duration: 300,
-        useNativeDriver: true,
-      }).start(() => setShowEditDetails(false));
-    } else {
-      setShowEditDetails(true);
-      // Slide up
-      Animated.timing(slideAnim, {
-        toValue: 0,
-        duration: 300,
-        useNativeDriver: true,
-      }).start();
-    }
-  };
+  const toggleEditDetails = useCallback(() => {
+    setShowEditDetails(prev => !prev);
+  }, []);
 
   if (!loaded) {
     return null;
   }
+
   return (
     <>
       <GestureHandlerRootView style={{ flex: 1 }}>
         <View style={styles.container}>
-          <Stack.Screen options={{ headerShown: false }} />
+          <Stack.Screen options={{ headerShown: false }} initialParams={{ toggleEditDetails: toggleEditDetails, showEditDetails: showEditDetails }}  />
+          {Platform.OS !== 'web' &&
+            <TouchableOpacity onPress={toggleEditDetails} style={styles.profileImage}>
+              <Image
+                source={profileIcon}
+                style={styles.profileImage}
+              />
+            </TouchableOpacity>
+          }
           <View style={styles.content}>
           {Platform.OS === 'web' &&
             <View style={styles.footer}>
@@ -100,18 +93,9 @@ export default function RootLayout() {
             <Image style={[styles.iconButton, styles.icon]} source={tileIcon} />
           </TouchableOpacity>
         </View>}
-        {showEditDetails && (
-          <Animated.View
-            style={[
-              styles.editDetailsContainer,
-              {
-                transform: [{ translateY: slideAnim }],
-              },
-            ]}
-          >
-            <EditDetails onClose={toggleEditDetails} />
-          </Animated.View>
-        )}
+        {showEditDetails &&
+        <EditDetails isVisible={showEditDetails} onClose={toggleEditDetails} />
+        }
       </GestureHandlerRootView>
     </>
   );
@@ -135,9 +119,10 @@ const styles = StyleSheet.create({
     borderRadius: 25,
     ...Platform.select({
       native: {
+        zIndex: 1,
         position: 'absolute',
-        top: 10,
-        left: 10,
+        margin: 10,
+        marginTop: 25,
       },
       web: {
         marginBottom: 30,
