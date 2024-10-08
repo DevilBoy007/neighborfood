@@ -1,7 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Dimensions, Animated, Image } from 'react-native';
 import { PanGestureHandler, State } from 'react-native-gesture-handler';
-import { Ionicons } from '@expo/vector-icons';
 const { height, width } = Dimensions.get('window');
 
 const EditDetails = ({ isVisible, onClose }) => {
@@ -60,12 +59,11 @@ const EditDetails = ({ isVisible, onClose }) => {
                 onHandlerStateChange={onHandlerStateChange}
             >
                 <View style={styles.dragBar}>
-                    <Ionicons name="ellipsis-horizontal-outline" size={ 20 } color="gray" />
+                    <View style={styles.dragBarImage} />
                 </View>
             </PanGestureHandler>
 
             <Text style={styles.title}>Edit Details</Text>
-
             <TextInput style={styles.input} placeholder="email" placeholderTextColor={ '#999' } />
 
             <View style={styles.row}>
