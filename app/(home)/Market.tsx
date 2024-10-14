@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, FlatList, StyleSheet, Platform } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, FlatList, StyleSheet, Platform, Animated } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Stack, useRouter } from 'expo-router';
+
+import EditDetails from "@/components/EditDetails";
 
 // Placeholder for the Shop component
 const Shop = ({ name }: { name: string }) => (
@@ -16,12 +17,10 @@ const Shop = ({ name }: { name: string }) => (
 );
 
 const MarketScreen = () => {
-    const router = useRouter();
-    
     const [isMapView, setIsMapView] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
     const [showSortOptions, setShowSortOptions] = useState(false);
-
+    
     const shops = [
         "Ben's Beef",
         "Big Baskets",
@@ -30,51 +29,40 @@ const MarketScreen = () => {
     ]; // this is a placeholder for the list of shops which will eventually load from a data source
 
     const toggleView = () => setIsMapView(!isMapView);
-
+    
     return (
         <>
         <View style={styles.container}>
             <View style={styles.header}>
-                {Platform.OS !== 'web' && <View />}
                 <Text style={styles.title}>market</Text>
-                {
-                Platform.select({
-                    ios: 
-                    <TouchableOpacity onPress={() => alert('profile')} style={styles.profileIcon}>
-                        <View style={styles.profileIcon} />
-                    </TouchableOpacity>,
-                    web:
-                    <View/>
-                })
-                }
             </View>
 
-            <View style={styles.searchContainer}>
-                <Ionicons name="search" size={20} color="gray" style={styles.searchIcon} />
+            <View style={ styles.searchContainer }>
+                <Ionicons name="search" size={ 20 } color="gray" style={ styles.searchIcon } />
                 <TextInput
-                    style={styles.searchInput}
+                    style= {styles.searchInput }
                     placeholder="search"
-                    placeholderTextColor={'#ccc'}
-                    value={searchQuery}
-                    onChangeText={setSearchQuery}
+                    placeholderTextColor={ '#999' }
+                    value={ searchQuery }
+                    onChangeText={ setSearchQuery }
                 />
-                <TouchableOpacity style={styles.sortButton}>
-                    <Text>sort</Text>
+                <TouchableOpacity style={ styles.textButton }>
+                    <Text style={{ fontFamily: 'TextMeOne' }}>sort</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.viewToggle} onPress={toggleView}>
-                    <Text>{isMapView ? 'LIST' : 'MAP'}</Text>
+                <TouchableOpacity style={ styles.textButton } onPress={ toggleView }>
+                    <Text style={{ fontFamily: 'TextMeOne' }}>{ isMapView ? 'list' : 'map' }</Text>
                 </TouchableOpacity>
             </View>
 
             {isMapView ? (
-                <View style={styles.mapContainer}>
-                    <Text style={styles.mapPlaceholder}>MAPBOX</Text>
+                <View style={ styles.mapContainer }>
+                    <Text style={ styles.mapPlaceholder }>MAPBOX</Text>
                 </View>
             ) : (
                 <FlatList
-                    data={shops}
-                    renderItem={({ item }) => <Shop name={item} />}
-                    keyExtractor={(item) => item}
+                    data={ shops }
+                    renderItem={({ item }) => <Shop name={ item } />}
+                    keyExtractor={ ( item ) => item}
                 />
             )}
         </View>
@@ -95,8 +83,7 @@ const styles = StyleSheet.create({
     },
     header: {
         flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: Platform.select({ ios: 'space-between', web: 'center' }),
+        justifyContent: 'center',
         padding: 16,
         marginTop: 40,
     },
@@ -129,14 +116,9 @@ const styles = StyleSheet.create({
         paddingLeft: 30,
         backgroundColor: 'white',
         color: '#00bfff',
+        fontFamily: 'TextMeOne',
     },
-    sortButton: {
-        marginLeft: 8,
-        padding: 8,
-        backgroundColor: 'white',
-        borderRadius: 20,
-    },
-    viewToggle: {
+    textButton: {
         marginLeft: 8,
         padding: 8,
         backgroundColor: 'white',
@@ -159,6 +141,22 @@ const styles = StyleSheet.create({
         borderRadius: 6,
         paddingVertical: Platform.select({ios: 275, web: 240}),
         paddingHorizontal: Platform.select({ios: 140, web: 425})
+    },
+    editDetailsContainer: {
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        // Adjust the height as needed
+        height: '90%',
+    },
+    iconButton: {
+        padding: 10,
+        ...Platform.select({
+            web: {
+                marginBottom: 20,
+            },
+        }),
     },
     shopItem: {
         backgroundColor: 'white',
