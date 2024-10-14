@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Dimensions, Animated, Image } from 'react-native';
-import { PanGestureHandler, State } from 'react-native-gesture-handler';
+import { PanGestureHandler, ScrollView, State } from 'react-native-gesture-handler';
 const { height, width } = Dimensions.get('window');
 
 const EditDetails = ({ isVisible, onClose }) => {
@@ -32,10 +32,8 @@ const EditDetails = ({ isVisible, onClose }) => {
         if (event.nativeEvent.oldState === State.ACTIVE) {
             lastGestureDy.current += event.nativeEvent.translationY;
             if (lastGestureDy.current > height * 0.4) {
-                // If dragged down more than 40% of screen height, close the modal
                 onClose();
             } else {
-                // Otherwise, snap back to fully open position
                 Animated.spring(slideAnim, {
                     toValue: 0,
                     useNativeDriver: true,
@@ -62,26 +60,35 @@ const EditDetails = ({ isVisible, onClose }) => {
                     <View style={styles.dragBarImage} />
                 </View>
             </PanGestureHandler>
-
             <Text style={styles.title}>Edit Details</Text>
-            <TextInput style={styles.input} placeholder="email" placeholderTextColor={ '#999' } />
+            <ScrollView>
+                <Text style={styles.subtitle}>Personal Info</Text>
+                <TextInput style={styles.input} placeholder="email" placeholderTextColor={ '#999' } />
 
-            <View style={styles.row}>
-                <TextInput style={[styles.input, styles.halfInput]} placeholder="address" placeholderTextColor={ '#999' } />
-                <TextInput style={[styles.input, styles.halfInput]} placeholder="city" placeholderTextColor={ '#999' } />
-            </View>
+                <View style={styles.row}>
+                    <TextInput style={[styles.input, styles.halfInput]} placeholder="address" placeholderTextColor={ '#999' } />
+                    <TextInput style={[styles.input, styles.halfInput]} placeholder="city" placeholderTextColor={ '#999' } />
+                </View>
 
-            <View style={styles.row}>
-                <TextInput style={[styles.input, styles.halfInput]} placeholder="state" placeholderTextColor={ '#999' } />
-                <TextInput style={[styles.input, styles.halfInput]} placeholder="zip (optional)" placeholderTextColor={ '#999' } />
-            </View>
+                <View style={styles.row}>
+                    <TextInput style={[styles.input, styles.halfInput]} placeholder="state" placeholderTextColor={ '#999' } />
+                    <TextInput style={[styles.input, styles.halfInput]} placeholder="zip (optional)" placeholderTextColor={ '#999' } />
+                </View>
 
-            <Text style={styles.subtitle}>Login Info</Text>
+                <Text style={styles.subtitle}>Login Info</Text>
 
-            <TextInput style={styles.input} placeholder="username" placeholderTextColor={ '#999' } />
-            <TextInput style={styles.input} placeholder="password" placeholderTextColor={ '#999' } secureTextEntry />
-            <TextInput style={styles.input} placeholder="confirm password" placeholderTextColor={ '#999' } secureTextEntry />
+                <TextInput style={styles.input} placeholder="username" placeholderTextColor={ '#999' } />
+                <TextInput style={styles.input} placeholder="password" placeholderTextColor={ '#999' } secureTextEntry />
+                <TextInput style={styles.input} placeholder="confirm password" placeholderTextColor={ '#999' } secureTextEntry />
 
+                <Text style={styles.subtitle}>Payment Info</Text>
+
+                <TextInput style={styles.input} placeholder="cardholder name" placeholderTextColor={'#999'} />
+                <TextInput style={styles.input} placeholder="card number" placeholderTextColor={'#999'} />
+                <TextInput style={styles.input} placeholder="expiration" placeholderTextColor={'#999'} />
+                <TextInput style={styles.input} placeholder="cvv" placeholderTextColor={'#999'} />
+            </ScrollView>
+            
             <TouchableOpacity style={styles.saveButton} onPress={onClose}>
                 <Text style={styles.saveButtonText}>Save</Text>
             </TouchableOpacity>
