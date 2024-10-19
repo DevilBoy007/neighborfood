@@ -1,8 +1,11 @@
 import { Slot, Stack, useRouter } from "expo-router";
 import { useFonts } from 'expo-font';
-import { View, StyleSheet, Platform, TouchableOpacity, Image } from 'react-native';
+import { View, StyleSheet, Platform, TouchableOpacity, Image, Pressable } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import * as SplashScreen from 'expo-splash-screen';
-import { useEffect } from 'react';
+import { useEffect, useState, useCallback } from 'react';
+
+import EditDetails from "@/components/EditDetails";
 
 import chatIcon from '../../assets/images/chat.png';
 import pollsIcon from '../../assets/images/surveys.png';
@@ -18,7 +21,10 @@ export default function RootLayout() {
   const [loaded] = useFonts({
     SpaceMono: require('../../assets/fonts/SpaceMono-Regular.ttf'),
     TitanOne: require('../../assets/fonts/TitanOne-Regular.ttf'),
+    TextMeOne: require('../../assets/fonts/TextMeOne-Regular.ttf'),
   });
+
+  const [showEditDetails, setShowEditDetails] = useState(false);
 
   useEffect(() => {
     if (loaded) {
@@ -26,22 +32,54 @@ export default function RootLayout() {
     }
   }, [loaded]);
 
+  const toggleEditDetails = useCallback(() => {
+    setShowEditDetails(prev => !prev);
+  }, []);
+
   if (!loaded) {
     return null;
   }
+
   return (
     <>
-      <View style={styles.container}>
-        <Stack.Screen options={{ headerShown: false }} />
-        <View style={styles.content}>
-      {Platform.OS === 'web' &&
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <View style={styles.container}>
+          <Stack.Screen options={{ headerShown: false }} initialParams={{ toggleEditDetails: toggleEditDetails, showEditDetails: showEditDetails }}  />
+          {Platform.OS !== 'web' && !showEditDetails &&
+            <TouchableOpacity onPress={toggleEditDetails} style={styles.profileImage}>
+              <Image
+                source={profileIcon}
+                style={styles.profileImage}
+              />
+            </TouchableOpacity>
+          }
+          <View style={styles.content}>
+          {Platform.OS === 'web' &&
+            <View style={styles.footer}>
+              <TouchableOpacity style={styles.iconButton} onPress={ toggleEditDetails }>
+                <Image
+                  source={profileIcon}
+                  style={[styles.iconButton, styles.profileImage]}
+                />
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.iconButton}>
+                <Image style={[styles.iconButton, styles.icon]} source={chatIcon} />
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.iconButton}>
+                <Image style={[styles.iconButton, styles.icon]} source={pollsIcon} />
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.iconButton} onPress={() => { router.navigate('/Market') }}>
+                <Image style={[styles.iconButton, styles.icon]} source={marketIcon} />
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.iconButton} onPress={ () => router.navigate('/Menu')}>
+                <Image style={[styles.iconButton, styles.icon]} source={tileIcon} />
+              </TouchableOpacity>
+            </View>}
+            <Slot />
+          </View>
+        </View>
+        {Platform.OS !== 'web' &&
         <View style={styles.footer}>
-          <TouchableOpacity style={styles.iconButton} onPress={ () => { alert('profile') }}>
-            <Image
-              source={profileIcon}
-              style={[styles.iconButton, styles.profileImage]}
-            />
-          </TouchableOpacity>
           <TouchableOpacity style={styles.iconButton}>
             <Image style={[styles.iconButton, styles.icon]} source={chatIcon} />
           </TouchableOpacity>
@@ -55,26 +93,10 @@ export default function RootLayout() {
             <Image style={[styles.iconButton, styles.icon]} source={tileIcon} />
           </TouchableOpacity>
         </View>}
-          <Slot />
-        </View>
-      </View>
-    {
-      Platform.OS !== 'web' &&
-        <View style={styles.footer}>
-          <TouchableOpacity style={styles.iconButton}>
-            <Image style={[styles.iconButton, styles.icon]} source={chatIcon} />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.iconButton}>
-            <Image style={[styles.iconButton, styles.icon]} source={pollsIcon} />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.iconButton} onPress={() => { router.navigate('/Market') }}>
-            <Image style={[styles.iconButton, styles.icon]} source={marketIcon} />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.iconButton} onPress={ () => router.navigate('/Menu')}>
-            <Image style={[styles.iconButton, styles.icon]} source={tileIcon} />
-          </TouchableOpacity>
-        </View>
-    }
+        {showEditDetails &&
+        <EditDetails isVisible={showEditDetails} onClose={toggleEditDetails} />
+        }
+      </GestureHandlerRootView>
     </>
   );
 }
@@ -97,9 +119,10 @@ const styles = StyleSheet.create({
     borderRadius: 25,
     ...Platform.select({
       native: {
+        zIndex: 1,
         position: 'absolute',
-        top: 10,
-        left: 10,
+        margin: 10,
+        marginTop: 25,
       },
       web: {
         marginBottom: 30,
@@ -129,6 +152,14 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
       },
     }),
+  },
+  editDetailsContainer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    // Adjust the height as needed
+    height: '90%',
   },
   iconButton: {
     padding: 10,

@@ -1,12 +1,9 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, SafeAreaView, Image, ScrollView, Platform, ImageBackground, ImageSourcePropType, Pressable } from 'react-native';
+import React, { useState, useRef } from 'react';
+import { Animated, View, Text, TouchableOpacity, StyleSheet, SafeAreaView, Image, ScrollView, Platform, ImageBackground, ImageSourcePropType, Pressable } from 'react-native';
 import { useRouter, Stack } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
 
-import chatIcon from '../../assets/images/chat.png';
-import pollsIcon from '../../assets/images/surveys.png';
-import marketIcon from '../../assets/images/market.png';
-import tileIcon from '../../assets/images/tiles.png';
+import EditDetails from '@/components/EditDetails';
+
 import shopIcon from '../../assets/images/shop.png';
 import receiptIcon from '../../assets/images/receipt.png';
 import contactUsIcon from '../../assets/images/contact.png';
@@ -39,27 +36,17 @@ const MenuScreen = () => {
             )
         }
     };
-
     const communityNeedsList = [
         { name: 'tomatoes', image: tomatoImage },
         { name: 'dill', image: dillImage },
         { name: 'bell peppers', image: bellPepperImage },
     ];
-
+    
     return (
         <>
         <View style={styles.container}>
-        <Stack.Screen options={{ headerShown: false }} />
             <ScrollView contentContainerStyle={styles.scrollContent}>
                 <View style={styles.header}>
-                {Platform.OS !== 'web' &&
-                    <Pressable onPress={() => alert('profile')} style={styles.profileImage}>
-                        <Image
-                            source={profileIcon}
-                            style={styles.profileImage}
-                        />
-                    </Pressable>
-                }
                     <Text style={styles.headerText}> <Text style={styles.boldText}>community needs</Text> | <Text style={styles.italicText}>you're in <TouchableOpacity><Text style={[styles.link, styles.italicText, styles.underlineText]}>Fountain Square, Indianapolis</Text></TouchableOpacity></Text></Text>
                     <View style={styles.communityNeedsContainer}>
                         {communityNeedsList.map((item, index) => (
@@ -95,7 +82,8 @@ const MenuScreen = () => {
 
 const styles = StyleSheet.create({
     container: {
-        paddingTop: 40,
+        height: '100%',
+        paddingTop: Platform.OS === ('ios' || 'android') ? 70 : 0,
         flex: 1,
         backgroundColor: '#B7FFB0',
     },
@@ -218,36 +206,7 @@ const styles = StyleSheet.create({
                 fontSize: 16,
             },
         }),
-    },
-    footer: {
-        flexDirection: 'row',
-        justifyContent: 'space-evenly',
-        alignItems: 'center',
-        backgroundColor: '#87CEFA',
-        padding: 10,
-        ...Platform.select({
-            ios: {
-                position: 'absolute',
-                bottom: 0,
-                left: 0,
-                right: 0,
-            },
-            web: {
-                flexDirection: 'column',
-                width: 200,
-                height: '100%',
-                justifyContent: 'center',
-            },
-        }),
-    },
-    iconButton: {
-        padding: 10,
-        ...Platform.select({
-            web: {
-                marginBottom: 20,
-            },
-        }),
-    },
+    }, 
     icon: {
         width: 50,
         height: 50,
