@@ -45,7 +45,7 @@ export default function RootLayout() {
       <GestureHandlerRootView style={{ flex: 1 }}>
         <View style={styles.container}>
           <Stack.Screen options={{ headerShown: false }} initialParams={{ toggleEditDetails: toggleEditDetails, showEditDetails: showEditDetails }}  />
-          {Platform.OS !== 'web' &&
+          {Platform.OS !== 'web' && !showEditDetails &&
             <TouchableOpacity onPress={toggleEditDetails} style={styles.profileImage}>
               <Image
                 source={profileIcon}

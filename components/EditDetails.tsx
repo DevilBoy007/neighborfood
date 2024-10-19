@@ -1,6 +1,9 @@
 import React, { useEffect, useRef } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Dimensions, Animated, Image } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Dimensions, Animated, Image, Platform } from 'react-native';
 import { PanGestureHandler, ScrollView, State } from 'react-native-gesture-handler';
+
+import profileIcon from '../assets/images/user.png';
+
 const { height, width } = Dimensions.get('window');
 
 const EditDetails = ({ isVisible, onClose }) => {
@@ -60,6 +63,12 @@ const EditDetails = ({ isVisible, onClose }) => {
                     <View style={styles.dragBarImage} />
                 </View>
             </PanGestureHandler>
+            <TouchableOpacity style={styles.profileImage}>
+                <Image
+                    source={profileIcon}
+                    style={styles.profileImage}
+                />
+            </TouchableOpacity>
             <Text style={styles.title}>Edit Details</Text>
             <ScrollView>
                 <Text style={styles.subtitle}>Personal Info</Text>
@@ -119,6 +128,25 @@ const styles = StyleSheet.create({
         height: 5,
         backgroundColor: 'grey',
         borderRadius: 2.5,
+    },
+    profileImage: {
+        width: 50,
+        height: 50,
+        borderRadius: 25,
+        ...Platform.select({
+            native: {
+                zIndex: 1,
+                position: 'absolute',
+                margin: 10,
+                marginTop: 25,
+            },
+            web: {
+                marginBottom: 30,
+                width: 100,
+                height: 100,
+                borderRadius: 50,
+            },
+        }),
     },
     title: {
         fontFamily: 'TextMeOne',
