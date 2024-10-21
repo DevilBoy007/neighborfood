@@ -1,6 +1,6 @@
 import { Slot, Stack, useRouter } from "expo-router";
 import { useFonts } from 'expo-font';
-import { View, StyleSheet, Platform, TouchableOpacity, Image, Pressable } from 'react-native';
+import { View, StyleSheet, Platform, TouchableOpacity, Image } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect, useState, useCallback } from 'react';
