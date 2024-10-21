@@ -45,27 +45,26 @@ const MenuScreen = () => {
     return (
         <>
         <View style={styles.container}>
-            <ScrollView contentContainerStyle={styles.scrollContent}>
-                <View style={styles.header}>
-                    <Text style={styles.headerText}> <Text style={styles.boldText}>community needs</Text> | <Text style={styles.italicText}>you're in <TouchableOpacity><Text style={[styles.link, styles.italicText, styles.underlineText]}>Fountain Square, Indianapolis</Text></TouchableOpacity></Text></Text>
-                    <View style={styles.communityNeedsContainer}>
-                        {communityNeedsList.map((item, index) => (
-                            <TouchableOpacity key={index} style={styles.communityNeedButton}>
-                            {
-                                Platform.select({
-                                    ios: 
-                                    <Text style={styles.communityNeedText}>{item.name}</Text>,
-                                    web: 
-                                    <ImageBackground source={item.image} style={{ width: 150, height: 150 }} resizeMode='cover'>
-                                        <Text style={styles.communityNeedText}>{item.name}</Text>
-                                    </ImageBackground>
-                                })
-                            }
-                            </TouchableOpacity>
-                        ))}
-                    </View>
+            <View style={styles.header}>
+                <Text style={styles.headerText}> <Text style={styles.boldText}>community needs</Text> | <Text style={styles.italicText}>you're in <TouchableOpacity><Text style={[styles.link, styles.italicText, styles.underlineText]}>Fountain Square, Indianapolis</Text></TouchableOpacity></Text></Text>
+                <View style={styles.communityNeedsContainer}>
+                    {communityNeedsList.map((item, index) => (
+                        <TouchableOpacity key={index} style={styles.communityNeedButton}>
+                        {
+                            Platform.select({
+                                ios: 
+                                <Text style={styles.communityNeedText}>{item.name}</Text>,
+                                web: 
+                                <ImageBackground source={item.image} style={{ width: 150, height: 150 }} resizeMode='cover'>
+                                    <Text style={styles.communityNeedText}>{item.name}</Text>
+                                </ImageBackground>
+                            })
+                        }
+                        </TouchableOpacity>
+                    ))}
                 </View>
-
+            </View>
+            <ScrollView contentContainerStyle={styles.scrollContent}>
                 <View style={styles.menuGrid}>
                     <MenuButton icon="+" title="add item" />
                     <MenuButton icon={shopIcon} title="manage shops" />
