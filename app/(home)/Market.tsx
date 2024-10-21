@@ -1,8 +1,6 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, FlatList, StyleSheet, Platform, Animated } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, FlatList, StyleSheet, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-
-import EditDetails from "@/components/EditDetails";
 
 // Placeholder for the Shop component
 const Shop = ({ name }: { name: string }) => (
