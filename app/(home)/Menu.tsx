@@ -1,14 +1,11 @@
-import React, { useState, useRef } from 'react';
-import { Animated, View, Text, TouchableOpacity, StyleSheet, SafeAreaView, Image, ScrollView, Platform, ImageBackground, ImageSourcePropType, Pressable } from 'react-native';
-import { useRouter, Stack } from 'expo-router';
-
-import EditDetails from '@/components/EditDetails';
+import React from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, Image, ScrollView, Platform, ImageBackground, ImageSourcePropType } from 'react-native';
+import { useRouter } from 'expo-router';
 
 import shopIcon from '../../assets/images/shop.png';
 import receiptIcon from '../../assets/images/receipt.png';
 import contactUsIcon from '../../assets/images/contact.png';
 import dashboardIcon from '../../assets/images/dashboard.png';
-import profileIcon from '../../assets/images/user.png';
 
 import tomatoImage from '../../assets/images/tomatoes.png';
 import dillImage from '../../assets/images/dill.jpeg';
