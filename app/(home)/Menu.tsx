@@ -12,7 +12,6 @@ import dillImage from '../../assets/images/dill.jpeg';
 import bellPepperImage from '../../assets/images/bellPeppers.jpeg';
 
 
-
 const MenuScreen = () => {
     const router = useRouter();
     const MenuButton = ({ icon, title, destination }: { icon: ImageSourcePropType | string, title: string, destination: string | null }) => {
