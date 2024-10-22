@@ -176,6 +176,8 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         marginBottom: 10,
         borderRadius: 10,
+        borderColor: 'black',
+        borderWidth: 1,
         ...Platform.select({
             web: {
                 height: 250,
