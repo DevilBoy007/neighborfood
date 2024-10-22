@@ -21,7 +21,7 @@ const OrderCard = ({ order, onPress }) => {
                 <View style={styles.detailRow}>
                     <Text style={styles.detailLabel}>shops:</Text>
                     <Text style={styles.detailValue}>
-                        {shops.join(', ')} ...
+                        {shops.join(', ')}
                     </Text>
                 </View>
 
