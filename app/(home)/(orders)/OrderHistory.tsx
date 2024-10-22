@@ -1,33 +1,36 @@
 import React from 'react';
+import { useRouter } from 'expo-router'
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+
 import OrderCard from '@/components/OrderCard';
 
 const OrderHistoryScreen = () => {
+    const router = useRouter();
     const orders = [
         {
-            date: 'Wed, Nov 27',
-            total: 'xxx.xx',
+            date: 'Sun, Oct 20',
+            total: '36.90',
             shops: ["Ann's Apples", "Bakr's Baskets"],
-            items: 15
+            items: 9
+        },
+        {
+            date: 'Mon, April 22',
+            total: '120.12',
+            shops: ["Ann's Apples", "Bakr's Baskets"],
+            items: 27
         },
         {
             date: 'Wed, Nov 27',
-            total: 'xxx.xx',
-            shops: ["Ann's Apples", "Bakr's Baskets"],
-            items: 15
-        },
-        {
-            date: 'Wed, Nov 27',
-            total: 'xxx.xx',
-            shops: ["Ann's Apples", "Bakr's Baskets"],
-            items: 15
+            total: '11.50',
+            shops: ["Ann's Apples"],
+            items: 2
         },
     ];
 
     const handleOrderPress = (order) => {
-        // Handle order press event
-        console.log('Order pressed:', order);
+        router.setParams({ order });
+        router.push('./OrderDetail');
     };
 
     return (
