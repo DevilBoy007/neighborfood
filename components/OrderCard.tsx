@@ -7,27 +7,27 @@ const OrderCard = ({ order, onPress }) => {
 
     return (
         <TouchableOpacity style={styles.orderCard} onPress={onPress}>
-            <View style={styles.orderHeader}>
-                <Text style={styles.dateText}>{date}</Text>
-                <Ionicons name="chevron-forward" size={24} color="black" />
+        <View style={styles.orderHeader}>
+            <Text style={styles.dateText}>{date}</Text>
+            <Ionicons name="chevron-forward" size={24} color="black" />
+        </View>
+
+        <View style={styles.orderDetails}>
+            <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>total:</Text>
+                <Text style={styles.detailValue}>${total}</Text>
             </View>
 
-            <View style={styles.orderDetails}>
-                <View style={styles.detailRow}>
-                    <Text style={styles.detailLabel}>total:</Text>
-                    <Text style={styles.detailValue}>${total}</Text>
-                </View>
-
-                <View style={styles.detailRow}>
-                    <Text style={styles.detailLabel}>shops:</Text>
-                    <Text style={styles.detailValue}>
-                        {shops.join(', ')}
-                    </Text>
-                </View>
-
-                <Text style={styles.itemsText}>items: {items}</Text>
+            <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>shops:</Text>
+                <Text style={styles.detailValue}>
+                    {shops.join(', ')}
+                </Text>
             </View>
-        </TouchableOpacity>
+
+            <Text style={styles.itemsText}>items: {items}</Text>
+        </View>
+    </TouchableOpacity>
     );
 };
 
