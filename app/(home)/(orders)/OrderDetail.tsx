@@ -1,5 +1,6 @@
 // OrderDetailScreen.js
 import React, { useEffect, useRef } from 'react';
+import { useRouter } from 'expo-router';
 import {
     View,
     Text,
@@ -8,7 +9,8 @@ import {
     TouchableOpacity,
     ScrollView,
     Animated,
-    Dimensions
+    Dimensions,
+    Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -32,6 +34,7 @@ const ShopSection = ({ shop, items }) => (
 );
 
 const OrderDetailScreen = ({ navigation, route }) => {
+    const router = useRouter();
     const slideAnim = useRef(new Animated.Value(height)).current;
     const fadeAnim = useRef(new Animated.Value(0)).current;
 
@@ -94,7 +97,7 @@ const OrderDetailScreen = ({ navigation, route }) => {
                                 duration: 300,
                                 useNativeDriver: true,
                             })
-                        ]).start(() => navigation.goBack());
+                        ]).start(() => router.replace('./OrderHistory'));
                     }}
                 >
                     <Ionicons name="chevron-back" size={24} color="black" />
@@ -141,7 +144,7 @@ const OrderDetailScreen = ({ navigation, route }) => {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#c2f7d7',
+        backgroundColor: '#b7ffb0',
     },
     header: {
         flexDirection: 'row',
@@ -149,6 +152,11 @@ const styles = StyleSheet.create({
         padding: 16,
         borderBottomWidth: 1,
         borderBottomColor: '#000',
+        ...Platform.select({
+            ios: {
+                justifyContent: 'flex-end',
+            }
+        }),
     },
     backButton: {
         marginRight: 16,

@@ -1,6 +1,6 @@
 import React from 'react';
 import { useRouter } from 'expo-router'
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import OrderCard from '@/components/OrderCard';
@@ -36,10 +36,10 @@ const OrderHistoryScreen = () => {
     return (
         <SafeAreaView style={styles.container}>
             <View style={styles.header}>
-                <TouchableOpacity style={styles.backButton}>
+                <TouchableOpacity style={styles.backButton} onPress={() => router.navigate('../Menu')}>
                     <Ionicons name="chevron-back" size={24} color="black" />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>order history</Text>
+                <Text style={styles.headerTitle}>menu</Text>
             </View>
 
             <ScrollView style={styles.scrollView}>
@@ -63,9 +63,13 @@ const styles = StyleSheet.create({
     },
     header: {
         flexDirection: 'row',
-        justifyContent: 'flex-end',
         alignItems: 'center',
         padding: 16,
+        ...Platform.select({
+            ios: {
+                justifyContent: 'flex-end',
+            }
+        }),
     },
     backButton: {
         marginRight: 16,
