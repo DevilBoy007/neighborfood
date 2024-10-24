@@ -3,6 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, Dimensions, Animat
 import { PanGestureHandler, ScrollView, State } from 'react-native-gesture-handler';
 
 import profileIcon from '../assets/images/user.png';
+import { router } from 'expo-router';
 
 const { height, width } = Dimensions.get('window');
 
@@ -98,7 +99,7 @@ const EditDetails = ({ isVisible, onClose }) => {
                 <TextInput style={styles.input} placeholder="cvv" placeholderTextColor={'#999'} />
             </ScrollView>
             
-            <TouchableOpacity style={styles.saveButton} onPress={onClose}>
+            <TouchableOpacity style={styles.saveButton} onPress={()=>{router.push('/success')}}>
                 <Text style={styles.saveButtonText}>Save</Text>
             </TouchableOpacity>
         </Animated.View>
