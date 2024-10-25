@@ -30,13 +30,13 @@ const OrderHistoryScreen = () => {
 
     const handleOrderPress = (order) => {
         router.setParams({ order });
-        router.push('./OrderDetail');
+        router.push('./OrderDetails');
     };
 
     return (
         <SafeAreaView style={styles.container}>
             <View style={styles.header}>
-                <TouchableOpacity style={styles.backButton} onPress={() => router.navigate('../Menu')}>
+                <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
                     <Ionicons name="chevron-back" size={24} color="black" />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>menu</Text>

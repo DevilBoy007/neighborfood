@@ -97,7 +97,7 @@ const OrderDetailScreen = ({ navigation, route }) => {
                                 duration: 300,
                                 useNativeDriver: true,
                             })
-                        ]).start(() => router.replace('./OrderHistory'));
+                        ]).start(() => router.back());
                     }}
                 >
                     <Ionicons name="chevron-back" size={24} color="black" />

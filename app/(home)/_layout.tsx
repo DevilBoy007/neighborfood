@@ -1,4 +1,4 @@
-import { Slot, Stack, useRouter } from "expo-router";
+import { Stack, useRouter } from "expo-router";
 import { useFonts } from 'expo-font';
 import { View, StyleSheet, Platform, TouchableOpacity, Image } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -75,7 +75,10 @@ export default function RootLayout() {
                 <Image style={[styles.iconButton, styles.icon]} source={tileIcon} />
               </TouchableOpacity>
             </View>}
-            <Slot />
+            <Stack>
+              <Stack.Screen name="Market" options={{ headerShown: false }} />
+              <Stack.Screen name="Menu" options={{ headerShown: false }} />
+            </Stack>
           </View>
         </View>
         {Platform.OS !== 'web' &&
