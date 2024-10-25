@@ -63,16 +63,34 @@ const EditDetails = ({ isVisible, onClose }) => {
                     <View style={styles.dragBarImage} />
                 </View>
             </PanGestureHandler>
+            {Platform.OS === 'web' &&
+                <View style={{ flex: 1, flexDirection: 'row', justifyContent: 'space-between', marginBottom: 100, }}>
+                <TouchableOpacity style={styles.profileImage}>
+                    <Image
+                        source={profileIcon}
+                        style={styles.profileImage}
+                    />
+                </TouchableOpacity>
+                <Text style={styles.title}>Edit Details</Text>
+            </View>
+            }
+            { Platform.OS !== 'web' && <>
             <TouchableOpacity style={styles.profileImage}>
                 <Image
                     source={profileIcon}
-                    style={styles.profileImage}
-                />
+                    style={styles.profileImage} />
             </TouchableOpacity>
             <Text style={styles.title}>Edit Details</Text>
+            </>
+            }
             <ScrollView>
                 <Text style={styles.subtitle}>Personal Info</Text>
                 <TextInput style={styles.input} placeholder="email" placeholderTextColor={ '#999' } />
+
+                <View style={styles.row}>
+                    <TextInput style={[styles.input, styles.halfInput]} placeholder="first name" placeholderTextColor={'#999'} />
+                    <TextInput style={[styles.input, styles.halfInput]} placeholder="last name" placeholderTextColor={'#999'} />
+                </View>
 
                 <View style={styles.row}>
                     <TextInput style={[styles.input, styles.halfInput]} placeholder="address" placeholderTextColor={ '#999' } />
@@ -153,6 +171,12 @@ const styles = StyleSheet.create({
         fontSize: 24,
         marginBottom: 20,
         textAlign: 'center',
+        ...Platform.select({
+            web: {
+                fontSize: 40,
+                flexGrow: 1,
+            }
+        }),
     },
     subtitle: {
         fontFamily: 'TextMeOne',
