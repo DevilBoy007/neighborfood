@@ -14,10 +14,10 @@ import bellPepperImage from '../../assets/images/bellPeppers.jpeg';
 
 const MenuScreen = () => {
     const router = useRouter();
-    const MenuButton = ({ icon, title }: { icon: ImageSourcePropType | string, title: string }) => {
+    const MenuButton = ({ icon, title, destination }: { icon: ImageSourcePropType | string, title: string, destination: string | null }) => {
         if (typeof icon !== 'string') {
             return (
-                <TouchableOpacity style={styles.menuButton}>
+                <TouchableOpacity style={styles.menuButton} onPress={() => router.navigate(`/(home)/${destination}`)} >
                     <Image source={icon} style={styles.icon} />
                     <Text style={styles.menuButtonText}>{title}</Text>
                 </TouchableOpacity>
@@ -65,7 +65,7 @@ const MenuScreen = () => {
                     <MenuButton icon="+" title="add item" />
                     <MenuButton icon={shopIcon} title="manage shops" />
                     <MenuButton icon={dashboardIcon} title="dashboard" />
-                    <MenuButton icon={receiptIcon} title="order history" />
+                    <MenuButton icon={receiptIcon} title="order history" destination={"./(orders)/OrderHistory"}/>
                     <MenuButton icon={contactUsIcon} title="contact us" />
                     <MenuButton icon="!" title="report a problem" />
                 </View>
@@ -176,6 +176,8 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         marginBottom: 10,
         borderRadius: 10,
+        borderColor: 'black',
+        borderWidth: 1,
         ...Platform.select({
             web: {
                 height: 250,
