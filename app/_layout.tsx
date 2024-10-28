@@ -2,6 +2,7 @@ import { Stack } from "expo-router";
 import { useFonts } from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 
 
 SplashScreen.preventAutoHideAsync();
@@ -22,10 +23,13 @@ export default function RootLayout() {
         return null;
     }
     return (
-        <Stack>
-            <Stack.Screen name="index" options={{ headerShown: false }} />
-            <Stack.Screen name="+not-found" options={{ headerShown: false }} />
-            <Stack.Screen name="success" options={{ headerShown: false, animation: 'fade' }} />
-        </Stack>
+        <GestureHandlerRootView style={{ flex: 1 }}>
+            <Stack>
+                <Stack.Screen name="index" options={{ headerShown: false }} />
+                <Stack.Screen name="+not-found" options={{ headerShown: false }} />
+                <Stack.Screen name="success" options={{ headerShown: false, animation: 'fade' }} />
+                <Stack.Screen name="EditDetails" options={{ headerShown: false, presentation: 'modal', }} />
+            </Stack>
+            </GestureHandlerRootView>
     );
 }

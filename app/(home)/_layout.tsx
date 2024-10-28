@@ -1,11 +1,8 @@
 import { Stack, useRouter } from "expo-router";
 import { useFonts } from 'expo-font';
 import { View, StyleSheet, Platform, TouchableOpacity, Image } from 'react-native';
-import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect, useState, useCallback } from 'react';
-
-import EditDetails from "@/components/EditDetails";
 
 import chatIcon from '../../assets/images/chat.png';
 import pollsIcon from '../../assets/images/surveys.png';
@@ -33,7 +30,7 @@ export default function RootLayout() {
   }, [loaded]);
 
   const toggleEditDetails = useCallback(() => {
-    setShowEditDetails(prev => !prev);
+    router.navigate('/EditDetails');
   }, []);
 
   if (!loaded) {
@@ -42,7 +39,6 @@ export default function RootLayout() {
 
   return (
     <>
-      <GestureHandlerRootView style={{ flex: 1 }}>
         <View style={styles.container}>
           <Stack.Screen options={{ headerShown: false }} initialParams={{ toggleEditDetails: toggleEditDetails, showEditDetails: showEditDetails }}  />
           {Platform.OS !== 'web' && !showEditDetails &&
@@ -96,10 +92,6 @@ export default function RootLayout() {
             <Image style={[styles.iconButton, styles.icon]} source={tileIcon} />
           </TouchableOpacity>
         </View>}
-        {showEditDetails &&
-        <EditDetails isVisible={showEditDetails} onClose={toggleEditDetails} />
-        }
-      </GestureHandlerRootView>
     </>
   );
 }
