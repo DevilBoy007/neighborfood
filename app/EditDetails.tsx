@@ -1,69 +1,20 @@
-import React, { useEffect, useRef } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Dimensions, Animated, Image, Platform } from 'react-native';
-import { PanGestureHandler, ScrollView, State } from 'react-native-gesture-handler';
+import React from 'react';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Dimensions, Image, Platform } from 'react-native';
+import {  ScrollView } from 'react-native-gesture-handler';
 
-import profileIcon from '../assets/images/user.png';
+import profileIcon from '@/assets/images/user.png';
 import { router } from 'expo-router';
 
 const { height, width } = Dimensions.get('window');
 
-const EditDetails = ({ isVisible, onClose }) => {
-    const slideAnim = useRef(new Animated.Value(height)).current;
-    const lastGestureDy = useRef(0);
-
-    useEffect(() => {
-        if (isVisible) {
-            // Slide up
-            Animated.spring(slideAnim, {
-                toValue: 0,
-                useNativeDriver: true,
-            }).start();
-        } else {
-            // Slide down
-            Animated.spring(slideAnim, {
-                toValue: height,
-                useNativeDriver: true,
-            }).start();
-        }
-    }, [isVisible, slideAnim]);
-
-    const onGestureEvent = Animated.event(
-        [{ nativeEvent: { translationY: slideAnim } }],
-        { useNativeDriver: true }
-    );
-
-    const onHandlerStateChange = event => {
-        if (event.nativeEvent.oldState === State.ACTIVE) {
-            lastGestureDy.current += event.nativeEvent.translationY;
-            if (lastGestureDy.current > height * 0.4) {
-                onClose();
-            } else {
-                Animated.spring(slideAnim, {
-                    toValue: 0,
-                    useNativeDriver: true,
-                }).start();
-            }
-            lastGestureDy.current = 0;
-        }
-    };
+const EditDetails = () => {
 
     return (
-        <Animated.View
-            style={[
-                styles.container,
-                {
-                    transform: [{ translateY: slideAnim }],
-                },
-            ]}
-        >
-            <PanGestureHandler
-                onGestureEvent={ () => { onGestureEvent }}
-                onHandlerStateChange={onHandlerStateChange}
-            >
-                <View style={styles.dragBar}>
-                    <View style={styles.dragBarImage} />
-                </View>
-            </PanGestureHandler>
+        <View style={styles.container}>
+            <View style={styles.dragBar}>
+                {Platform.OS !== 'web' && <View style={styles.dragBarImage} />}
+                {Platform.OS === 'web' && <Text onPress={() => { router.back(); }} style={styles.closeIcon}>X</Text>}
+            </View>
             {Platform.OS === 'web' &&
                 <View style={{ flex: 1, flexDirection: 'row', justifyContent: 'space-between', marginBottom: 100, }}>
                 <TouchableOpacity style={styles.profileImage}>
@@ -116,31 +67,47 @@ const EditDetails = ({ isVisible, onClose }) => {
                 <TextInput style={styles.input} placeholder="expiration" placeholderTextColor={'#999'} />
                 <TextInput style={styles.input} placeholder="cvv" placeholderTextColor={'#999'} />
             </ScrollView>
-            
-            <TouchableOpacity style={styles.saveButton} onPress={()=>{router.push('/success')}}>
+            <TouchableOpacity style={styles.saveButton} onPress={()=>{ router.back(); router.push("/success") }}>
                 <Text style={styles.saveButtonText}>Save</Text>
             </TouchableOpacity>
-        </Animated.View>
+        </View>
     );
 }
 
 const styles = StyleSheet.create({
     container: {
-        position: 'absolute',
-        bottom: 0,
-        left: 0,
-        right: 0,
-        height: height * 0.9,
-        backgroundColor: '#87CEFA',
-        borderTopLeftRadius: 20,
-        borderTopRightRadius: 20,
+        backgroundColor: '#b7ffb0',
         padding: 20,
+        ...Platform.select({
+            ios: {
+                height: height * 0.93,
+            },
+            web: {
+                height: height,
+            },
+        }),
     },
     dragBar: {
         width: '100%',
         height: 30,
         justifyContent: 'center',
         alignItems: 'center',
+    },
+    closeIcon: {
+        fontSize: 15,
+        fontWeight: 'bold',
+        color: '#b7ffb0',
+        fontFamily: 'TextMeOne',
+        margin: 30,
+        position: 'absolute',
+        height: 33,
+        width: 33,
+        borderRadius: 17,
+        backgroundColor: "#fff",
+        padding: 10,
+        paddingLeft: 12,
+        right: 0,
+        top: 0,
     },
     dragBarImage: {
         width: 50,
@@ -168,7 +135,8 @@ const styles = StyleSheet.create({
         }),
     },
     title: {
-        fontFamily: 'TextMeOne',
+        fontFamily: 'TitanOne',
+        color: '#fff',
         fontSize: 24,
         marginBottom: 20,
         textAlign: 'center',
@@ -200,15 +168,17 @@ const styles = StyleSheet.create({
         width: '48%',
     },
     saveButton: {
-        backgroundColor: 'white',
+        backgroundColor: '#00bfff',
+        width: '100%',
         padding: 15,
+        marginTop: 10,
         borderRadius: 5,
         alignItems: 'center',
-        marginTop: 20,
     },
     saveButtonText: {
         fontFamily: 'TextMeOne',
         fontSize: 30,
+        color: 'white',
     },
 });
 

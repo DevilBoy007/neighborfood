@@ -75,7 +75,6 @@ const styles = StyleSheet.create({
         ...Platform.select({
             web:{
                 minWidth: '100%',
-                paddingRight: 175,
             }
         })
     },

@@ -13,7 +13,7 @@ export default function SucessScreen({ onTimerComplete = () => { } }) {
         setShow(true);
         const timer = setTimeout(() => {
             onTimerComplete();
-        }, 1200);
+        }, (Platform.OS === 'web'? 2000 : 1200));
 
         // Cleanup timer if component unmounts
         return () => clearTimeout(timer);
