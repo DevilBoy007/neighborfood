@@ -1,6 +1,6 @@
-import React, { useEffect, useRef } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Dimensions, Animated, Image, Platform } from 'react-native';
-import { PanGestureHandler, ScrollView, State } from 'react-native-gesture-handler';
+import React from 'react';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Dimensions, Image, Platform } from 'react-native';
+import {  ScrollView } from 'react-native-gesture-handler';
 
 import profileIcon from '@/assets/images/user.png';
 import { router } from 'expo-router';
@@ -12,7 +12,8 @@ const EditDetails = () => {
     return (
         <View style={styles.container}>
             <View style={styles.dragBar}>
-                <View style={styles.dragBarImage} />
+                {Platform.OS !== 'web' && <View style={styles.dragBarImage} />}
+                {Platform.OS === 'web' && <Text onPress={() => { router.back(); }} style={styles.closeIcon}>X</Text>}
             </View>
             {Platform.OS === 'web' &&
                 <View style={{ flex: 1, flexDirection: 'row', justifyContent: 'space-between', marginBottom: 100, }}>
@@ -66,7 +67,7 @@ const EditDetails = () => {
                 <TextInput style={styles.input} placeholder="expiration" placeholderTextColor={'#999'} />
                 <TextInput style={styles.input} placeholder="cvv" placeholderTextColor={'#999'} />
             </ScrollView>
-            <TouchableOpacity style={styles.saveButton} onPress={()=>{router.back(); router.push('/success'); }}>
+            <TouchableOpacity style={styles.saveButton} onPress={()=>{ router.back(); router.push("/success") }}>
                 <Text style={styles.saveButtonText}>Save</Text>
             </TouchableOpacity>
         </View>
@@ -91,6 +92,22 @@ const styles = StyleSheet.create({
         height: 30,
         justifyContent: 'center',
         alignItems: 'center',
+    },
+    closeIcon: {
+        fontSize: 15,
+        fontWeight: 'bold',
+        color: '#b7ffb0',
+        fontFamily: 'TextMeOne',
+        margin: 30,
+        position: 'absolute',
+        height: 33,
+        width: 33,
+        borderRadius: 17,
+        backgroundColor: "#fff",
+        padding: 10,
+        paddingLeft: 12,
+        right: 0,
+        top: 0,
     },
     dragBarImage: {
         width: 50,
@@ -118,7 +135,8 @@ const styles = StyleSheet.create({
         }),
     },
     title: {
-        fontFamily: 'TextMeOne',
+        fontFamily: 'TitanOne',
+        color: '#fff',
         fontSize: 24,
         marginBottom: 20,
         textAlign: 'center',
@@ -150,7 +168,7 @@ const styles = StyleSheet.create({
         width: '48%',
     },
     saveButton: {
-        backgroundColor: 'white',
+        backgroundColor: '#00bfff',
         width: '100%',
         padding: 15,
         marginTop: 10,
@@ -160,6 +178,7 @@ const styles = StyleSheet.create({
     saveButtonText: {
         fontFamily: 'TextMeOne',
         fontSize: 30,
+        color: 'white',
     },
 });
 
