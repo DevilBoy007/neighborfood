@@ -77,6 +77,13 @@ const styles = StyleSheet.create({
     headerTitle: {
         fontSize: 24,
         fontWeight: '400',
+        fontFamily: 'TitanOne',
+        color: "#fff",
+        ...Platform.select({
+            web: {
+                fontSize: 32,
+            }
+        }),
     },
     scrollView: {
         flex: 1,

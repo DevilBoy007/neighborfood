@@ -51,10 +51,12 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         alignItems: 'center',
         marginBottom: 12,
+        fontFamily: 'TextMeOne',
     },
     dateText: {
         fontSize: 24,
-        fontWeight: '400',
+        fontWeight: 'bold',
+        fontFamily: 'TextMeOne',
     },
     orderDetails: {
         gap: 4,
@@ -67,16 +69,20 @@ const styles = StyleSheet.create({
         fontSize: 16,
         color: '#000',
         width: 60,
+        fontFamily: 'TextMeOne',
+        fontWeight: 'bold',
     },
     detailValue: {
         fontSize: 16,
         color: '#000',
         flex: 1,
+        fontFamily: 'TextMeOne',
     },
     itemsText: {
         fontSize: 14,
         color: '#999',
         marginTop: 8,
+        fontFamily: 'TextMeOne',
     },
 });
 

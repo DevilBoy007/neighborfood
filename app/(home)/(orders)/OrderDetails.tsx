@@ -152,6 +152,7 @@ const styles = StyleSheet.create({
         padding: 16,
         borderBottomWidth: 1,
         borderBottomColor: '#000',
+        fontFamily: 'TextMeOne',
         ...Platform.select({
             ios: {
                 justifyContent: 'flex-end',
@@ -164,6 +165,13 @@ const styles = StyleSheet.create({
     headerTitle: {
         fontSize: 24,
         fontWeight: '400',
+        fontFamily: 'TitanOne',
+        color: "#fff",
+        ...Platform.select({
+            web: {
+                fontSize: 32,
+            }
+        }),
     },
     content: {
         flex: 1,
@@ -173,6 +181,7 @@ const styles = StyleSheet.create({
         fontSize: 24,
         fontWeight: '400',
         marginBottom: 20,
+        fontFamily: 'TextMeOne',
     },
     orderContent: {
         backgroundColor: 'white',
@@ -193,6 +202,8 @@ const styles = StyleSheet.create({
     shopName: {
         fontSize: 18,
         marginBottom: 8,
+        fontFamily: 'TextMeOne',
+        fontWeight: 'bold',
     },
     itemRow: {
         flexDirection: 'row',
@@ -207,14 +218,17 @@ const styles = StyleSheet.create({
     itemText: {
         fontSize: 16,
         marginRight: 8,
+        fontFamily: 'TextMeOne',
     },
     itemPrice: {
         fontSize: 16,
         color: '#666',
+        fontFamily: 'TextMeOne',
     },
     itemTotal: {
         fontSize: 16,
         color: '#40C4FF',
+        fontFamily: 'TextMeOne',
     },
     divider: {
         height: 1,
@@ -228,13 +242,17 @@ const styles = StyleSheet.create({
     },
     totalLabel: {
         fontSize: 18,
+        fontFamily: 'TextMeOne',
+        fontWeight: 'bold',
     },
     totalAmount: {
         fontSize: 18,
+        fontFamily: 'TextMeOne',
     },
     itemCount: {
         fontSize: 14,
         color: '#999',
+        fontFamily: 'TextMeOne',
     },
 });
 
