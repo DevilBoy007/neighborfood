@@ -25,7 +25,7 @@ export default function RootLayout() {
         <>
             <Stack.Screen options={{ headerShown: false }} />
             <Stack>
-                <Stack.Screen name="ContactUs" options={{ headerShown: false }} />
+                <Stack.Screen name="ContactUs" options={{ headerShown: false}} />
             </Stack>
         </>
     );

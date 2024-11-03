@@ -1,9 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, SafeAreaView, Platform, Dimensions } from 'react-native';
+import { useRouter } from 'expo-router';
 
 const ContactScreen = () => {
-
+    const router = useRouter();
     const [selectedOption, setSelectedOption] = useState(null);
     const [message, setMessage] = useState('');
 
@@ -18,8 +19,8 @@ const ContactScreen = () => {
     return (
         <SafeAreaView style={styles.container}>
             <View style={styles.header}>
-                <TouchableOpacity style={styles.backButton}>
-                    <Ionicons name='arrow-back' color="#000" size={24} />
+                <TouchableOpacity style={styles.backButton} onPress={()=>{ router.back() }}>
+                    <Ionicons name='chevron-back' color="#000" size={24} />
                 </TouchableOpacity>
                 <Text style={styles.headerText}>Contact Us</Text>
             </View>
@@ -114,7 +115,7 @@ const styles = StyleSheet.create({
         backgroundColor: '#00bfff',
     },
     optionText: {
-        fontSize: 16,
+        fontSize: Platform.OS === 'web' ? 21 : 18,
         textAlign: 'center',
         fontFamily: 'TextMeOne',
     },
@@ -137,7 +138,7 @@ const styles = StyleSheet.create({
         })
     },
     submitButtonDisabled: {
-        backgroundColor: '#87CEFA80',
+        backgroundColor: '#ddd',
     },
     submitButtonText: {
         color: '#fff',
