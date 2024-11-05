@@ -14,6 +14,8 @@ const ContactScreen = () => {
         // Handle form submission here
         console.log('Selected option:', selectedOption);
         console.log('Message:', message);
+        router.back();
+        router.push('/success');
     };
 
     return (
