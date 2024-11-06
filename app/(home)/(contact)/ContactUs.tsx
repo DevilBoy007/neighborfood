@@ -48,6 +48,7 @@ const ContactScreen = () => {
                         style={styles.textInput}
                         multiline
                         placeholder="Type your message here..."
+                        placeholderTextColor={'#999'}
                         value={message}
                         onChangeText={setMessage}
                     />
