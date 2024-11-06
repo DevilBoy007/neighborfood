@@ -104,7 +104,7 @@ const OrderDetailScreen = ({ navigation, route }) => {
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>order history</Text>
             </View>
-
+            <Text style={styles.headerTitle}>Order Details</Text>
             <Animated.ScrollView
                 style={[
                     styles.content,
@@ -167,6 +167,7 @@ const styles = StyleSheet.create({
         fontWeight: '400',
         fontFamily: 'TitanOne',
         color: "#fff",
+        paddingLeft: 16,
         ...Platform.select({
             web: {
                 fontSize: 32,

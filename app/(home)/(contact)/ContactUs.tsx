@@ -24,9 +24,9 @@ const ContactScreen = () => {
                 <TouchableOpacity style={styles.backButton} onPress={()=>{ router.back() }}>
                     <Ionicons name='chevron-back' color="#000" size={24} />
                 </TouchableOpacity>
-                <Text style={styles.headerText}>Contact Us</Text>
+                <Text style={styles.headerText}>menu</Text>
             </View>
-
+            <Text style={styles.headerText}>Contact Us</Text>
             <View style={styles.content}>
                 <Text style={styles.title}>what's on your mind?</Text>
 
