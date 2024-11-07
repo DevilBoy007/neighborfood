@@ -15,6 +15,20 @@ const ReportScreen = () => {
         console.log('Selected option:', selectedOption);
         console.log('Problem:', problem);
         console.log('Path:', path);
+        switch (selectedOption) {
+            case 'order':
+                router.navigate('./ReportOrder');
+                break;
+            case 'shop':
+                router.navigate('/ShopIssue');
+                break;
+            case 'account':
+                router.navigate('/AccountIssue');
+                break;
+            case 'other':
+                router.navigate('/OtherIssue');
+                break;
+        }
     };
 
     return (

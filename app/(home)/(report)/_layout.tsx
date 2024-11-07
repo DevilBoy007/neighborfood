@@ -26,6 +26,7 @@ export default function RootLayout() {
             <Stack.Screen options={{ headerShown: false }} />
             <Stack>
                 <Stack.Screen name="Report" options={{ headerShown: false}} />
+                <Stack.Screen name="ReportOrder" options={{ headerShown: false}} />
             </Stack>
         </>
     );
