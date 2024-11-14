@@ -30,7 +30,7 @@ const OrderHistoryScreen = () => {
 
     const handleOrderPress = (order) => {
         router.setParams({ order });
-        router.push('./OrderDetails');
+        router.push('./ReportOrder');
     };
 
     return (
@@ -39,7 +39,7 @@ const OrderHistoryScreen = () => {
                 <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
                     <Ionicons name="chevron-back" size={24} color="black" />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>report</Text>
+                <Text style={styles.headerTitle}>report problem</Text>
             </View>
             <Text style={styles.headerTitle}>Which Order?</Text>
             <ScrollView style={styles.scrollView}>

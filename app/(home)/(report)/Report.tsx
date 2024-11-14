@@ -17,7 +17,7 @@ const ReportScreen = () => {
         console.log('Path:', path);
         switch (selectedOption) {
             case 'order':
-                router.navigate('./ReportOrder');
+                router.navigate('./(order)');
                 break;
             case 'shop':
                 router.navigate('/ShopIssue');
