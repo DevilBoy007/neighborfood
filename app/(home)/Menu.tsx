@@ -67,7 +67,7 @@ const MenuScreen = () => {
                     <MenuButton icon={dashboardIcon} title="dashboard" />
                     <MenuButton icon={receiptIcon} title="order history" destination={"./(orders)/"}/>
                     <MenuButton icon={contactUsIcon} title="contact us" destination={"./(contact)"}/>
-                    <MenuButton icon="!" title="report a problem" destination={"./(report)"}/>
+                    <MenuButton icon="!" title="report a problem" destination={"./(report)/Report"}/>
                 </View>
             </ScrollView>
         </View>
