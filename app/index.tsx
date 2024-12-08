@@ -21,8 +21,9 @@ const LoginScreen = () => {
             styles.button,
             pressed && styles.buttonOpacity,
           ]}
+          onPress = {() => router.navigate('/Register')}
         >
-          <Text style={styles.buttonText} onPress={() => alert('sign up')}>Sign Up</Text>
+          <Text style={styles.buttonText}>Sign Up</Text>
         </Pressable>
       </View>
     </View>
