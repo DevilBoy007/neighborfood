@@ -41,7 +41,7 @@ const OrderHistoryScreen = () => {
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>menu</Text>
             </View>
-
+            <Text style={styles.headerTitle}>Order History</Text>
             <ScrollView style={styles.scrollView}>
                 {orders.map((order, index) => (
                     <OrderCard
@@ -79,6 +79,7 @@ const styles = StyleSheet.create({
         fontWeight: '400',
         fontFamily: 'TitanOne',
         color: "#fff",
+        paddingLeft: 16,
         ...Platform.select({
             web: {
                 fontSize: 32,

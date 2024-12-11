@@ -1,34 +1,33 @@
 import { Ionicons } from '@expo/vector-icons';
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, SafeAreaView, Platform, Dimensions } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, SafeAreaView, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 
-const ContactScreen = () => {
+const ReportScreen = () => {
     const router = useRouter();
     const [selectedOption, setSelectedOption] = useState(null);
-    const [message, setMessage] = useState('');
+    const [problem, setProblem] = useState('');
 
-    const options = ['feedback', 'question', 'other'];
+    const options = ['order', 'shop', 'account', 'other'];
 
-    const handleSubmit = () => {
+    const handleNext = (path) => {
         // Handle form submission here
         console.log('Selected option:', selectedOption);
-        console.log('Message:', message);
-        router.back();
-        router.push('/success');
+        console.log('Problem:', problem);
+        console.log('Path:', path);
     };
 
     return (
         <SafeAreaView style={styles.container}>
             <View style={styles.header}>
-                <TouchableOpacity style={styles.backButton} onPress={()=>{ router.back() }}>
+                <TouchableOpacity style={styles.backButton} onPress={() => { router.back() }}>
                     <Ionicons name='chevron-back' color="#000" size={24} />
                 </TouchableOpacity>
-                <Text style={styles.headerText}>menu</Text>
+                <Text style={styles.headerText}>Report Problem</Text>
             </View>
-            <Text style={styles.headerText}>Contact Us</Text>
+
             <View style={styles.content}>
-                <Text style={styles.title}>what's on your mind?</Text>
+                <Text style={styles.title}>what's the issue?</Text>
 
                 {options.map((option) => (
                     <TouchableOpacity
@@ -42,28 +41,38 @@ const ContactScreen = () => {
                         <Text style={styles.optionText}>{option}</Text>
                     </TouchableOpacity>
                 ))}
-
-                {selectedOption && (
+                {problem !== '' && (
+                    <TouchableOpacity
+                        key={problem}
+                        style={[
+                            styles.optionButton,
+                            selectedOption === problem && styles.selectedOption
+                        ]}
+                        onPress={() => setSelectedOption(problem)}
+                    >
+                        <Text style={styles.optionText}>{problem}</Text>
+                    </TouchableOpacity>
+                )}
+                {selectedOption == 'other' && (
                     <TextInput
                         style={styles.textInput}
-                        multiline
-                        placeholder="Type your message here..."
+                        placeholder="New Issue Category"
                         placeholderTextColor={'#999'}
-                        value={message}
-                        onChangeText={setMessage}
+                        value={problem}
+                        onChangeText={setProblem}
                     />
                 )}
             </View>
 
             <TouchableOpacity
                 style={[
-                    styles.submitButton,
-                    (!selectedOption || !message) && styles.submitButtonDisabled
+                    styles.nextButton,
+                    (!selectedOption || (selectedOption == 'other' && !problem)) && styles.nextButtonDisabled
                 ]}
-                disabled={!selectedOption || !message}
-                onPress={handleSubmit}
+                disabled={!selectedOption || (selectedOption == 'other' && !problem)}
+                onPress={() => handleNext(selectedOption == 'other' ? problem : selectedOption)}
             >
-                <Text style={styles.submitButtonText}>Submit</Text>
+                <Text style={styles.nextButtonText}>Next</Text>
             </TouchableOpacity>
         </SafeAreaView>
     );
@@ -123,27 +132,27 @@ const styles = StyleSheet.create({
         fontFamily: 'TextMeOne',
     },
     textInput: {
+        fontSize: Platform.OS === 'web' ? 21 : 18,
+        fontFamily: 'TextMeOne',
         backgroundColor: '#fff',
         borderRadius: 8,
         padding: 16,
-        height: 150,
-        marginTop: 24,
         textAlignVertical: 'top',
     },
-    submitButton: {
+    nextButton: {
         backgroundColor: '#87CEFA',
         padding: 20,
         alignItems: 'center',
         ...Platform.select({
             ios: {
-                marginBottom: 40,
+                marginBottom: 36,
             }
         })
     },
-    submitButtonDisabled: {
+    nextButtonDisabled: {
         backgroundColor: '#ddd',
     },
-    submitButtonText: {
+    nextButtonText: {
         color: '#fff',
         fontSize: Platform.OS === 'web' ? 30 : 25,
         fontWeight: '500',
@@ -151,4 +160,4 @@ const styles = StyleSheet.create({
     },
 });
 
-export default ContactScreen;
+export default ReportScreen;
