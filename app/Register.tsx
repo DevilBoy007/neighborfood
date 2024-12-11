@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     View,
     Text,
@@ -8,6 +8,7 @@ import {
     Platform
 } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
+import * as Location from 'expo-location';
 import firebaseAuth from '@/handlers/auth';
 
 const RegisterScreen = () => {
@@ -23,6 +24,9 @@ const RegisterScreen = () => {
         password: '',
         confirmPassword: ''
     });
+    const [location, setLocation] = useState(null);
+    const [errorMsg, setErrorMsg] = useState(null);
+
 
     const states = [
         { label: 'Select State', value: '' },
@@ -30,6 +34,28 @@ const RegisterScreen = () => {
         { label: 'Illinois', value: 'IL' },
         // Add other states as needed
     ];
+
+    useEffect(() => {
+        (async () => {
+            // Request location permissions
+            let { status } = await Location.requestForegroundPermissionsAsync();
+            if (status !== 'granted') {
+                setErrorMsg('Permission to access location was denied');
+                return;
+            }
+
+            // Get the user's location
+            let location = await Location.getCurrentPositionAsync({});
+            setLocation(location);
+
+            // Extract the zip code from the location data
+            const { zipCode } = await Location.reverseGeocodeAsync({
+                latitude: location.coords.latitude,
+                longitude: location.coords.longitude
+            });
+            handleChange('zip', zipCode);
+        })();
+    }, []);
 
     const handleChange = (name, value) => {
         setFormData(prev => ({
@@ -94,6 +120,7 @@ const RegisterScreen = () => {
             </View>
 
             {/* Market Info Section */}
+            { !errorMsg && <>
             <Text style={styles.sectionTitle}>Market Info</Text>
             <TextInput
                 style={[styles.input, styles.marginBottom]}
@@ -129,7 +156,10 @@ const RegisterScreen = () => {
                     value={formData.zip}
                     onChangeText={(text) => handleChange('zip', text)}
                 />
-            </View>
+                </View></>
+            }
+            
+            <Text style={styles.errorText}>{errorMsg}</Text>
 
             {/* Login Info Section */}
             <Text style={styles.sectionTitle}>Login Info</Text>
@@ -229,6 +259,12 @@ const styles = StyleSheet.create({
         color: '#fff',
         textAlign: 'center',
         fontSize: 20,
+    },
+    errorText: {
+        color: 'red',
+        fontSize: 24,
+        marginTop: 8,
+        fontFamily: 'TextMeOne',
     },
 });
 
