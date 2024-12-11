@@ -39,11 +39,13 @@
         {
           "locationAlwaysAndWhenInUsePermission": "Allow $(PRODUCT_NAME) to use your location."
         }
-      ]
+      ],
+      "expo-font"
     ],
     "experiments": {
       "typedRoutes": true
     },
+    "newArchEnabled": true
     "extra": {
       "router": {
         "origin": false

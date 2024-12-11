@@ -46,7 +46,7 @@ const styles = StyleSheet.create({
     },
     text: {
         backgroundColor: 'transparent',
-        fontSize: 40,
+        fontSize: 30,
         color: '#fff',
         fontFamily: 'TextMeOne',
         ...Platform.select({
