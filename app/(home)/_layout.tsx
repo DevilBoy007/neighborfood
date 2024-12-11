@@ -139,6 +139,7 @@ const styles = StyleSheet.create({
         bottom: 0,
         left: 0,
         right: 0,
+        height: 75,
       },
       web: {
         flexDirection: 'column',
@@ -167,11 +168,5 @@ const styles = StyleSheet.create({
   icon: {
     width: 50,
     height: 50,
-    ...Platform.select({
-      ios: {
-        width: 30,
-        height: 30,
-      },
-    }),
   },
 });

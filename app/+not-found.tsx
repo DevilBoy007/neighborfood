@@ -16,7 +16,7 @@ const SplashScreen = () => {
                         styles.button,
                         pressed && styles.buttonOpacity,
                     ]}
-                    onPress={() => router.replace('/Market')}
+                    onPress={() => router.back()}
                 >
                     <Text style={styles.buttonText}>back to safety</Text>
                 </Pressable>

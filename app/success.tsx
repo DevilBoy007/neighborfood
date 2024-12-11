@@ -25,7 +25,7 @@ export default function SucessScreen({ onTimerComplete = () => { } }) {
                 colors={['#b7ffb0', '#b7ffb0', '#00bfff']}
                 style={styles.background}
             />
-            <Text style={styles.text} onPress={() => { router.back() }}>🥕 SUCCESS 🥕</Text>
+            <Text style={styles.text} onPress={() => { router.back() }}>🥕 THANKS, NEIGHBOR 🥕</Text>
         </View>
     );
 }
@@ -46,7 +46,7 @@ const styles = StyleSheet.create({
     },
     text: {
         backgroundColor: 'transparent',
-        fontSize: 40,
+        fontSize: 30,
         color: '#fff',
         fontFamily: 'TextMeOne',
         ...Platform.select({
