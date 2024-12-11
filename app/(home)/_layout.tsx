@@ -149,14 +149,6 @@ const styles = StyleSheet.create({
       },
     }),
   },
-  editDetailsContainer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    // Adjust the height as needed
-    height: '90%',
-  },
   iconButton: {
     padding: 10,
     ...Platform.select({
