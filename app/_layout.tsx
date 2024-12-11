@@ -11,6 +11,7 @@ export default function RootLayout() {
     const [loaded] = useFonts({
         SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
         TitanOne: require('../assets/fonts/TitanOne-Regular.ttf'),
+        TextMeOne: require('../assets/fonts/TextMeOne-Regular.ttf'),
     });
 
     useEffect(() => {
