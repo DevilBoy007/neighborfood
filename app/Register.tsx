@@ -5,9 +5,11 @@ import {
     TextInput,
     TouchableOpacity,
     StyleSheet,
+    ScrollView,
     Platform
 } from 'react-native';
-import { Picker } from '@react-native-picker/picker';
+import 'react-native-get-random-values';
+import { GooglePlacesAutocomplete } from 'react-native-google-places-autocomplete';
 import * as Location from 'expo-location';
 import firebaseAuth from '@/handlers/auth';
 
@@ -17,14 +19,19 @@ const RegisterScreen = () => {
         lastName: '',
         email: '',
         dob: '',
-        city: '',
-        state: '',
-        zip: '',
+        location: {
+            address: '',
+            city: '',
+            state: '',
+            zip: '',
+            latitude: null,
+            longitude: null
+        },
         username: '',
         password: '',
         confirmPassword: ''
     });
-    const [location, setLocation] = useState(null);
+    const [locationPermission, setLocationPermission] = useState(null);
     const [errorMsg, setErrorMsg] = useState(null);
 
 
@@ -35,27 +42,58 @@ const RegisterScreen = () => {
         // Add other states as needed
     ];
 
+    const updateLocationData = (locationInfo) => {
+        setFormData(prev => ({
+            ...prev,
+            location: {
+                address: locationInfo.address || '',
+                city: locationInfo.city || '',
+                state: locationInfo.state || '',
+                zip: locationInfo.zip || '',
+                latitude: locationInfo.latitude || null,
+                longitude: locationInfo.longitude || null
+            }
+        }));
+    };
+
     useEffect(() => {
         (async () => {
             // Request location permissions
             let { status } = await Location.requestForegroundPermissionsAsync();
+            setLocationPermission(status);
+
             if (status !== 'granted') {
                 setErrorMsg('Permission to access location was denied');
                 return;
             }
 
-            // Get the user's location
-            let location = await Location.getCurrentPositionAsync({});
-            setLocation(location);
+            try {
+                // Get the user's current location
+                let location = await Location.getCurrentPositionAsync({});
 
-            // Extract the zip code from the location data
-            const { zipCode } = await Location.reverseGeocodeAsync({
-                latitude: location.coords.latitude,
-                longitude: location.coords.longitude
-            });
-            handleChange('zip', zipCode);
+                // Reverse geocode to get address details
+                const [addressDetails] = await Location.reverseGeocodeAsync({
+                    latitude: location.coords.latitude,
+                    longitude: location.coords.longitude
+                });
+
+                // Update form data with current location details
+                updateLocationData({
+                    address: `${addressDetails.street}, ${addressDetails.city}, ${addressDetails.region} ${addressDetails.postalCode}`,
+                    city: addressDetails.city,
+                    state: addressDetails.region,
+                    zip: addressDetails.postalCode,
+                    latitude: location.coords.latitude,
+                    longitude: location.coords.longitude
+                });
+            } catch (error) {
+                console.error('Error getting location', error);
+                setErrorMsg('Could not retrieve location');
+            }
         })();
     }, []);
+
+
 
     const handleChange = (name, value) => {
         setFormData(prev => ({
@@ -63,6 +101,32 @@ const RegisterScreen = () => {
             [name]: value
         }));
     };
+
+    const handleLocationSelect = (data, details = null) => {
+        if (details) {
+            // Extract address components
+            const addressComponents = details.address_components;
+            const cityComponent = addressComponents.find(component =>
+                component.types.includes('locality')
+            );
+            const stateComponent = addressComponents.find(component =>
+                component.types.includes('administrative_area_level_1')
+            );
+            const zipComponent = addressComponents.find(component =>
+                component.types.includes('postal_code')
+            );
+
+            updateLocationData({
+                address: details.formatted_address,
+                city: cityComponent ? cityComponent.long_name : '',
+                state: stateComponent ? stateComponent.short_name : '',
+                zip: zipComponent ? zipComponent.long_name : '',
+                latitude: details.geometry.location.lat,
+                longitude: details.geometry.location.lng
+            });
+        }
+    };
+
 
     const handleRegister = async () => {
         try {
@@ -81,6 +145,7 @@ const RegisterScreen = () => {
     return (
         <View style={styles.container}>
             <Text style={styles.title}>Register</Text>
+            <ScrollView>
             {/* Personal Details Section */}
             <Text style={styles.sectionTitle}>Personal Details</Text>
             <View style={styles.row}>
@@ -122,41 +187,32 @@ const RegisterScreen = () => {
             {/* Market Info Section */}
             { !errorMsg && <>
             <Text style={styles.sectionTitle}>Market Info</Text>
-            <TextInput
-                style={[styles.input, styles.marginBottom]}
-                placeholder="city"
-                placeholderTextColor="#999"
-                value={formData.city}
-                onChangeText={(text) => handleChange('city', text)}
-            />
-
-            <View style={styles.row}>
-                <View style={[styles.flex1, styles.marginRight]}>
-                    <View style={styles.pickerContainer}>
-                        <Picker
-                            selectedValue={formData.state}
-                            onValueChange={(value) => handleChange('state', value)}
-                            style={styles.picker}
-                        >
-                            {states.map((state) => (
-                                <Picker.Item
-                                    key={state.value}
-                                    label={state.label}
-                                    value={state.value}
-                                />
-                            ))}
-                        </Picker>
-                    </View>
-                </View>
-                <TextInput
-                    style={[styles.input, styles.flex1]}
-                    placeholder="zip"
-                    placeholderTextColor="#999"
-                    keyboardType="numeric"
-                    value={formData.zip}
-                    onChangeText={(text) => handleChange('zip', text)}
+                <GooglePlacesAutocomplete
+                    placeholder='Enter your address'
+                    onPress={handleLocationSelect}
+                    query={{
+                        key: 'AIzaSyCci8Td3waW6ToYzua9q6fxiNDetGa1sBI',
+                        language: 'en',
+                    }}
+                    styles={{
+                        textInput: styles.googlePlacesInput,
+                        container: styles.googlePlacesContainer
+                    }}
+                    fetchDetails={true}
+                    enablePoweredByContainer={false}
                 />
-                </View></>
+
+                {/* Display selected location details */}
+                {formData.location.address && (
+                    <View style={styles.locationDetailsContainer}>
+                        <Text style={styles.locationDetail}>
+                            {formData.location.address}
+                        </Text>
+                        <Text style={styles.locationDetail}>
+                            {formData.location.city}, {formData.location.state} {formData.location.zip}
+                        </Text>
+                    </View>
+                )}</>
             }
             
             <Text style={styles.errorText}>{errorMsg}</Text>
@@ -189,6 +245,8 @@ const RegisterScreen = () => {
                 autoCapitalize='none'
                 onChangeText={(text) => handleChange('confirmPassword', text)}
             />
+            </ScrollView>
+            
 
             {/* Register Button */}
             <TouchableOpacity
@@ -265,6 +323,26 @@ const styles = StyleSheet.create({
         fontSize: 24,
         marginTop: 8,
         fontFamily: 'TextMeOne',
+    },
+    googlePlacesContainer: {
+        marginBottom: 16,
+    },
+    googlePlacesInput: {
+        backgroundColor: '#fff',
+        padding: 12,
+        borderRadius: 8,
+        fontSize: 16,
+        height: 50,
+    },
+    locationDetailsContainer: {
+        backgroundColor: '#fff',
+        padding: 12,
+        borderRadius: 8,
+        marginBottom: 16,
+    },
+    locationDetail: {
+        fontSize: 16,
+        color: '#333',
     },
 });
 
