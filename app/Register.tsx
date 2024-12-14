@@ -34,14 +34,6 @@ const RegisterScreen = () => {
     const [locationPermission, setLocationPermission] = useState(null);
     const [errorMsg, setErrorMsg] = useState(null);
 
-
-    const states = [
-        { label: 'Select State', value: '' },
-        { label: 'Indiana', value: 'IN' },
-        { label: 'Illinois', value: 'IL' },
-        // Add other states as needed
-    ];
-
     const updateLocationData = (locationInfo) => {
         setFormData(prev => ({
             ...prev,
@@ -62,7 +54,7 @@ const RegisterScreen = () => {
             let { status } = await Location.requestForegroundPermissionsAsync();
             setLocationPermission(status);
 
-            if (status !== 'granted') {
+            if (locationPermission !== 'granted') {
                 setErrorMsg('Permission to access location was denied');
                 return;
             }
@@ -79,7 +71,7 @@ const RegisterScreen = () => {
 
                 // Update form data with current location details
                 updateLocationData({
-                    address: `${addressDetails.street}, ${addressDetails.city}, ${addressDetails.region} ${addressDetails.postalCode}`,
+                    address: `${addressDetails.formattedAddress}, ${addressDetails.city}, ${addressDetails.region} ${addressDetails.postalCode}`,
                     city: addressDetails.city,
                     state: addressDetails.region,
                     zip: addressDetails.postalCode,
@@ -133,8 +125,7 @@ const RegisterScreen = () => {
             await firebaseAuth.connect();
 
             const { email, password } = formData;
-            await firebaseAuth.registerUser(email, password);
-
+            const user = await firebaseAuth.registerUser(email, password);
             firebaseAuth.disconnect();
             console.log('Registration successful!');
         } catch (error) {
