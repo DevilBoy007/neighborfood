@@ -177,7 +177,6 @@ const RegisterScreen = () => {
                 <Text style={styles.sectionTitle}>Market Info</Text>
                     <GooglePlacesAutocomplete
                         placeholder='Enter your address'
-                        placeholderTextColor='#999'
                         onPress={handleLocationSelect}
                         query={{
                             key: 'AIzaSyCci8Td3waW6ToYzua9q6fxiNDetGa1sBI',
@@ -189,6 +188,10 @@ const RegisterScreen = () => {
                         }}
                         fetchDetails={true}
                         enablePoweredByContainer={false}
+                        requestUrl={{
+                            useOnPlatform: 'web',
+                            url: 'https://cors-anywhere.herokuapp.com/https://maps.googleapis.com/maps/api',
+                        }}
                     />
 
                     {/* Display selected location details */}
