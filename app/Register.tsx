@@ -9,7 +9,7 @@ import {
     Platform
 } from 'react-native';
 import 'react-native-get-random-values';
-import { GooglePlacesAutocomplete } from 'react-native-google-places-autocomplete';
+import { GooglePlaceData, GooglePlaceDetail, GooglePlacesAutocomplete } from 'react-native-google-places-autocomplete';
 import * as Location from 'expo-location';
 import firebaseAuth from '@/handlers/auth';
 
@@ -91,7 +91,7 @@ const RegisterScreen = () => {
         }));
     };
 
-    const handleLocationSelect = (data, details = null) => {
+    const handleLocationSelect = (data: GooglePlaceData, details: GooglePlaceDetail = null) => {
         if (details) {
             // Extract address components
             const addressComponents = details.address_components;
@@ -197,12 +197,9 @@ const RegisterScreen = () => {
                             <Text style={styles.locationDetail}>
                                 {formData.location.address}
                             </Text>
-                            <Text style={styles.locationDetail}>
-                                {formData.location.city}, {formData.location.state} {formData.location.zip}
-                            </Text>
                         </View>
                     ):(
-                        <View style={styles.locationDetail}>
+                        <View style={styles.locationDetailsContainer}>
                             <Text style={styles.locationDetail}>
                                 {formData.location.city}, {formData.location.state} {formData.location.zip}
                             </Text>
@@ -328,14 +325,15 @@ const styles = StyleSheet.create({
         height: 50,
     },
     locationDetailsContainer: {
-        backgroundColor: '#fff',
+        backgroundColor: '#00bfff',
         padding: 12,
         borderRadius: 8,
         marginBottom: 16,
     },
     locationDetail: {
-        fontSize: 16,
-        color: '#333',
+        fontSize: 18,
+        color: '#fff',
+        fontFamily: 'TextMeOne',
     },
 });
 
