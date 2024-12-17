@@ -1,5 +1,5 @@
 import { initializeApp, FirebaseApp } from 'firebase/app';
-import { getAuth, createUserWithEmailAndPassword, Auth } from 'firebase/auth';
+import { getAuth, createUserWithEmailAndPassword, Auth, UserCredential } from 'firebase/auth';
 import { getFirestore, Firestore } from 'firebase/firestore';
 
 class FirebaseAuth {
@@ -35,7 +35,7 @@ class FirebaseAuth {
         }
     }
 
-    async registerUser(email: string, password: string) {
+    async registerUser(email: string, password: string): Promise<UserCredential> {
         try {
             const userCredential = await createUserWithEmailAndPassword(
                 this.auth,
