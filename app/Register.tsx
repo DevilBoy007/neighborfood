@@ -85,6 +85,17 @@ const RegisterScreen = () => {
                 setErrorMsg('Could not retrieve location');
             }
         })();
+
+        const listener = EventRegister.on('userLoggedIn', (user) => {
+            router.navigate('/success');
+            setTimeout(() => {
+                router.replace('/(home)/Market');
+            }, 2000); // Adjust the delay as needed
+        });
+
+        return () => {
+            EventRegister.removeEventListener(listener);
+        };
     }, []);
 
 
