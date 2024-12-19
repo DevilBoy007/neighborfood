@@ -8,15 +8,16 @@ import {
     ScrollView,
     Platform
 } from 'react-native';
+import { useRouter } from 'expo-router';
 import 'react-native-get-random-values';
 import { User } from 'firebase/auth'
+import { EventRegister } from 'react-native-event-listeners';
 import { GooglePlaceData, GooglePlaceDetail, GooglePlacesAutocomplete } from 'react-native-google-places-autocomplete';
 import * as Location from 'expo-location';
-import firebaseAuth from '@/handlers/auth';
-import firebaseDB from '@/handlers/database';
+import firebaseService from '@/handlers/firebaseService';
 
 const RegisterScreen = () => {
-    
+    const router = useRouter();
     const [user, setUser] = useState<User | null>(null);
     const [formData, setFormData] = useState({
         firstName: '',
