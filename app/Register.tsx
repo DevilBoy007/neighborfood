@@ -121,26 +121,40 @@ const RegisterScreen = () => {
         }
     };
 
-
     const handleRegister = async () => {
         try {
-            await firebaseAuth.connect();
+            await firebaseService.connect();
 
-            const { email, password } = formData;
-            await firebaseAuth.registerUser(email, password).then((user) => {
-                setUser(user.user);
-            });
-            firebaseAuth.disconnect();
+            const { email, password, firstName, lastName, dob, location, username } = formData;
+            const user = await firebaseService.registerUser(email, password, username);
+            setUser(user);
+
+            const userData = {
+                uid: user.uid,
+                email: user.email,
+                first: firstName,
+                last: lastName,
+                dob: dob,
+                location: location,
+                username: username,
+                pfpUrl: 'https://firebasestorage.googleapis.com/v0/b/neighborfoods/o/cloud.gif?alt=media&token=81350c47-c9e3-4c75-8d9d-d0b9ff6e50f0',
+                createdAt: new Date(),
+                lastLogin: new Date()
+            };
+            await firebaseService.addDocument('user', userData);
+            await firebaseService.disconnect();
+
             console.log('Registration successful!');
+            EventRegister.emit('userLoggedIn', user);
         } catch (error) {
-            console.error('Error registering user:', error);
+            alert(`Error registering user: ${error}`);
         }
     };
 
     return (
         <View style={styles.container}>
             <Text style={styles.title}>Register</Text>
-            <ScrollView keyboardDismissMode='interactive' keyboardShouldPersistTaps='handled'>
+            <ScrollView keyboardDismissMode='on-drag' keyboardShouldPersistTaps='handled'>
                 {/* Personal Details Section */}
                 <Text style={styles.sectionTitle}>Personal Details</Text>
                 <View style={styles.row}>
