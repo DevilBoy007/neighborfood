@@ -1,6 +1,6 @@
 import { initializeApp, FirebaseApp } from 'firebase/app';
 import { getAuth, createUserWithEmailAndPassword, Auth, UserCredential } from 'firebase/auth';
-import { getFirestore, Firestore } from 'firebase/firestore';
+import { API_KEY, AUTH_DOMAIN, PROJECT_ID } from '@env';
 
 class FirebaseAuth {
     private firebaseConfig: {
@@ -13,9 +13,9 @@ class FirebaseAuth {
 
     constructor() {
         this.firebaseConfig = {
-            apiKey: "AIzaSyCgt-cu8zyYSewxW3Uy5296chETA-U4d7A",
-            authDomain: "portus-baebe.firebaseapp.com",
-            projectId: "portus-baebe",
+            apiKey: API_KEY,
+            authDomain: AUTH_DOMAIN,
+            projectId: PROJECT_ID,
         };
 
         this.app = null;
@@ -35,8 +35,11 @@ class FirebaseAuth {
         }
     }
 
-    async registerUser(email: string, password: string): Promise<UserCredential> {
+    async registerUser(email: string, password: string): Promise<UserCredential["user"]> {
         try {
+            if (!this.auth) {
+                throw new Error('Firebase Auth is not initialized');
+            }
             const userCredential = await createUserWithEmailAndPassword(
                 this.auth,
                 email,
