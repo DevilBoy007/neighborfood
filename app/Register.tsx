@@ -9,11 +9,15 @@ import {
     Platform
 } from 'react-native';
 import 'react-native-get-random-values';
+import { User } from 'firebase/auth'
 import { GooglePlaceData, GooglePlaceDetail, GooglePlacesAutocomplete } from 'react-native-google-places-autocomplete';
 import * as Location from 'expo-location';
 import firebaseAuth from '@/handlers/auth';
+import firebaseDB from '@/handlers/database';
 
 const RegisterScreen = () => {
+    
+    const [user, setUser] = useState<User | null>(null);
     const [formData, setFormData] = useState({
         firstName: '',
         lastName: '',
@@ -122,7 +126,9 @@ const RegisterScreen = () => {
             await firebaseAuth.connect();
 
             const { email, password } = formData;
-            const user = await firebaseAuth.registerUser(email, password);
+            await firebaseAuth.registerUser(email, password).then((user) => {
+                setUser(user.user);
+            });
             firebaseAuth.disconnect();
             console.log('Registration successful!');
         } catch (error) {
