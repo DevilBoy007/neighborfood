@@ -224,6 +224,7 @@ const RegisterScreen = () => {
                             useOnPlatform: 'web',
                             url: 'https://cors-anywhere.herokuapp.com/https://maps.googleapis.com/maps/api',
                         }}
+                        disableScroll={true}
                     />
 
                     {/* Display selected location details */}
