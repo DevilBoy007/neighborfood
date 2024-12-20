@@ -37,6 +37,7 @@ const RegisterScreen = () => {
         confirmPassword: ''
     });
     const [errorMsg, setErrorMsg] = useState(null);
+    const [locationErrorMsg, setLocationErrorMsg] = useState(null);
 
     const updateLocationData = (locationInfo) => {
         setFormData(prev => ({
@@ -57,7 +58,7 @@ const RegisterScreen = () => {
             // Request location permissions
             let { status } = await Location.requestForegroundPermissionsAsync();
             if (status !== 'granted') {
-                setErrorMsg('Permission to access location was denied');
+                setLocationErrorMsg('Permission to access location was denied');
                 return;
             }
 
@@ -82,7 +83,7 @@ const RegisterScreen = () => {
                 });
             } catch (error) {
                 console.error('Error getting location', error);
-                setErrorMsg('Could not retrieve location');
+                setLocationErrorMsg('Could not retrieve location');
             }
         })();
 
@@ -90,7 +91,7 @@ const RegisterScreen = () => {
             router.replace('/success');
             setTimeout(() => {
                 router.replace('/(home)/Market');
-            }, 2000); // Adjust the delay as needed
+            }, 2000);
         });
 
         return () => {
@@ -132,7 +133,24 @@ const RegisterScreen = () => {
         }
     };
 
+    const validateFormData = () => {
+        const { firstName, lastName, email, dob, location, username, password, confirmPassword } = formData;
+        if (!firstName || !lastName || !email || !dob || !location.address || !username || !password || !confirmPassword) {
+            setErrorMsg('All fields are required.');
+            return false;
+        }
+        if (password !== confirmPassword) {
+            setErrorMsg('Passwords do not match.');
+            return false;
+        }
+        setErrorMsg(null);
+        return true;
+    };
+
     const handleRegister = async () => {
+        if (!validateFormData()) {
+            return;
+        }
         try {
             await firebaseService.connect();
 
@@ -168,6 +186,7 @@ const RegisterScreen = () => {
             <ScrollView keyboardDismissMode='on-drag' keyboardShouldPersistTaps='handled'>
                 {/* Personal Details Section */}
                 <Text style={styles.sectionTitle}>Personal Details</Text>
+                {errorMsg && <Text style={styles.errorText}>{errorMsg}</Text>}
                 <View style={styles.row}>
                     <TextInput
                         style={[styles.input, styles.flex1, styles.marginRight]}
@@ -205,7 +224,7 @@ const RegisterScreen = () => {
                 </View>
 
                 {/* Market Info Section */}
-                { !errorMsg && <>
+                { !locationErrorMsg && <>
                 <Text style={styles.sectionTitle}>Market Info</Text>
                     <GooglePlacesAutocomplete
                         placeholder='Enter your address'
@@ -242,8 +261,7 @@ const RegisterScreen = () => {
                         </View>
                     )}</>
                 }
-                
-                <Text style={styles.errorText}>{errorMsg}</Text>
+                {locationErrorMsg && <Text style={styles.errorText}>{locationErrorMsg}</Text>}
 
                 {/* Login Info Section */}
                 <Text style={styles.sectionTitle}>Login Info</Text>
@@ -255,6 +273,7 @@ const RegisterScreen = () => {
                     autoCapitalize='none'
                     onChangeText={(text) => handleChange('username', text)}
                 />
+                {errorMsg == 'Passwords do not match.' && <Text style={styles.errorText}>{errorMsg}</Text>}
                 <TextInput
                     style={[styles.input, styles.marginBottom]}
                     placeholder="password"
@@ -347,7 +366,7 @@ const styles = StyleSheet.create({
     errorText: {
         color: 'red',
         fontSize: 24,
-        marginTop: 8,
+        marginVertical: 2,
         fontFamily: 'TextMeOne',
     },
     googlePlacesContainer: {
