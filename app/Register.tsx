@@ -87,7 +87,7 @@ const RegisterScreen = () => {
         })();
 
         const listener = EventRegister.on('userLoggedIn', (user) => {
-            router.navigate('/success');
+            router.replace('/success');
             setTimeout(() => {
                 router.replace('/(home)/Market');
             }, 2000); // Adjust the delay as needed
