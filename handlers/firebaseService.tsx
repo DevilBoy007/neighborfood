@@ -1,7 +1,6 @@
-// firebaseService.tsx
-
 import { initializeApp, FirebaseApp } from 'firebase/app';
-import { getAuth, createUserWithEmailAndPassword, Auth, UserCredential } from 'firebase/auth';
+import { initializeAuth, getReactNativePersistence, createUserWithEmailAndPassword, Auth, UserCredential } from 'firebase/auth';
+import ReactNativeAsyncStorage from '@react-native-async-storage/async-storage';
 import {
     getFirestore,
     Firestore,
@@ -51,7 +50,7 @@ class FirebaseService {
     async connect() {
         try {
             this.app = initializeApp(this.firebaseConfig);
-            this.auth = getAuth(this.app);
+            this.auth = initializeAuth(this.app, { persistence: getReactNativePersistence(ReactNativeAsyncStorage) });
             this.db = getFirestore(this.app);
             console.log('Successfully connected to Firebase');
             return true;
