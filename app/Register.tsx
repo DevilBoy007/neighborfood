@@ -6,6 +6,7 @@ import {
     TouchableOpacity,
     StyleSheet,
     ScrollView,
+    Button,
     Platform
 } from 'react-native';
 import { useRouter } from 'expo-router';
@@ -15,6 +16,7 @@ import { EventRegister } from 'react-native-event-listeners';
 import { GooglePlaceData, GooglePlaceDetail, GooglePlacesAutocomplete } from 'react-native-google-places-autocomplete';
 import * as Location from 'expo-location';
 import firebaseService from '@/handlers/firebaseService';
+import DatePicker from 'react-native-date-picker';
 
 const RegisterScreen = () => {
     const router = useRouter();
@@ -38,6 +40,7 @@ const RegisterScreen = () => {
     });
     const [errorMsg, setErrorMsg] = useState(null);
     const [locationErrorMsg, setLocationErrorMsg] = useState(null);
+    const [showDatePicker, setShowDatePicker] = useState(false);
 
     const updateLocationData = (locationInfo) => {
         setFormData(prev => ({
@@ -98,8 +101,6 @@ const RegisterScreen = () => {
             EventRegister.removeEventListener(listener);
         };
     }, []);
-
-
 
     const handleChange = (name, value) => {
         setFormData(prev => ({
@@ -180,6 +181,11 @@ const RegisterScreen = () => {
         }
     };
 
+    const handleDateChange = (date) => {
+        setShowDatePicker(false);
+        handleChange('dob', date.toISOString().split('T')[0]);
+    };
+
     return (
         <View style={styles.container}>
             <Text style={styles.title}>Register</Text>
@@ -206,7 +212,7 @@ const RegisterScreen = () => {
 
                 <View style={styles.row}>
                     <TextInput
-                        style={[styles.input, styles.flex1, styles.marginRight]}
+                        style={[styles.input, styles.flex1, styles.marginRight, styles.thin]}
                         placeholder="email"
                         placeholderTextColor="#999"
                         keyboardType="email-address"
@@ -214,13 +220,19 @@ const RegisterScreen = () => {
                         value={formData.email}
                         onChangeText={(text) => handleChange('email', text)}
                     />
-                    <TextInput
-                        style={[styles.input, styles.flex1]}
-                        placeholder="d.o.b."
-                        placeholderTextColor="#999"
-                        value={formData.dob}
-                        onChangeText={(text) => handleChange('dob', text)}
-                    />
+                    <View style={[styles.input, styles.flex1, styles.thin]}>
+                        <Button onPress={() => setShowDatePicker(true)} title={formData.dob ? formData.dob : "d.o.b."} color={ formData.dob ? '#00bfff' : '#999' }/>
+                        {showDatePicker && (
+                            <DatePicker
+                                modal
+                                open={showDatePicker}
+                                date={formData.dob ? new Date(formData.dob) : new Date()}
+                                mode="date"
+                                onConfirm={handleDateChange}
+                                onCancel={() => setShowDatePicker(false)}
+                            />
+                        )}
+                    </View>
                 </View>
 
                 {/* Market Info Section */}
@@ -253,7 +265,7 @@ const RegisterScreen = () => {
                                 {formData.location.address}
                             </Text>
                         </View>
-                    ):(
+                    ) : (
                         <View style={styles.locationDetailsContainer}>
                             <Text style={styles.locationDetail}>
                                 {formData.location.city}, {formData.location.state} {formData.location.zip}
@@ -335,13 +347,8 @@ const styles = StyleSheet.create({
         borderRadius: 8,
         fontSize: 16,
     },
-    pickerContainer: {
-        backgroundColor: '#fff',
-        borderRadius: 8,
-        overflow: 'hidden',
-    },
-    picker: {
-        height: 50,
+    thin: {
+        paddingVertical: 3,
     },
     flex1: {
         flex: 1,
