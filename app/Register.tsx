@@ -111,7 +111,6 @@ const RegisterScreen = () => {
 
     const handleLocationSelect = (data: GooglePlaceData, details: GooglePlaceDetail = null) => {
         if (details) {
-            // Extract address components
             const addressComponents = details.address_components;
             const cityComponent = addressComponents.find(component =>
                 component.types.includes('locality')
@@ -142,6 +141,15 @@ const RegisterScreen = () => {
         }
         if (password !== confirmPassword) {
             setErrorMsg('Passwords do not match.');
+            return false;
+        }
+        if (password.length < 6) {
+            setErrorMsg('Password must be at least 6 characters.');
+            return false;
+        }
+        const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailPattern.test(email)) {
+            setErrorMsg('Invalid email format.');
             return false;
         }
         setErrorMsg(null);
