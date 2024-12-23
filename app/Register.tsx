@@ -181,7 +181,7 @@ const RegisterScreen = () => {
         }
     };
 
-    const handleDateChange = (date) => {
+    const handleDateChange = (date: Date) => {
         setShowDatePicker(false);
         handleChange('dob', date.toISOString().split('T')[0]);
     };
