@@ -13,7 +13,6 @@ import {
     deleteDoc,
     doc
 } from 'firebase/firestore';
-import { API_KEY, AUTH_DOMAIN, PROJECT_ID, STORAGE_BUCKET } from '@env';
 
 class FirebaseService {
     private static instance: FirebaseService;
@@ -29,10 +28,10 @@ class FirebaseService {
 
     private constructor() {
         this.firebaseConfig = {
-            apiKey: API_KEY,
-            authDomain: AUTH_DOMAIN,
-            projectId: PROJECT_ID,
-            storageBucket: STORAGE_BUCKET
+            apiKey: process.env.EXPO_PUBLIC_API_KEY??'',
+            authDomain: process.env.EXPO_PUBLIC_AUTH_DOMAIN??'',
+            projectId: process.env.EXPO_PUBLIC_PROJECT_ID??'',
+            storageBucket: process.env.EXPO_PUBLIC_STORAGE_BUCKET??''
         };
 
         this.app = null;
