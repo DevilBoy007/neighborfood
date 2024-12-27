@@ -180,7 +180,6 @@ const RegisterScreen = () => {
                 lastLogin: new Date()
             };
             await firebaseService.addDocument('user', userData);
-            await firebaseService.disconnect();
 
             console.log('Registration successful!');
             EventRegister.emit('userLoggedIn', user);
