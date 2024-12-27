@@ -247,6 +247,10 @@ const RegisterScreen = () => {
                 <Text style={styles.sectionTitle}>Market Info</Text>
                     <GooglePlacesAutocomplete
                         placeholder='Enter your address'
+                        textInputProps={{
+                            placeholderTextColor: '#999',
+                            returnKeyType: "search"
+                        }}
                         onPress={handleLocationSelect}
                         query={{
                             key: 'AIzaSyCci8Td3waW6ToYzua9q6fxiNDetGa1sBI',
