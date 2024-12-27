@@ -202,7 +202,7 @@ const RegisterScreen = () => {
         <View style={styles.container}>
             <Text style={styles.title}>Register</Text>
             <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-                <ScrollView contentContainerStyle={{ flexGrow: 1 }} keyboardDismissMode='on-drag' keyboardShouldPersistTaps='handled'>
+                <ScrollView contentContainerStyle={{ flexGrow: 1 }} keyboardDismissMode='on-drag' keyboardShouldPersistTaps='handled' showsVerticalScrollIndicator={false}>
                     {/* Personal Details Section */}
                     <Text style={styles.sectionTitle}>Personal Details</Text>
                     {errorMsg && <Text style={styles.errorText}>{errorMsg}</Text>}
