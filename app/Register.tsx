@@ -6,10 +6,12 @@ import {
     TouchableOpacity,
     StyleSheet,
     ScrollView,
+    Keyboard,
     KeyboardAvoidingView,
     Button,
     Platform
 } from 'react-native';
+import { KeyboardToolbar } from 'react-native-keyboard-controller';
 import { useRouter } from 'expo-router';
 import 'react-native-get-random-values';
 import { User } from 'firebase/auth'
@@ -43,7 +45,7 @@ const RegisterScreen = () => {
     const [locationErrorMsg, setLocationErrorMsg] = useState<string | null>(null);
     const [showDatePicker, setShowDatePicker] = useState<boolean>(false);
     const [disabled, setDisabled] = useState<boolean>(false);
-    const [focusedInput, setFocusedInput] = useState<string | null>(null);
+    const [isKeyboardVisible, setKeyboardVisible] = useState<boolean>(false);
 
     const updateLocationData = (locationInfo) => {
         setFormData(prev => ({
@@ -93,15 +95,25 @@ const RegisterScreen = () => {
             }
         })();
 
-        const listener = EventRegister.on('userLoggedIn', (user) => {
+        const userLoggedInListener = EventRegister.on('userLoggedIn', (user) => {
             router.replace('/success');
             setTimeout(() => {
                 router.replace('/(home)/Market');
             }, 2000);
         });
 
+        const keyboardDidShowListener = Keyboard.addListener('keyboardDidShow', () => {
+            setKeyboardVisible(true);
+        });
+
+        const keyboardDidHideListener = Keyboard.addListener('keyboardDidHide', () => {
+            setKeyboardVisible(false);
+        });
+
         return () => {
-            EventRegister.removeEventListener(listener);
+            EventRegister.removeEventListener(userLoggedInListener);
+            keyboardDidShowListener.remove();
+            keyboardDidHideListener.remove();
         };
     }, []);
 
@@ -337,6 +349,7 @@ const RegisterScreen = () => {
                 ]}>Register</Text>
                 </TouchableOpacity>
             </KeyboardAvoidingView>
+            {isKeyboardVisible && <KeyboardToolbar/>}
         </View>
     );
 };
