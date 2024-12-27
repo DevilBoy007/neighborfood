@@ -41,6 +41,7 @@ const RegisterScreen = () => {
     const [errorMsg, setErrorMsg] = useState(null);
     const [locationErrorMsg, setLocationErrorMsg] = useState(null);
     const [showDatePicker, setShowDatePicker] = useState(false);
+    const [disabled, setDisabled] = useState(false);
 
     const updateLocationData = (locationInfo) => {
         setFormData(prev => ({
@@ -161,8 +162,9 @@ const RegisterScreen = () => {
             return;
         }
         try {
+            setDisabled(true);
             await firebaseService.connect();
-
+            
             const { email, password, firstName, lastName, dob, location, username } = formData;
             const user = await firebaseService.registerUser(email, password, username);
             setUser(user);
@@ -185,6 +187,7 @@ const RegisterScreen = () => {
             EventRegister.emit('userLoggedIn', user);
         } catch (error) {
             alert(`Error registering user: ${error}`);
+            setDisabled(false);
         }
     };
 
@@ -318,10 +321,17 @@ const RegisterScreen = () => {
             </ScrollView>
             {/* Register Button */}
             <TouchableOpacity
-                style={styles.button}
+                style={[
+                    styles.button,
+                    disabled && styles.buttonDisabled
+                ]}
                 onPress={handleRegister}
+                disabled={disabled}
             >
-                <Text style={styles.buttonText}>Register</Text>
+                <Text style={[
+                    styles.buttonText,
+                    disabled && styles.buttonTextDisabled
+                ]}>Register</Text>
             </TouchableOpacity>
         </View>
     );
@@ -408,6 +418,13 @@ const styles = StyleSheet.create({
         color: '#fff',
         fontFamily: 'TextMeOne',
     },
+    buttonDisabled: {
+        backgroundColor: '#cccccc',
+        opacity: 0.7,
+    },
+    buttonTextDisabled: {
+        color: '#666666'
+    }
 });
 
 export default RegisterScreen;
