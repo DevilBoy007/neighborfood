@@ -38,10 +38,11 @@ const RegisterScreen = () => {
         password: '',
         confirmPassword: ''
     });
-    const [errorMsg, setErrorMsg] = useState(null);
-    const [locationErrorMsg, setLocationErrorMsg] = useState(null);
-    const [showDatePicker, setShowDatePicker] = useState(false);
-    const [disabled, setDisabled] = useState(false);
+    const [errorMsg, setErrorMsg] = useState<string | null>(null);
+    const [locationErrorMsg, setLocationErrorMsg] = useState<string | null>(null);
+    const [showDatePicker, setShowDatePicker] = useState<boolean>(false);
+    const [disabled, setDisabled] = useState<boolean>(false);
+    const [focusedInput, setFocusedInput] = useState<string | null>(null);
 
     const updateLocationData = (locationInfo) => {
         setFormData(prev => ({
