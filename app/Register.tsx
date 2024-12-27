@@ -285,7 +285,7 @@ const RegisterScreen = () => {
                     </View>
 
                     {/* Market Info Section */}
-                    { !locationErrorMsg && <>
+                    { !errorMsg.location && <>
                     <Text style={styles.sectionTitle}>Market Info</Text>
                         <GooglePlacesAutocomplete
                             placeholder='Enter your address'
@@ -326,7 +326,7 @@ const RegisterScreen = () => {
                             </View>
                         )}</>
                     }
-                    {locationErrorMsg && <Text style={styles.errorText}>{locationErrorMsg}</Text>}
+                    {errorMsg.location && <Text style={styles.errorText}>{errorMsg.location}</Text>}
 
                     {/* Login Info Section */}
                     <Text style={styles.sectionTitle}>Login Info</Text>

@@ -49,7 +49,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     fontFamily: 'TitanOne',
     color: '#fff',
-    marginTop: 20,
+    marginTop: 40,
   },
   titleWeb: {
     textAlign: 'center',
@@ -63,15 +63,15 @@ const styles = StyleSheet.create({
   },
   button: {
     backgroundColor: '#00bfff',
-    padding: 10,
+    padding: 15,
     borderRadius: 5,
     marginHorizontal: 5,
-    width: 100,
+    width: 150,
     marginTop: 20,
   },
   buttonText: {
     color: 'white',
-    fontSize: 16,
+    fontSize: 20,
     fontWeight: 'bold',
     textAlign: 'center',
   },
