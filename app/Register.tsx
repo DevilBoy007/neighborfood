@@ -41,8 +41,23 @@ const RegisterScreen = () => {
         password: '',
         confirmPassword: ''
     });
-    const [errorMsg, setErrorMsg] = useState<string | null>(null);
-    const [locationErrorMsg, setLocationErrorMsg] = useState<string | null>(null);
+    const [errorMsg, setErrorMsg] = useState<{
+        fields: string,
+        username1: string,
+        username2: string,
+        password1: string,
+        password2: string,
+        email: string,
+        location: string
+    }>({
+        fields: '',
+        username1: '',
+        username2: '',
+        password1: '',
+        password2: '',
+        email: '',
+        location: ''
+    });
     const [showDatePicker, setShowDatePicker] = useState<boolean>(false);
     const [disabled, setDisabled] = useState<boolean>(false);
     const [isKeyboardVisible, setKeyboardVisible] = useState<boolean>(false);
@@ -66,7 +81,7 @@ const RegisterScreen = () => {
             // Request location permissions
             let { status } = await Location.requestForegroundPermissionsAsync();
             if (status !== 'granted') {
-                setLocationErrorMsg('Permission to access location was denied');
+                setErrorMsg({...errorMsg, 'location': 'Permission to access location was denied'});
                 return;
             }
 
@@ -91,7 +106,7 @@ const RegisterScreen = () => {
                 });
             } catch (error) {
                 console.error('Error getting location', error);
-                setLocationErrorMsg('Could not retrieve location');
+                setErrorMsg({...errorMsg, 'location': 'Could not retrieve location'});
             }
         })();
 
@@ -149,25 +164,33 @@ const RegisterScreen = () => {
     };
 
     const validateFormData = () => {
+        const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         const { firstName, lastName, email, dob, location, username, password, confirmPassword } = formData;
         if (!firstName || !lastName || !email || !dob || !location.address || !username || !password || !confirmPassword) {
-            setErrorMsg('All fields are required.');
+            setErrorMsg({ ...errorMsg, fields: 'All fields are required.' });
+            return false;
+        }
+        if (username.length < 6) {
+            setErrorMsg({...errorMsg, 'username1': 'Username must be at least 6 characters.'});
+            return false;
+        }
+        if (username.match(/[^a-zA-Z0-9]/)) {
+            setErrorMsg({...errorMsg, 'username2': 'Username cannot contain special characters.'});
             return false;
         }
         if (password !== confirmPassword) {
-            setErrorMsg('Passwords do not match.');
+            setErrorMsg({...errorMsg, 'password1': 'Passwords do not match.'});
             return false;
         }
         if (password.length < 6) {
-            setErrorMsg('Password must be at least 6 characters.');
+            setErrorMsg({...errorMsg, 'password2': 'Password must be at least 6 characters.'});
             return false;
         }
-        const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!emailPattern.test(email)) {
-            setErrorMsg('Invalid email format.');
+            setErrorMsg({...errorMsg, 'email': 'Invalid email format.'});
             return false;
         }
-        setErrorMsg(null);
+        setErrorMsg({'fields': '', 'username1': '', 'username2': '', 'password1': '', 'password2': '', 'email': '', 'location': ''});
         return true;
     };
 
@@ -217,7 +240,7 @@ const RegisterScreen = () => {
                 <ScrollView contentContainerStyle={{ flexGrow: 1 }} keyboardDismissMode='on-drag' keyboardShouldPersistTaps='handled' showsVerticalScrollIndicator={false}>
                     {/* Personal Details Section */}
                     <Text style={styles.sectionTitle}>Personal Details</Text>
-                    {errorMsg && <Text style={styles.errorText}>{errorMsg}</Text>}
+                    {errorMsg.fields && <Text style={[styles.errorText, styles.largeText]}>{errorMsg.fields}</Text>}
                     <View style={styles.row}>
                         <TextInput
                             style={[styles.input, styles.flex1, styles.marginRight]}
@@ -245,6 +268,7 @@ const RegisterScreen = () => {
                             value={formData.email}
                             onChangeText={(text) => handleChange('email', text)}
                         />
+                        {errorMsg.email && <Text style={styles.errorText}>{errorMsg.email}</Text>}
                         <View style={[styles.input, styles.flex1, styles.thin]}>
                             <Button onPress={() => setShowDatePicker(true)} title={formData.dob ? formData.dob : "d.o.b."} color={ formData.dob ? '#00bfff' : '#999' }/>
                             {showDatePicker && (
@@ -269,7 +293,7 @@ const RegisterScreen = () => {
                                 placeholderTextColor: '#999',
                                 returnKeyType: "search"
                             }}
-                            onPress={handleLocationSelect}
+                            onPress={(data: GooglePlaceData, detail: GooglePlaceDetail | null) => handleLocationSelect(data, detail || undefined)}
                             query={{
                                 key: 'AIzaSyCci8Td3waW6ToYzua9q6fxiNDetGa1sBI',
                                 language: 'en',
@@ -307,32 +331,36 @@ const RegisterScreen = () => {
                     {/* Login Info Section */}
                     <Text style={styles.sectionTitle}>Login Info</Text>
                     <TextInput
-                        style={[styles.input, styles.marginBottom]}
+                        style={styles.input}
                         placeholder="username"
                         placeholderTextColor="#999"
                         value={formData.username}
                         autoCapitalize='none'
                         onChangeText={(text) => handleChange('username', text)}
                     />
-                    {errorMsg == 'Passwords do not match.' && <Text style={styles.errorText}>{errorMsg}</Text>}
+                    <Text style={[styles.subtitle, styles.marginBottom]}>[ <Text style={errorMsg.username1?styles.errorText:styles.subtitle}>must be at least 6 characters</Text> | cannot contain special characters ]</Text>
                     <TextInput
-                        style={[styles.input, styles.marginBottom]}
+                        style={styles.input}
                         placeholder="password"
                         placeholderTextColor="#999"
                         secureTextEntry
+                        textContentType='none'
                         value={formData.password}
                         autoCapitalize='none'
                         onChangeText={(text) => handleChange('password', text)}
-                    />
+                        />
+                    <Text style={[styles.subtitle, styles.marginBottom]}>[ <Text style={errorMsg.password2?styles.errorText:styles.subtitle}>must be at least 6 characters</Text> ]</Text>
+                    {errorMsg.password1 && <Text style={styles.errorText}>{errorMsg.password1}</Text>}
                     <TextInput
                         style={[styles.input, styles.marginBottom]}
                         placeholder="confirm password"
                         placeholderTextColor="#999"
                         secureTextEntry
+                        textContentType='none'
                         value={formData.confirmPassword}
                         autoCapitalize='none'
                         onChangeText={(text) => handleChange('confirmPassword', text)}
-                    />
+                        />
                 </ScrollView>
                 {/* Register Button */}
                 <TouchableOpacity
@@ -376,6 +404,12 @@ const styles = StyleSheet.create({
         fontWeight: '300',
         fontFamily: 'TextMeOne'
     },
+    subtitle: {
+        fontSize:10,
+        marginLeft: 15,
+        fontFamily: 'TextMeOne',
+        color: '#000',
+    },
     row: {
         flexDirection: 'row',
         marginBottom: 16,
@@ -412,9 +446,12 @@ const styles = StyleSheet.create({
     },
     errorText: {
         color: 'red',
-        fontSize: 24,
+        fontSize: 10,
         marginVertical: 2,
         fontFamily: 'TextMeOne',
+    },
+    largeText: {
+        fontSize: 20,
     },
     googlePlacesContainer: {
         marginBottom: 16,
