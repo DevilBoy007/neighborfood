@@ -6,6 +6,7 @@ import {
     TouchableOpacity,
     StyleSheet,
     ScrollView,
+    KeyboardAvoidingView,
     Button,
     Platform
 } from 'react-native';
@@ -200,140 +201,142 @@ const RegisterScreen = () => {
     return (
         <View style={styles.container}>
             <Text style={styles.title}>Register</Text>
-            <ScrollView keyboardDismissMode='on-drag' keyboardShouldPersistTaps='handled'>
-                {/* Personal Details Section */}
-                <Text style={styles.sectionTitle}>Personal Details</Text>
-                {errorMsg && <Text style={styles.errorText}>{errorMsg}</Text>}
-                <View style={styles.row}>
-                    <TextInput
-                        style={[styles.input, styles.flex1, styles.marginRight]}
-                        placeholder="first name"
-                        placeholderTextColor="#999"
-                        value={formData.firstName}
-                        onChangeText={(text) => handleChange('firstName', text)}
-                    />
-                    <TextInput
-                        style={[styles.input, styles.flex1]}
-                        placeholder="last name"
-                        placeholderTextColor="#999"
-                        value={formData.lastName}
-                        onChangeText={(text) => handleChange('lastName', text)}
-                    />
-                </View>
-
-                <View style={styles.row}>
-                    <TextInput
-                        style={[styles.input, styles.flex1, styles.marginRight, styles.thin]}
-                        placeholder="email"
-                        placeholderTextColor="#999"
-                        keyboardType="email-address"
-                        autoCapitalize='none'
-                        value={formData.email}
-                        onChangeText={(text) => handleChange('email', text)}
-                    />
-                    <View style={[styles.input, styles.flex1, styles.thin]}>
-                        <Button onPress={() => setShowDatePicker(true)} title={formData.dob ? formData.dob : "d.o.b."} color={ formData.dob ? '#00bfff' : '#999' }/>
-                        {showDatePicker && (
-                            <DatePicker
-                                modal
-                                open={showDatePicker}
-                                date={formData.dob ? new Date(formData.dob) : new Date()}
-                                mode="date"
-                                onConfirm={handleDateChange}
-                                onCancel={() => setShowDatePicker(false)}
-                            />
-                        )}
+            <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+                <ScrollView contentContainerStyle={{ flexGrow: 1 }} keyboardDismissMode='on-drag' keyboardShouldPersistTaps='handled'>
+                    {/* Personal Details Section */}
+                    <Text style={styles.sectionTitle}>Personal Details</Text>
+                    {errorMsg && <Text style={styles.errorText}>{errorMsg}</Text>}
+                    <View style={styles.row}>
+                        <TextInput
+                            style={[styles.input, styles.flex1, styles.marginRight]}
+                            placeholder="first name"
+                            placeholderTextColor="#999"
+                            value={formData.firstName}
+                            onChangeText={(text) => handleChange('firstName', text)}
+                        />
+                        <TextInput
+                            style={[styles.input, styles.flex1]}
+                            placeholder="last name"
+                            placeholderTextColor="#999"
+                            value={formData.lastName}
+                            onChangeText={(text) => handleChange('lastName', text)}
+                        />
                     </View>
-                </View>
 
-                {/* Market Info Section */}
-                { !locationErrorMsg && <>
-                <Text style={styles.sectionTitle}>Market Info</Text>
-                    <GooglePlacesAutocomplete
-                        placeholder='Enter your address'
-                        textInputProps={{
-                            placeholderTextColor: '#999',
-                            returnKeyType: "search"
-                        }}
-                        onPress={handleLocationSelect}
-                        query={{
-                            key: 'AIzaSyCci8Td3waW6ToYzua9q6fxiNDetGa1sBI',
-                            language: 'en',
-                        }}
-                        styles={{
-                            textInput: styles.googlePlacesInput,
-                            container: styles.googlePlacesContainer
-                        }}
-                        fetchDetails={true}
-                        enablePoweredByContainer={false}
-                        requestUrl={{
-                            useOnPlatform: 'web',
-                            url: 'https://cors-anywhere.herokuapp.com/https://maps.googleapis.com/maps/api',
-                        }}
-                        disableScroll={true}
+                    <View style={styles.row}>
+                        <TextInput
+                            style={[styles.input, styles.flex1, styles.marginRight, styles.thin]}
+                            placeholder="email"
+                            placeholderTextColor="#999"
+                            keyboardType="email-address"
+                            autoCapitalize='none'
+                            value={formData.email}
+                            onChangeText={(text) => handleChange('email', text)}
+                        />
+                        <View style={[styles.input, styles.flex1, styles.thin]}>
+                            <Button onPress={() => setShowDatePicker(true)} title={formData.dob ? formData.dob : "d.o.b."} color={ formData.dob ? '#00bfff' : '#999' }/>
+                            {showDatePicker && (
+                                <DatePicker
+                                    modal
+                                    open={showDatePicker}
+                                    date={formData.dob ? new Date(formData.dob) : new Date()}
+                                    mode="date"
+                                    onConfirm={handleDateChange}
+                                    onCancel={() => setShowDatePicker(false)}
+                                />
+                            )}
+                        </View>
+                    </View>
+
+                    {/* Market Info Section */}
+                    { !locationErrorMsg && <>
+                    <Text style={styles.sectionTitle}>Market Info</Text>
+                        <GooglePlacesAutocomplete
+                            placeholder='Enter your address'
+                            textInputProps={{
+                                placeholderTextColor: '#999',
+                                returnKeyType: "search"
+                            }}
+                            onPress={handleLocationSelect}
+                            query={{
+                                key: 'AIzaSyCci8Td3waW6ToYzua9q6fxiNDetGa1sBI',
+                                language: 'en',
+                            }}
+                            styles={{
+                                textInput: styles.googlePlacesInput,
+                                container: styles.googlePlacesContainer
+                            }}
+                            fetchDetails={true}
+                            enablePoweredByContainer={false}
+                            requestUrl={{
+                                useOnPlatform: 'web',
+                                url: 'https://cors-anywhere.herokuapp.com/https://maps.googleapis.com/maps/api',
+                            }}
+                            disableScroll={true}
+                        />
+
+                        {/* Display selected location details */}
+                        {formData.location.address ? (
+                            <View style={styles.locationDetailsContainer}>
+                                <Text style={styles.locationDetail}>
+                                    {formData.location.address}
+                                </Text>
+                            </View>
+                        ) : (
+                            <View style={styles.locationDetailsContainer}>
+                                <Text style={styles.locationDetail}>
+                                    {formData.location.city}, {formData.location.state} {formData.location.zip}
+                                </Text>
+                            </View>
+                        )}</>
+                    }
+                    {locationErrorMsg && <Text style={styles.errorText}>{locationErrorMsg}</Text>}
+
+                    {/* Login Info Section */}
+                    <Text style={styles.sectionTitle}>Login Info</Text>
+                    <TextInput
+                        style={[styles.input, styles.marginBottom]}
+                        placeholder="username"
+                        placeholderTextColor="#999"
+                        value={formData.username}
+                        autoCapitalize='none'
+                        onChangeText={(text) => handleChange('username', text)}
                     />
-
-                    {/* Display selected location details */}
-                    {formData.location.address ? (
-                        <View style={styles.locationDetailsContainer}>
-                            <Text style={styles.locationDetail}>
-                                {formData.location.address}
-                            </Text>
-                        </View>
-                    ) : (
-                        <View style={styles.locationDetailsContainer}>
-                            <Text style={styles.locationDetail}>
-                                {formData.location.city}, {formData.location.state} {formData.location.zip}
-                            </Text>
-                        </View>
-                    )}</>
-                }
-                {locationErrorMsg && <Text style={styles.errorText}>{locationErrorMsg}</Text>}
-
-                {/* Login Info Section */}
-                <Text style={styles.sectionTitle}>Login Info</Text>
-                <TextInput
-                    style={[styles.input, styles.marginBottom]}
-                    placeholder="username"
-                    placeholderTextColor="#999"
-                    value={formData.username}
-                    autoCapitalize='none'
-                    onChangeText={(text) => handleChange('username', text)}
-                />
-                {errorMsg == 'Passwords do not match.' && <Text style={styles.errorText}>{errorMsg}</Text>}
-                <TextInput
-                    style={[styles.input, styles.marginBottom]}
-                    placeholder="password"
-                    placeholderTextColor="#999"
-                    secureTextEntry
-                    value={formData.password}
-                    autoCapitalize='none'
-                    onChangeText={(text) => handleChange('password', text)}
-                />
-                <TextInput
-                    style={[styles.input, styles.marginBottom]}
-                    placeholder="confirm password"
-                    placeholderTextColor="#999"
-                    secureTextEntry
-                    value={formData.confirmPassword}
-                    autoCapitalize='none'
-                    onChangeText={(text) => handleChange('confirmPassword', text)}
-                />
-            </ScrollView>
-            {/* Register Button */}
-            <TouchableOpacity
+                    {errorMsg == 'Passwords do not match.' && <Text style={styles.errorText}>{errorMsg}</Text>}
+                    <TextInput
+                        style={[styles.input, styles.marginBottom]}
+                        placeholder="password"
+                        placeholderTextColor="#999"
+                        secureTextEntry
+                        value={formData.password}
+                        autoCapitalize='none'
+                        onChangeText={(text) => handleChange('password', text)}
+                    />
+                    <TextInput
+                        style={[styles.input, styles.marginBottom]}
+                        placeholder="confirm password"
+                        placeholderTextColor="#999"
+                        secureTextEntry
+                        value={formData.confirmPassword}
+                        autoCapitalize='none'
+                        onChangeText={(text) => handleChange('confirmPassword', text)}
+                    />
+                </ScrollView>
+                {/* Register Button */}
+                <TouchableOpacity
                 style={[
                     styles.button,
                     disabled && styles.buttonDisabled
                 ]}
                 onPress={handleRegister}
                 disabled={disabled}
-            >
+                >
                 <Text style={[
                     styles.buttonText,
                     disabled && styles.buttonTextDisabled
                 ]}>Register</Text>
-            </TouchableOpacity>
+                </TouchableOpacity>
+            </KeyboardAvoidingView>
         </View>
     );
 };
@@ -351,6 +354,7 @@ const styles = StyleSheet.create({
         color: '#fff',
         marginTop: 33,
         textAlign: 'center',
+        paddingBottom: 16,
     },
     sectionTitle: {
         fontSize: 24,
@@ -385,7 +389,8 @@ const styles = StyleSheet.create({
         backgroundColor: '#00bfff',
         padding: 16,
         borderRadius: 8,
-        marginTop: 25,
+        marginVertical: 20,
+        alignSelf: 'stretch',
     },
     buttonText: {
         color: '#fff',
