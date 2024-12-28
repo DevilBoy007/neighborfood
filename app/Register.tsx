@@ -201,7 +201,6 @@ const RegisterScreen = () => {
         try {
             setDisabled(true);
             await firebaseService.connect();
-            
             const { email, password, firstName, lastName, dob, location, username } = formData;
             const user = await firebaseService.registerUser(email, password, username);
             setUser(user);
@@ -223,7 +222,7 @@ const RegisterScreen = () => {
             console.log('Registration successful!');
             EventRegister.emit('userLoggedIn', user);
         } catch (error) {
-            alert(`Error registering user: ${error}`);
+            alert(`Error registering user: ${error.message}`);
             setDisabled(false);
         }
     };
