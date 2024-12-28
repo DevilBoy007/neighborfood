@@ -80,7 +80,14 @@ class FirebaseService {
             return user;
         } catch (error) {
             console.error('Error registering user:', error);
-            throw error;
+            switch (error.code) {
+                case 'auth/email-already-in-use':
+                    throw new Error('Email already in use');
+                case 'auth/invalid-email':
+                    throw new Error('Invalid email');
+                default:
+                    throw error;
+            }
         }
     }
 
