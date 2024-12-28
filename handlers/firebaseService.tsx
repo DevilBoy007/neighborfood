@@ -47,16 +47,22 @@ class FirebaseService {
     }
 
     async connect() {
-        try {
-            this.app = initializeApp(this.firebaseConfig);
-            this.auth = initializeAuth(this.app, { persistence: getReactNativePersistence(ReactNativeAsyncStorage) });
-            this.db = getFirestore(this.app);
-            console.log('Successfully connected to Firebase');
+        if (this.app && this.auth && this.db) {
+            console.log('Already connected to Firebase');
             return true;
-        } catch (error) {
-            console.error('Error connecting to Firebase:', error);
-            throw error;
         }
+        else {
+            try {
+                this.app = initializeApp(this.firebaseConfig);
+                this.auth = initializeAuth(this.app, { persistence: getReactNativePersistence(ReactNativeAsyncStorage) });
+                this.db = getFirestore(this.app);
+                console.log('Successfully connected to Firebase');
+                return true;
+            } catch (error) {
+                console.error('Error connecting to Firebase:', error);
+                throw error;
+            }
+        } 
     }
 
     async registerUser(email: string, password: string, username: string): Promise<UserCredential['user']> {
