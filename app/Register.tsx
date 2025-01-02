@@ -29,6 +29,7 @@ const RegisterScreen = () => {
         lastName: '',
         email: '',
         dob: '',
+        phone: '',
         location: {
             address: '',
             city: '',
@@ -43,20 +44,22 @@ const RegisterScreen = () => {
     });
     const [errorMsg, setErrorMsg] = useState<{
         fields: string,
+        phone: string,
         username1: string,
         username2: string,
         password1: string,
         password2: string,
         email: string,
-        location: string
+        location: string,
     }>({
         fields: '',
+        phone: '',
         username1: '',
         username2: '',
         password1: '',
         password2: '',
         email: '',
-        location: ''
+        location: '',
     });
     const [showDatePicker, setShowDatePicker] = useState<boolean>(false);
     const [disabled, setDisabled] = useState<boolean>(false);
@@ -165,8 +168,8 @@ const RegisterScreen = () => {
 
     const validateFormData = () => {
         const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        const { firstName, lastName, email, dob, location, username, password, confirmPassword } = formData;
-        if (!firstName || !lastName || !email || !dob || !location.address || !username || !password || !confirmPassword) {
+        const { firstName, lastName, email, dob, phone, location, username, password, confirmPassword } = formData;
+        if (!firstName || !lastName || !email || !dob || !phone || !location.address || !username || !password || !confirmPassword) {
             setErrorMsg({ ...errorMsg, fields: 'All fields are required.' });
             return false;
         }
@@ -190,7 +193,11 @@ const RegisterScreen = () => {
             setErrorMsg({...errorMsg, 'email': 'Invalid email format.'});
             return false;
         }
-        setErrorMsg({'fields': '', 'username1': '', 'username2': '', 'password1': '', 'password2': '', 'email': '', 'location': ''});
+        if (phone.length !== 10 || phone.match(/[^0-9]/)) {
+            setErrorMsg({...errorMsg, 'phone': 'Invalid phone number.'});
+            return false;
+        }
+        setErrorMsg({'fields': '', 'phone': '', 'username1': '', 'username2': '', 'password1': '', 'password2': '', 'email': '', 'location': ''});
         return true;
     };
 
@@ -201,7 +208,7 @@ const RegisterScreen = () => {
         try {
             setDisabled(true);
             await firebaseService.connect();
-            const { email, password, firstName, lastName, dob, location, username } = formData;
+            const { email, password, phone, firstName, lastName, dob, location, username } = formData;
             const user = await firebaseService.registerUser(email, password, username);
             setUser(user);
 
@@ -210,6 +217,7 @@ const RegisterScreen = () => {
                 email: user.email,
                 first: firstName,
                 last: lastName,
+                phone: phone,
                 dob: dob,
                 location: location,
                 username: username,
@@ -282,7 +290,14 @@ const RegisterScreen = () => {
                             )}
                         </View>
                     </View>
-
+                    <TextInput
+                        style={styles.input}
+                        placeholder="phone number"
+                        placeholderTextColor="#999"
+                        keyboardType="phone-pad"
+                        value={formData.phone}
+                        onChangeText={(text) => handleChange('phone', text)}
+                    />
                     {/* Market Info Section */}
                     { !errorMsg.location && <>
                     <Text style={styles.sectionTitle}>Market Info</Text>
