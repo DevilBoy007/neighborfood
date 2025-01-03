@@ -6,11 +6,10 @@ import {
     TouchableOpacity,
     StyleSheet,
     ScrollView,
-    Keyboard,
     KeyboardAvoidingView,
-    Button,
     Platform
 } from 'react-native';
+import { EventRegister } from 'react-native-event-listeners';
 import { KeyboardToolbar } from 'react-native-keyboard-controller';
 import { User } from 'firebase/auth'
 import { useRouter } from 'expo-router';
@@ -40,7 +39,15 @@ const LoginScreen = () => {
             }
         };
         //checkUser();
+        const userLoggedInListener = EventRegister.on('userLoggedIn', () => {
+            router.replace('/success');
+            setTimeout(() => {
+                router.replace('/(home)/Market');
+            }, 2000);
+        });
     }, []);
+
+    
 
     const handleLogin = async () => {
         try {
@@ -51,7 +58,7 @@ const LoginScreen = () => {
                 await AsyncStorage.setItem('userData', JSON.stringify(userData));
                 setUser(userData);
                 console.log('User logged in:', userData);
-                router.replace('/Market');
+                EventRegister.emit('userLoggedIn');
             }
         } catch (error) {
             console.error('Error logging in:', error);
