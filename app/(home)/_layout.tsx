@@ -3,6 +3,7 @@ import { useFonts } from 'expo-font';
 import { View, StyleSheet, Platform, TouchableOpacity, Image } from 'react-native';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect, useState, useCallback } from 'react';
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import chatIcon from '../../assets/images/chat.png';
 import pollsIcon from '../../assets/images/surveys.png';
@@ -20,12 +21,31 @@ export default function RootLayout() {
     TitanOne: require('../../assets/fonts/TitanOne-Regular.ttf'),
     TextMeOne: require('../../assets/fonts/TextMeOne-Regular.ttf'),
   });
-
+  const [userProfileData, setUserProfileData] = useState<Object | null>(null);
   const [showEditDetails, setShowEditDetails] = useState(false);
 
   useEffect(() => {
     if (loaded) {
       SplashScreen.hideAsync();
+      const checkUser = async () => {
+        try {
+            const userData = await AsyncStorage.getItem('userData');
+            console.log('User data:', userData);
+            if (!userData) {
+              router.replace('/');
+              return;
+            }
+            else {
+              const DATA = JSON.parse(userData);
+              setUserProfileData(DATA);
+              console.log('Loaded user data:\n', userProfileData);
+            }
+        } catch (error) {
+            console.error('User not logged in:', error);
+            router.replace('/');
+        }
+    };
+    checkUser();
     }
   }, [loaded]);
 
