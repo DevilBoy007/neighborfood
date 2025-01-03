@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, FlatList, StyleSheet, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Placeholder for the Shop component
 const Shop = ({ name }: { name: string }) => (
@@ -18,13 +19,30 @@ const MarketScreen = () => {
     const [isMapView, setIsMapView] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
     const [showSortOptions, setShowSortOptions] = useState(false);
-    
+    const [userProfileData, setUserProfileData] = useState({});
+
     const shops = [
         "Ben's Beef",
         "Big Baskets",
         "Ann's Apples",
         "Happy Alan's Produce"
-    ]; // this is a placeholder for the list of shops which will eventually load from a data source
+    ];
+
+    useEffect(() => {
+        const loadUserData = async () => {
+            try {
+                const userData = await AsyncStorage.getItem('userData');
+                if (userData) {
+                    const DATA = JSON.parse(userData);
+                    setUserProfileData(DATA);
+                    console.log('Loaded user data:\n', userProfileData);
+                }
+            } catch (error) {
+                console.error('Error loading profile data:', error);
+            }
+            loadUserData()
+        }
+    });
 
     const toggleView = () => setIsMapView(!isMapView);
     
