@@ -79,11 +79,29 @@ class FirebaseService {
         } 
     }
 
+    async logout() {
+        try {
+            if (!this.auth) {
+                throw new Error('Firebase Auth is not initialized');
+            }
+            await signOut(this.auth);
+            // Clear any cached data
+            await ReactNativeAsyncStorage.clear();
+            console.log('User logged out successfully');
+            return true;
+        } catch (error) {
+            console.error('Error logging out:', error);
+            throw error;
+        }
+    }
+
     async login(email: string, password: string): Promise<UserCredential> {
         try {
             if (!this.auth) {
                 throw new Error('Firebase Auth is not initialized');
             }
+            // Clear any existing cached data before login
+            await ReactNativeAsyncStorage.clear();
             const userCredential = await signInWithEmailAndPassword(this.auth, email, password);
             console.log('User logged in:', userCredential.user.uid);
             return userCredential;
