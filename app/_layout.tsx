@@ -30,6 +30,7 @@ export default function RootLayout() {
             <Stack>
                 <Stack.Screen name="index" options={{ headerShown: false }} />
                 <Stack.Screen name="Register" options={{ headerShown: false }} />
+                <Stack.Screen name="Login" options={{ headerShown: false }} />
                 <Stack.Screen name="+not-found" options={{ headerShown: false }} />
                 <Stack.Screen name="success" options={{ headerShown: false, animation: 'fade' }} />
                 <Stack.Screen name="EditDetails" options={{ headerShown: false, presentation: 'modal', }} />
