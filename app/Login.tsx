@@ -27,37 +27,54 @@ const LoginScreen = () => {
     useEffect(() => {
         const checkUser = async () => {
             try {
-                const userData = await AsyncStorage.getItem('userData');
-                if (userData) {
-                    const DATA = JSON.parse(userData);
-                    setUser(DATA);
-                    console.log('Loaded user data:\n', user);
-                    router.replace('/Market');
+                const user = await AsyncStorage.getItem('userData');
+
+                if (!user) {
+                    console.log('No user data found');
+                    router.replace('/');
+                    return;
                 }
+
+                const DATA = JSON.parse(user);
+                if (!DATA || !DATA.uid) {
+                    console.log('Invalid user data');
+                    router.replace('/');
+                    return;
+                }
+
+                setuserData(DATA);
+                console.log('Loaded user data:', DATA.uid);
+
             } catch (error) {
-                console.error('User not logged in:', error);
+                console.error('Error checking user:', error);
+                router.replace('/');
             }
         };
-        //checkUser();
+
+        // checkUser();
         const userLoggedInListener = EventRegister.on('userLoggedIn', () => {
             router.replace('/success');
             setTimeout(() => {
                 router.replace('/(home)/Market');
             }, 2000);
         });
+        return () => {
+            EventRegister.rm(userLoggedInListener);
+        }
     }, []);
 
     
 
     const handleLogin = async () => {
         try {
-            await firebaseService.connect()
+            await firebaseService.connect();
+            await firebaseService.logout(); // clear any cached data
             const userCredential = await firebaseService.login(email, password);
+            console.log(userCredential.operationType, userCredential.user);
             if (userCredential) {
-                const userData = { userCredential };
+                const userData =  userCredential.user ;
                 await AsyncStorage.setItem('userData', JSON.stringify(userData));
-                setUser(userData);
-                console.log('User logged in:', userData);
+                console.log('Stored user:', userData.uid);
                 EventRegister.emit('userLoggedIn');
             }
         } catch (error) {

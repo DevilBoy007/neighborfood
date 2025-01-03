@@ -25,28 +25,35 @@ export default function RootLayout() {
   const [showEditDetails, setShowEditDetails] = useState(false);
 
   useEffect(() => {
-    if (loaded) {
-      SplashScreen.hideAsync();
-      const checkUser = async () => {
-        try {
-            const user = await AsyncStorage.getItem('user');
-            console.log('User:', user);
-            if (!user) {
-              router.replace('/');
-              return;
-            }
-            else {
-              const DATA = await JSON.parse(user);
-              setuserData(DATA);
-              console.log('Loaded user data:\n', userData);
-            }
-        } catch (error) {
-            console.error('User not logged in:', error);
-            router.replace('/');
+    if (!loaded) return;
+
+    const checkUser = async () => {
+      try {
+        const user = await AsyncStorage.getItem('userData');
+        
+        if (!user) {
+          console.log('No user data found');
+          router.replace('/');
+          return;
         }
+
+        const DATA = JSON.parse(user);
+        if (!DATA || !DATA.uid) {
+          console.log('Invalid user data');
+          router.replace('/');
+          return;
+        }
+
+        setuserData(DATA);
+        console.log('Loaded user data:', DATA.uid);
+        
+      } catch (error) {
+        console.error('Error checking user:', error);
+        router.replace('/');
+      }
     };
+
     checkUser();
-    }
   }, [loaded]);
 
   const toggleEditDetails = useCallback(() => {
