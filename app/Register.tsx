@@ -20,6 +20,7 @@ import { GooglePlaceData, GooglePlaceDetail, GooglePlacesAutocomplete } from 're
 import * as Location from 'expo-location';
 import firebaseService from '@/handlers/firebaseService';
 import DatePicker from 'react-native-date-picker';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const RegisterScreen = () => {
     const router = useRouter();
@@ -113,7 +114,7 @@ const RegisterScreen = () => {
             }
         })();
 
-        const userLoggedInListener = EventRegister.on('userLoggedIn', (user) => {
+        const userLoggedInListener = EventRegister.on('userLoggedIn', (userData) => {
             router.replace('/success');
             setTimeout(() => {
                 router.replace('/(home)/Market');
@@ -226,12 +227,22 @@ const RegisterScreen = () => {
                 lastLogin: new Date()
             };
             await firebaseService.addDocument('user', userData);
-
             console.log('Registration successful!');
-            EventRegister.emit('userLoggedIn', user);
+            handleRegistrationSuccess(userData);
         } catch (error) {
             alert(`Error registering user: ${error.message}`);
             setDisabled(false);
+        }
+    };
+
+    const handleRegistrationSuccess = async (userData: Object) => {
+        try {
+            // store user data
+            console.log('Saving user data:', userData);
+            await AsyncStorage.setItem('userData', JSON.stringify(userData));
+            EventRegister.emit('userLoggedIn', userData);
+        } catch (error) {
+            console.error('Error saving auth data', error);
         }
     };
 
