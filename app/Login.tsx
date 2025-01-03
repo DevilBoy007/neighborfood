@@ -70,19 +70,23 @@ const LoginScreen = () => {
         <KeyboardAvoidingView
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
             style={styles.container}
+            keyboardVerticalOffset={Platform.select({ ios: -350, android: -350 })}
         >
             <ScrollView scrollEnabled={false}>
                 <Text style={styles.title}>Login</Text>
                 <View style={styles.inputContainer}>
                     <TextInput
+                    autoCapitalize='none'
                     style={styles.input}
                     placeholder="Email"
+                    placeholderTextColor={'#999'}
                     value={email}
                     onChangeText={setEmail}
                 />
                 <TextInput
                     style={styles.input}
                     placeholder="Password"
+                    placeholderTextColor={'#999'}
                     value={password}
                     onChangeText={setPassword}
                     secureTextEntry
@@ -130,6 +134,8 @@ const styles = StyleSheet.create({
         margin: 12,
         borderBottomWidth: 1,
         padding: 10,
+        color: 'fff',
+        fontSize: 20,
     },
     buttonContainer: {
         flex: 1,
@@ -161,6 +167,7 @@ const styles = StyleSheet.create({
         marginVertical: 2,
         marginHorizontal: 2,
         fontFamily: 'TextMeOne',
+        fontSize: 16,
     }
 })
 
