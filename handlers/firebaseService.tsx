@@ -1,5 +1,13 @@
 import { initializeApp, FirebaseApp } from 'firebase/app';
-import { initializeAuth, getReactNativePersistence, createUserWithEmailAndPassword, signInWithEmailAndPassword, Auth, UserCredential } from 'firebase/auth';
+import {
+    initializeAuth,
+    getReactNativePersistence,
+    createUserWithEmailAndPassword,
+    signInWithEmailAndPassword,
+    signOut,
+    Auth,
+    UserCredential
+} from 'firebase/auth';
 import ReactNativeAsyncStorage from '@react-native-async-storage/async-storage';
 import {
     getFirestore,
@@ -53,8 +61,14 @@ class FirebaseService {
         }
         else {
             try {
-                this.app = initializeApp(this.firebaseConfig);
-                this.auth = initializeAuth(this.app, { persistence: getReactNativePersistence(ReactNativeAsyncStorage) });
+                this.app = initializeApp(this.firebaseConfig);                // Initialize auth with forced token refresh
+                this.auth = initializeAuth(this.app, {
+                    persistence: getReactNativePersistence(ReactNativeAsyncStorage)
+                });
+                
+                // Force token refresh on init
+                await this.auth.currentUser?.reload();
+                
                 this.db = getFirestore(this.app);
                 console.log('Successfully connected to Firebase');
                 return true;
