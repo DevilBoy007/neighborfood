@@ -3,6 +3,7 @@ import { useFonts } from 'expo-font';
 import { View, StyleSheet, Platform, TouchableOpacity, Image } from 'react-native';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect, useState, useCallback } from 'react';
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import chatIcon from '../../assets/images/chat.png';
 import pollsIcon from '../../assets/images/surveys.png';
@@ -20,12 +21,31 @@ export default function RootLayout() {
     TitanOne: require('../../assets/fonts/TitanOne-Regular.ttf'),
     TextMeOne: require('../../assets/fonts/TextMeOne-Regular.ttf'),
   });
-
+  const [userProfileData, setUserProfileData] = useState<Object | null>(null);
   const [showEditDetails, setShowEditDetails] = useState(false);
 
   useEffect(() => {
     if (loaded) {
       SplashScreen.hideAsync();
+      const checkUser = async () => {
+        try {
+            const userData = await AsyncStorage.getItem('userData');
+            console.log('User data:', userData);
+            if (!userData) {
+              router.replace('/');
+              return;
+            }
+            else {
+              const DATA = JSON.parse(userData);
+              setUserProfileData(DATA);
+              console.log('Loaded user data:\n', userProfileData);
+            }
+        } catch (error) {
+            console.error('User not logged in:', error);
+            router.replace('/');
+        }
+    };
+    checkUser();
     }
   }, [loaded]);
 
@@ -44,7 +64,7 @@ export default function RootLayout() {
           {Platform.OS !== 'web' && !showEditDetails &&
             <TouchableOpacity onPress={toggleEditDetails} style={styles.profileImage}>
               <Image
-                source={profileIcon}
+                source={userProfileData ? { uri: userProfileData.pfpUrl } : profileIcon}
                 style={styles.profileImage}
               />
             </TouchableOpacity>
@@ -54,7 +74,7 @@ export default function RootLayout() {
             <View style={styles.footer}>
               <TouchableOpacity style={styles.iconButton} onPress={ toggleEditDetails }>
                 <Image
-                  source={profileIcon}
+                  source={userProfileData ? { uri: userProfileData.pfpUrl } : profileIcon}
                   style={[styles.iconButton, styles.profileImage]}
                 />
               </TouchableOpacity>
@@ -148,14 +168,6 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
       },
     }),
-  },
-  editDetailsContainer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    // Adjust the height as needed
-    height: '90%',
   },
   iconButton: {
     padding: 10,
