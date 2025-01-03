@@ -87,17 +87,17 @@ const LoginScreen = () => {
                     onChangeText={setPassword}
                     secureTextEntry
                 />
-                </View>
-                <View style={styles.buttonContainer}>
-                    <TouchableOpacity
-                        style={styles.button}
-                        onPress={handleLogin}
-                    >
-                        <Text style={styles.buttonText}>Login</Text>
-                    </TouchableOpacity>
-                </View>
                 <Text style={styles.errorText}>{error}</Text>
+                </View>
             </ScrollView>
+            <View style={styles.buttonContainer}>
+                <TouchableOpacity
+                    style={styles.button}
+                    onPress={handleLogin}
+                >
+                    <Text style={styles.buttonText}>Login</Text>
+                </TouchableOpacity>
+            </View>
             <KeyboardToolbar />
         </KeyboardAvoidingView>
     );
@@ -114,37 +114,46 @@ const styles = StyleSheet.create({
         fontSize: 36,
         fontWeight: 'bold',
         color: '#fff',
-        marginTop: 33,
+        marginTop: 100,
         textAlign: 'center',
-        paddingBottom: 16,
+        paddingBottom: 75,
     },
     inputContainer: {
         flex: 1,
         alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingBottom: 75,
     },
     input: {
         width: '80%',
         height: 40,
         margin: 12,
-        borderWidth: 1,
+        borderBottomWidth: 1,
         padding: 10,
     },
     buttonContainer: {
+        flex: 1,
         flexDirection: 'row',
         justifyContent: 'center',
+        ...Platform.select({
+            ios: {
+                position: 'absolute',
+                bottom: 0,
+                left: 0,
+                right: 0,
+            }
+        })
     },
     button: {
         width: '100%',
-        height: 40,
-        margin: 12,
         padding: 10,
+        paddingBottom: 33,
         backgroundColor: '#00bfff',
-        alignSelf: 'stretch',
     },
     buttonText: {
         color: 'white',
         textAlign: 'center',
-        fontSize: 16,
+        fontSize: 30,
         fontFamily: 'TextMeOne',
     },
     errorText: {
