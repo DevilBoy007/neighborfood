@@ -130,7 +130,7 @@ const RegisterScreen = () => {
         });
 
         return () => {
-            EventRegister.removeEventListener(userLoggedInListener);
+            EventRegister.rm(userLoggedInListener);
             keyboardDidShowListener.remove();
             keyboardDidHideListener.remove();
         };
@@ -209,6 +209,7 @@ const RegisterScreen = () => {
         try {
             setDisabled(true);
             await firebaseService.connect();
+            await firebaseService.logout(); // clear any cached data
             const { email, password, phone, firstName, lastName, dob, location, username } = formData;
             const user = await firebaseService.registerUser(email, password, username);
             setUser(user);
@@ -237,11 +238,11 @@ const RegisterScreen = () => {
         }
     };
 
-    const handleRegistrationSuccess = async (user: Object) => {
+    const handleRegistrationSuccess = async (user: User) => {
         try {
             // store user data
-            console.log('Saving user data:', user);
-            await AsyncStorage.setItem('user', JSON.stringify(user));
+            console.log('Stored user:', user.uid);
+            await AsyncStorage.setItem('userData', JSON.stringify(user));
             EventRegister.emit('userLoggedIn');
         } catch (error) {
             console.error('Error saving auth data', error);
