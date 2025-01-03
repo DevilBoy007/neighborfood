@@ -35,7 +35,7 @@ const MarketScreen = () => {
                 if (userData) {
                     const DATA = JSON.parse(userData);
                     setUserProfileData(DATA);
-                    console.log('Loaded user data:\n', userProfileData);
+                    console.log('Loaded user market data:\n', userProfileData);
                 }
             } catch (error) {
                 console.error('Error loading profile data:', error);

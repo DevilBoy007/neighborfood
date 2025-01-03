@@ -14,7 +14,7 @@ import {
 import { KeyboardToolbar } from 'react-native-keyboard-controller';
 import { useRouter } from 'expo-router';
 import 'react-native-get-random-values';
-import { User } from 'firebase/auth'
+import { updateProfile, User } from 'firebase/auth'
 import { EventRegister } from 'react-native-event-listeners';
 import { GooglePlaceData, GooglePlaceDetail, GooglePlacesAutocomplete } from 'react-native-google-places-autocomplete';
 import * as Location from 'expo-location';
@@ -114,7 +114,7 @@ const RegisterScreen = () => {
             }
         })();
 
-        const userLoggedInListener = EventRegister.on('userLoggedIn', (userData) => {
+        const userLoggedInListener = EventRegister.on('userLoggedIn', () => {
             router.replace('/success');
             setTimeout(() => {
                 router.replace('/(home)/Market');
@@ -212,7 +212,10 @@ const RegisterScreen = () => {
             const { email, password, phone, firstName, lastName, dob, location, username } = formData;
             const user = await firebaseService.registerUser(email, password, username);
             setUser(user);
-
+            updateProfile(user, {
+                displayName: username, 
+                photoURL: "https://firebasestorage.googleapis.com/v0/b/neighborfoods/o/cloud.gif?alt=media&token=81350c47-c9e3-4c75-8d9d-d0b9ff6e50f0",
+            })
             const userData = {
                 uid: user.uid,
                 email: user.email,
@@ -222,25 +225,24 @@ const RegisterScreen = () => {
                 dob: dob,
                 location: location,
                 username: username,
-                pfpUrl: 'https://firebasestorage.googleapis.com/v0/b/neighborfoods/o/cloud.gif?alt=media&token=81350c47-c9e3-4c75-8d9d-d0b9ff6e50f0',
                 createdAt: new Date(),
                 lastLogin: new Date()
             };
             await firebaseService.addDocument('user', userData);
             console.log('Registration successful!');
-            handleRegistrationSuccess(userData);
+            handleRegistrationSuccess(user);
         } catch (error) {
             alert(`Error registering user: ${error.message}`);
             setDisabled(false);
         }
     };
 
-    const handleRegistrationSuccess = async (userData: Object) => {
+    const handleRegistrationSuccess = async (user: Object) => {
         try {
             // store user data
-            console.log('Saving user data:', userData);
-            await AsyncStorage.setItem('userData', JSON.stringify(userData));
-            EventRegister.emit('userLoggedIn', userData);
+            console.log('Saving user data:', user);
+            await AsyncStorage.setItem('user', JSON.stringify(user));
+            EventRegister.emit('userLoggedIn');
         } catch (error) {
             console.error('Error saving auth data', error);
         }

@@ -21,7 +21,7 @@ export default function RootLayout() {
     TitanOne: require('../../assets/fonts/TitanOne-Regular.ttf'),
     TextMeOne: require('../../assets/fonts/TextMeOne-Regular.ttf'),
   });
-  const [userProfileData, setUserProfileData] = useState<Object | null>(null);
+  const [userData, setuserData] = useState<Object | null>(null);
   const [showEditDetails, setShowEditDetails] = useState(false);
 
   useEffect(() => {
@@ -29,16 +29,16 @@ export default function RootLayout() {
       SplashScreen.hideAsync();
       const checkUser = async () => {
         try {
-            const userData = await AsyncStorage.getItem('userData');
-            console.log('User data:', userData);
-            if (!userData) {
+            const user = await AsyncStorage.getItem('user');
+            console.log('User:', user);
+            if (!user) {
               router.replace('/');
               return;
             }
             else {
-              const DATA = JSON.parse(userData);
-              setUserProfileData(DATA);
-              console.log('Loaded user data:\n', userProfileData);
+              const DATA = await JSON.parse(user);
+              setuserData(DATA);
+              console.log('Loaded user data:\n', userData);
             }
         } catch (error) {
             console.error('User not logged in:', error);
@@ -64,7 +64,7 @@ export default function RootLayout() {
           {Platform.OS !== 'web' && !showEditDetails &&
             <TouchableOpacity onPress={toggleEditDetails} style={styles.profileImage}>
               <Image
-                source={userProfileData ? { uri: userProfileData.pfpUrl } : profileIcon}
+                source={userData ? { uri: userData.photoURL } : profileIcon}
                 style={styles.profileImage}
               />
             </TouchableOpacity>
@@ -74,7 +74,7 @@ export default function RootLayout() {
             <View style={styles.footer}>
               <TouchableOpacity style={styles.iconButton} onPress={ toggleEditDetails }>
                 <Image
-                  source={userProfileData ? { uri: userProfileData.pfpUrl } : profileIcon}
+                  source={userData ? { uri: userData.photoURL } : profileIcon}
                   style={[styles.iconButton, styles.profileImage]}
                 />
               </TouchableOpacity>
