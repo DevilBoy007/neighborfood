@@ -11,12 +11,7 @@ const EditDetails = () => {
 
     return (
         <View style={styles.container}>
-            <View style={styles.dragBar}>
-                {Platform.OS !== 'web' && <View style={styles.dragBarImage} />}
-                {Platform.OS === 'web' && <Text onPress={() => { router.back(); }} style={styles.closeIcon}>X</Text>}
-            </View>
-            {Platform.OS === 'web' &&
-                <View style={{ flex: 1, flexDirection: 'row', justifyContent: 'space-between', marginBottom: 100, }}>
+            <View style={styles.topBar}>
                 <TouchableOpacity style={styles.profileImage}>
                     <Image
                         source={profileIcon}
@@ -24,17 +19,8 @@ const EditDetails = () => {
                     />
                 </TouchableOpacity>
                 <Text style={styles.title}>Edit Details</Text>
+                <Text onPress={() => { router.back(); }} style={styles.closeIcon}>X</Text>
             </View>
-            }
-            { Platform.OS !== 'web' && <>
-            <TouchableOpacity style={styles.profileImage}>
-                <Image
-                    source={profileIcon}
-                    style={styles.profileImage} />
-            </TouchableOpacity>
-            <Text style={styles.title}>Edit Details</Text>
-            </>
-            }
             <ScrollView>
                 <Text style={styles.subtitle}>Personal Info</Text>
                 <TextInput style={styles.input} placeholder="email" placeholderTextColor={ '#999' } />
@@ -76,104 +62,81 @@ const EditDetails = () => {
 
 const styles = StyleSheet.create({
     container: {
+        flex: 1,
         backgroundColor: '#b7ffb0',
-        padding: 20,
-        ...Platform.select({
-            ios: {
-                height: height * 0.93,
-            },
-            web: {
-                height: height,
-            },
-        }),
+        paddingHorizontal: Platform.OS === 'web' ? '10%' : 20,
+        paddingTop: Platform.OS === 'web' ? 40 : 60,
     },
-    dragBar: {
-        width: '100%',
-        height: 30,
-        justifyContent: 'center',
+    topBar: {
+        flexDirection: 'row',
         alignItems: 'center',
-    },
-    closeIcon: {
-        fontSize: 15,
-        fontWeight: 'bold',
-        color: '#b7ffb0',
-        fontFamily: 'TextMeOne',
-        margin: 30,
-        position: 'absolute',
-        height: 30,
-        width: 40,
-        borderRadius: 17,
-        backgroundColor: "#fff",
-        padding: 10,
-        paddingLeft: 15,
-        right: 0,
-        top: 0,
-    },
-    dragBarImage: {
-        width: 50,
-        height: 5,
-        backgroundColor: 'grey',
-        borderRadius: 2.5,
+        justifyContent: 'space-between',
+        marginBottom: 30,
+        paddingHorizontal: 10,
     },
     profileImage: {
-        width: 50,
-        height: 50,
-        borderRadius: 25,
-        ...Platform.select({
-            native: {
-                zIndex: 1,
-                position: 'absolute',
-                margin: 10,
-                marginTop: 25,
-            },
-            web: {
-                marginBottom: 30,
-                width: 100,
-                height: 100,
-                borderRadius: 50,
-            },
-        }),
+        width: Platform.OS === 'web' ? 50 : 40,
+        height: Platform.OS === 'web' ? 50 : 40,
+        borderRadius: Platform.OS === 'web' ? 25 : 20,
+        backgroundColor: '#f0f0f0',
     },
     title: {
+        fontSize: 30,
         fontFamily: 'TitanOne',
-        color: '#fff',
-        fontSize: 24,
-        marginBottom: 20,
+        flex: 1,
         textAlign: 'center',
-        ...Platform.select({
-            web: {
-                fontSize: 40,
-                flexGrow: 1,
-            }
-        }),
+        color: '#fff',
+    },
+    closeIcon: {
+        fontSize: 16,
+        padding: 10,
+        borderWidth: 1,
+        borderColor: '#000',
+        borderRadius: 5,
     },
     subtitle: {
+        fontSize: 20,
         fontFamily: 'TextMeOne',
-        fontSize: 18,
-        marginTop: 20,
-        marginBottom: 10,
+        marginBottom: 20,
+        marginTop: 10,
+        paddingHorizontal: 10,
     },
     input: {
-        fontFamily: 'TextMeOne',
-        backgroundColor: 'white',
-        padding: 10,
-        borderRadius: 5,
-        marginBottom: 10,
+        height: Platform.OS === 'web' ? 45 : 50,
+        borderWidth: 1,
+        borderColor: '#000',
+        borderRadius: 8,
+        paddingHorizontal: 15,
+        marginBottom: 15,
+        fontSize: 16,
+        backgroundColor: '#fff',
+        width: '100%',
+        ...Platform.select({
+            web: {
+                outlineStyle: 'none',
+            },
+        }),
     },
     row: {
         flexDirection: 'row',
         justifyContent: 'space-between',
+        marginBottom: 5,
+        width: '100%',
     },
     halfInput: {
         width: '48%',
+    },
+    scrollView: {
+        flexGrow: 1,
+        paddingHorizontal: 10,
     },
     saveButton: {
         backgroundColor: '#00bfff',
         width: '100%',
         padding: 15,
-        marginTop: 10,
         borderRadius: 5,
         alignItems: 'center',
+        marginBottom: 20,
     },
     saveButtonText: {
         fontFamily: 'TextMeOne',
