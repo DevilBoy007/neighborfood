@@ -22,7 +22,6 @@ export default function RootLayout() {
     TextMeOne: require('../../assets/fonts/TextMeOne-Regular.ttf'),
   });
   const [userData, setuserData] = useState<Object | null>(null);
-  const [showEditDetails, setShowEditDetails] = useState(false);
 
   useEffect(() => {
     if (!loaded) return;
@@ -56,8 +55,8 @@ export default function RootLayout() {
     checkUser();
   }, [loaded]);
 
-  const toggleEditDetails = useCallback(() => {
-    router.navigate('/EditDetails');
+  const toggleSettings = useCallback(() => {
+    router.navigate('/Settings');
   }, []);
 
   if (!loaded) {
@@ -67,9 +66,9 @@ export default function RootLayout() {
   return (
     <>
         <View style={styles.container}>
-          <Stack.Screen options={{ headerShown: false }} initialParams={{ toggleEditDetails: toggleEditDetails, showEditDetails: showEditDetails }}  />
-          {Platform.OS !== 'web' && !showEditDetails &&
-            <TouchableOpacity onPress={toggleEditDetails} style={styles.profileImage}>
+          <Stack.Screen options={{ headerShown: false }} initialParams={{ toggleSettings: toggleSettings }}  />
+          {Platform.OS !== 'web'  &&
+            <TouchableOpacity onPress={toggleSettings} style={styles.profileImage}>
               <Image
                 source={userData ? { uri: userData.photoURL } : profileIcon}
                 style={styles.profileImage}
@@ -79,7 +78,7 @@ export default function RootLayout() {
           <View style={styles.content}>
           {Platform.OS === 'web' &&
             <View style={styles.footer}>
-              <TouchableOpacity style={styles.iconButton} onPress={ toggleEditDetails }>
+              <TouchableOpacity style={styles.iconButton} onPress={ toggleSettings }>
                 <Image
                   source={userData ? { uri: userData.photoURL } : profileIcon}
                   style={[styles.iconButton, styles.profileImage]}

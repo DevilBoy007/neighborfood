@@ -33,7 +33,14 @@ export default function RootLayout() {
                 <Stack.Screen name="Login" options={{ headerShown: false }} />
                 <Stack.Screen name="+not-found" options={{ headerShown: false }} />
                 <Stack.Screen name="success" options={{ headerShown: false, animation: 'fade' }} />
-                <Stack.Screen name="EditDetails" options={{ headerShown: false, presentation: 'modal', }} />
+                <Stack.Screen name="EditDetails" options={{ headerShown: false }} />
+                <Stack.Screen
+                name="Settings"
+                options={{
+                    headerShown: false,
+                    presentation: 'modal',
+                    animation: 'slide_from_bottom',
+                }} />
             </Stack>
             </GestureHandlerRootView>
         </KeyboardProvider>
