@@ -503,11 +503,11 @@ const styles = StyleSheet.create({
         fontFamily: 'TextMeOne',
     },
     buttonDisabled: {
-        backgroundColor: '#cccccc',
+        backgroundColor: '#ccc',
         opacity: 0.7,
     },
     buttonTextDisabled: {
-        color: '#666666'
+        color: '#666'
     }
 });
 

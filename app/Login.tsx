@@ -22,6 +22,7 @@ const LoginScreen = () => {
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const [user, setUser] = useState<User | null>(null);
+    const [disabled, setDisabled] = useState<boolean>(false);
     const router = useRouter();
 
     useEffect(() => {
@@ -66,6 +67,7 @@ const LoginScreen = () => {
     
 
     const handleLogin = async () => {
+        setDisabled(true);
         try {
             await firebaseService.connect();
             await firebaseService.logout(); // clear any cached data
@@ -80,6 +82,7 @@ const LoginScreen = () => {
         } catch (error) {
             console.error('Error logging in:', error);
             setError(error.message);
+            setDisabled(false);
         }
     };
 
@@ -96,14 +99,14 @@ const LoginScreen = () => {
                     autoCapitalize='none'
                     style={styles.input}
                     placeholder="email"
-                    placeholderTextColor={'#999'}
+                    placeholderTextColor={'#fff'}
                     value={email}
                     onChangeText={setEmail}
                 />
                 <TextInput
                     style={styles.input}
                     placeholder="password"
-                    placeholderTextColor={'#999'}
+                    placeholderTextColor={'#fff'}
                     value={password}
                     onChangeText={setPassword}
                     secureTextEntry
@@ -113,7 +116,10 @@ const LoginScreen = () => {
             </ScrollView>
             <View style={styles.buttonContainer}>
                 <TouchableOpacity
-                    style={styles.button}
+                    style={[
+                        styles.button,
+                        disabled && styles.buttonTextDisabled,
+                    ]}
                     onPress={handleLogin}
                 >
                     <Text style={styles.buttonText}>Login</Text>
@@ -177,6 +183,13 @@ const styles = StyleSheet.create({
         textAlign: 'center',
         fontSize: 30,
         fontFamily: 'TextMeOne',
+    },
+    buttonDisabled: {
+        backgroundColor: '#ccc',
+        opacity: 0.7,
+    },
+    buttonTextDisabled: {
+        color: '#666'
     },
     errorText: {
         color: 'red',
