@@ -95,14 +95,14 @@ const LoginScreen = () => {
                     <TextInput
                     autoCapitalize='none'
                     style={styles.input}
-                    placeholder="Email"
+                    placeholder="email"
                     placeholderTextColor={'#999'}
                     value={email}
                     onChangeText={setEmail}
                 />
                 <TextInput
                     style={styles.input}
-                    placeholder="Password"
+                    placeholder="password"
                     placeholderTextColor={'#999'}
                     value={password}
                     onChangeText={setPassword}
