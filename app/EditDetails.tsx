@@ -21,7 +21,11 @@ const EditDetails = () => {
                 <Text style={styles.title}>Edit Details</Text>
                 <Text onPress={() => { router.back(); }} style={styles.closeIcon}>X</Text>
             </View>
-            <ScrollView>
+            <ScrollView
+            style={styles.scrollView}
+            contentContainerStyle={{ paddingBottom: 40 }}
+            showsVerticalScrollIndicator={Platform.OS !== 'web'}
+            >
                 <Text style={styles.subtitle}>Personal Info</Text>
                 <TextInput style={styles.input} placeholder="email" placeholderTextColor={ '#999' } />
 
@@ -71,7 +75,6 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        marginBottom: 30,
         paddingHorizontal: 10,
     },
     profileImage: {
@@ -88,11 +91,13 @@ const styles = StyleSheet.create({
         color: '#fff',
     },
     closeIcon: {
-        fontSize: 16,
-        padding: 10,
+        fontSize: 15,
+        padding: Platform.OS === 'web'? 10 : 5,
         borderWidth: 1,
         borderColor: '#000',
         borderRadius: 5,
+        backgroundColor: '#fff',
+        color: '#b7ffb0',
     },
     subtitle: {
         fontSize: 20,
