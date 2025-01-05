@@ -71,7 +71,7 @@ export default function RootLayout() {
           {Platform.OS !== 'web'  &&
             <TouchableOpacity onPress={toggleSettings} style={styles.profileImage}>
               <Image
-                source={userData ? { uri: userData.photoURL } : profileIcon}
+                source={userData.photoURL ? { uri: userData.photoURL } : profileIcon}
                 style={styles.profileImage}
               />
             </TouchableOpacity>
@@ -81,7 +81,7 @@ export default function RootLayout() {
             <View style={styles.footer}>
               <TouchableOpacity style={styles.iconButton} onPress={ toggleSettings }>
                 <Image
-                  source={userData ? { uri: userData.photoURL } : profileIcon}
+                  source={userData.photoURL ? { uri: userData.photoURL } : profileIcon}
                   style={[styles.iconButton, styles.profileImage]}
                 />
               </TouchableOpacity>
