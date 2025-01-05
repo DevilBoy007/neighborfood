@@ -129,7 +129,7 @@ class FirebaseService {
                     throw new Error('Invalid email');
                 case 'auth/user-not-found':
                     throw new Error('User not found');
-                case 'auth/wrong-password':
+                case 'auth/invalid-credential':
                     throw new Error('Wrong password');
                 default:
                     throw error;
