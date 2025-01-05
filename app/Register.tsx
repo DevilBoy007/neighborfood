@@ -391,19 +391,22 @@ const RegisterScreen = () => {
                         />
                 </ScrollView>
                 {/* Register Button */}
-                <TouchableOpacity
-                style={[
-                    styles.button,
-                    disabled && styles.buttonDisabled
-                ]}
-                onPress={handleRegister}
-                disabled={disabled}
-                >
-                <Text style={[
-                    styles.buttonText,
-                    disabled && styles.buttonTextDisabled
-                ]}>Register</Text>
-                </TouchableOpacity>
+                <View style={styles.buttonContainer}>
+                    <TouchableOpacity
+                        style={[
+                            styles.button,
+                            disabled && styles.buttonDisabled,
+                        ]}
+                        onPress={handleRegister}
+                    >
+                        <Text style={[
+                            styles.buttonText,
+                            disabled && styles.buttonTextDisabled
+                            ]}>
+                                Register
+                        </Text>
+                    </TouchableOpacity>
+                </View>
             </KeyboardAvoidingView>
             {isKeyboardVisible && <KeyboardToolbar/>}
         </View>
@@ -413,7 +416,6 @@ const RegisterScreen = () => {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        padding: 24,
         backgroundColor: '#B7FFB0',
     },
     title: {
@@ -460,17 +462,30 @@ const styles = StyleSheet.create({
     marginBottom: {
         marginBottom: 16,
     },
+    buttonContainer: {
+        flex: 1,
+        flexDirection: 'row',
+        justifyContent: 'center',
+        ...Platform.select({
+            ios: {
+                position: 'absolute',
+                bottom: 0,
+                left: 0,
+                right: 0,
+            }
+        })
+    },
     button: {
+        width: '100%',
+        padding: 10,
+        paddingBottom: 33,
         backgroundColor: '#00bfff',
-        padding: 16,
-        borderRadius: 8,
-        marginVertical: 20,
-        alignSelf: 'stretch',
     },
     buttonText: {
-        color: '#fff',
+        color: 'white',
         textAlign: 'center',
-        fontSize: 20,
+        fontSize: 30,
+        fontFamily: 'TextMeOne',
     },
     errorText: {
         color: 'red',
