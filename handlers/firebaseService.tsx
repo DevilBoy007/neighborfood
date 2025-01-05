@@ -1,5 +1,5 @@
 import { Platform } from 'react-native';
-import { initializeApp, FirebaseApp } from 'firebase/app';
+import { initializeApp, getApp, FirebaseApp } from 'firebase/app';
 import { Analytics, getAnalytics } from 'firebase/analytics';
 import {
     initializeAuth,
@@ -62,28 +62,40 @@ class FirebaseService {
     }
 
     async connect() {
-        if (this.app && this.auth && this.db) {
-            console.log('Already connected to Firebase');
-            return true;
-        }
-        else {
+        try {
+            // Check if we already have a Firebase app instance
             try {
-                this.app = initializeApp(this.firebaseConfig); // Initialize auth with forced token refresh
-                this.auth = initializeAuth(this.app, {
-                    persistence: Platform.OS === 'web'? browserLocalPersistence : getReactNativePersistence(AsyncStorage)
-                });
-                // this.analytics = getAnalytics(this.app);
-                // Force token refresh on init
-                await this.auth.currentUser?.reload();
-                
-                this.db = getFirestore(this.app);
-                console.log('Successfully connected to Firebase');
-                return true;
-            } catch (error) {
-                console.error('Error connecting to Firebase:', error);
-                throw error;
+                this.app = this.app || getApp();
+                console.log('Retrieved existing Firebase app');
+            } catch (getAppError) {
+                // If no app exists, initialize a new one
+                this.app = initializeApp(this.firebaseConfig);
+                console.log('Initialized new Firebase app');
             }
-        } 
+
+            // Initialize auth if not already initialized
+            if (!this.auth) {
+                this.auth = initializeAuth(this.app, {
+                    persistence: Platform.OS === 'web'
+                        ? browserLocalPersistence
+                        : getReactNativePersistence(AsyncStorage)
+                });
+            }
+
+            // Force token refresh on init if user exists
+            await this.auth.currentUser?.reload();
+
+            // Initialize Firestore if not already initialized  
+            if (!this.db) {
+                this.db = getFirestore(this.app);
+            }
+
+            console.log('Successfully connected to Firebase');
+            return true;
+        } catch (error) {
+            console.error('Error connecting to Firebase:', error);
+            throw error;
+        }
     }
 
     async logout() {
