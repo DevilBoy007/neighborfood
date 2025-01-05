@@ -88,10 +88,8 @@ class FirebaseService {
 
     async logout() {
         try {
-            if (!this.auth) {
-                this.connect();
-            }
-            await signOut(this.auth);
+            if (this.auth) { await signOut(this.auth) }
+            else { this.connect() }
             // Clear any cached data
             await AsyncStorage.clear()
             console.log('User logged out successfully');
