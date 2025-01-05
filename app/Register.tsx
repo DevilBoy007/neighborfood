@@ -258,7 +258,12 @@ const RegisterScreen = () => {
         <View style={styles.container}>
             <Text style={styles.title}>Register</Text>
             <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-                <ScrollView contentContainerStyle={{ flexGrow: 1 }} keyboardDismissMode='on-drag' keyboardShouldPersistTaps='handled' showsVerticalScrollIndicator={false}>
+                <ScrollView
+                    style={styles.scrollView}
+                    contentContainerStyle={{ paddingBottom: 100 }}
+                    keyboardDismissMode='on-drag'
+                    keyboardShouldPersistTaps='handled'
+                    showsVerticalScrollIndicator={false}>
                     {/* Personal Details Section */}
                     <Text style={styles.sectionTitle}>Personal Details</Text>
                     {errorMsg.fields && <Text style={[styles.errorText, styles.largeText]}>{errorMsg.fields}</Text>}
@@ -418,14 +423,17 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: '#B7FFB0',
     },
+    scrollView: {
+        flexGrow: 1,
+        paddingHorizontal: 10,
+    },
     title: {
         fontFamily: 'TitanOne',
         fontSize: 36,
         fontWeight: 'bold',
         color: '#fff',
-        marginTop: 33,
+        marginTop: 40,
         textAlign: 'center',
-        paddingBottom: 16,
     },
     sectionTitle: {
         fontSize: 24,
