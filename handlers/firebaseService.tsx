@@ -1,5 +1,6 @@
 import { Platform } from 'react-native';
 import { initializeApp, FirebaseApp } from 'firebase/app';
+import { Analytics, getAnalytics } from 'firebase/analytics';
 import {
     initializeAuth,
     browserLocalPersistence,
@@ -34,6 +35,7 @@ class FirebaseService {
     };
     private app: FirebaseApp | null;
     private auth: Auth | null;
+    private analytics: Analytics | null;
     private db: Firestore | null;
 
     private constructor() {
@@ -45,6 +47,7 @@ class FirebaseService {
         };
 
         this.app = null;
+        this.analytics = null;
         this.auth = null;
         this.db = null;
     }
@@ -67,7 +70,7 @@ class FirebaseService {
                 this.auth = initializeAuth(this.app, {
                     persistence: Platform.OS === 'web'? browserLocalPersistence : getReactNativePersistence(AsyncStorage)
                 });
-                
+                this.analytics = getAnalytics(this.app);
                 // Force token refresh on init
                 await this.auth.currentUser?.reload();
                 
