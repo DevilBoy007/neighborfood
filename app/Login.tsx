@@ -32,36 +32,32 @@ const LoginScreen = () => {
                 const user = await storage.getItem('userData');
                 if (!user) {
                     console.log('No user data found');
-                    router.replace('/');
                     return;
                 }
 
                 const DATA = JSON.parse(user);
                 if (!DATA || !DATA.uid) {
                     console.log('Invalid user data');
-                    router.replace('/');
                     return;
                 }
 
-                setuserData(DATA);
+                setUser(DATA);
                 console.log('Loaded user data:', DATA.uid);
+                EventRegister.emit('userLoggedIn');
 
             } catch (error) {
                 console.error('Error checking user:', error);
-                router.replace('/');
+                return;
             }
         };
+        checkUser();
 
-        // checkUser();
         const userLoggedInListener = EventRegister.on('userLoggedIn', () => {
             router.replace('/success');
             setTimeout(() => {
                 router.replace('/(home)/Market');
             }, 2000);
         });
-        return () => {
-            EventRegister.rm(userLoggedInListener);
-        }
     }, []);
 
     

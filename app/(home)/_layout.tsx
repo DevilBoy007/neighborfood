@@ -1,10 +1,11 @@
 import React from 'react';
-import { Stack, useRouter } from "expo-router";
-import { useFonts } from 'expo-font';
 import { View, StyleSheet, Platform, TouchableOpacity, Image } from 'react-native';
-import * as SplashScreen from 'expo-splash-screen';
 import { useEffect, useState, useCallback } from 'react';
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { EventRegister } from 'react-native-event-listeners';
+import { Stack, useRouter } from "expo-router";
+import { useFonts } from 'expo-font';
+import * as SplashScreen from 'expo-splash-screen';
 
 import chatIcon from '../../assets/images/chat.png';
 import pollsIcon from '../../assets/images/surveys.png';
@@ -17,6 +18,8 @@ SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
   const router = useRouter();
+  const storage = Platform.OS === 'web' ? localStorage : AsyncStorage;
+  const [user, setUser] = useState<Object | null>(null);
   const [loaded] = useFonts({
     SpaceMono: require('../../assets/fonts/SpaceMono-Regular.ttf'),
     TitanOne: require('../../assets/fonts/TitanOne-Regular.ttf'),
@@ -29,30 +32,29 @@ export default function RootLayout() {
 
     const checkUser = async () => {
       try {
-        const user = await AsyncStorage.getItem('userData');
-        
+        const user = await storage.getItem('userData');
         if (!user) {
           console.log('No user data found');
-          router.replace('/');
+          router.navigate('/Login');
           return;
         }
 
         const DATA = JSON.parse(user);
         if (!DATA || !DATA.uid) {
           console.log('Invalid user data');
-          router.replace('/');
+          router.navigate('/Login');
           return;
         }
 
-        setuserData(DATA);
+        setUser(DATA);
         console.log('Loaded user data:', DATA.uid);
-        
+
       } catch (error) {
         console.error('Error checking user:', error);
-        router.replace('/');
+        router.navigate('/Login');
+        return;
       }
     };
-
     checkUser();
   }, [loaded]);
 
