@@ -118,11 +118,15 @@ const LoginScreen = () => {
                 <TouchableOpacity
                     style={[
                         styles.button,
-                        disabled && styles.buttonTextDisabled,
+                        disabled && styles.buttonDisabled,
                     ]}
                     onPress={handleLogin}
                 >
-                    <Text style={styles.buttonText}>Login</Text>
+                    <Text style={[
+                        styles.buttonText,
+                        disabled && styles.buttonTextDisabled]}>
+                            Login
+                    </Text>
                 </TouchableOpacity>
             </View>
             <KeyboardToolbar />
