@@ -161,8 +161,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#87CEFA',
     padding: 10,
-    borderTopWidth: 1,
-    borderTopColor: '#000',
+    
     ...Platform.select({
       ios: {
         position: 'absolute',
@@ -170,12 +169,16 @@ const styles = StyleSheet.create({
         left: 0,
         right: 0,
         height: 75,
+        borderTopWidth: 1,
+        borderTopColor: '#000',
       },
       web: {
         flexDirection: 'column',
         width: 175,
         height: '100%',
         justifyContent: 'center',
+        borderRightWidth: 1,
+        borderRightColor: '#000',
       },
     }),
   },
