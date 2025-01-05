@@ -45,7 +45,7 @@ const Settings = () => {
                 onPress={async () => {
                     await firebaseService.logout();
                     router.back();
-                    router.push('/'); 
+                    router.replace('/'); 
                 }}
             >
                 <Text style={styles.menuText}>Logout</Text>
