@@ -31,6 +31,7 @@ class FirebaseService {
         apiKey: string;
         authDomain: string;
         projectId: string;
+        appId: string;
         storageBucket: string;
     };
     private app: FirebaseApp | null;
@@ -43,6 +44,7 @@ class FirebaseService {
             apiKey: process.env.EXPO_PUBLIC_API_KEY??'',
             authDomain: process.env.EXPO_PUBLIC_AUTH_DOMAIN??'',
             projectId: process.env.EXPO_PUBLIC_PROJECT_ID??'',
+            appId: process.env.EXPO_PUBLIC_APP_ID??'',
             storageBucket: process.env.EXPO_PUBLIC_STORAGE_BUCKET??''
         };
 
@@ -66,11 +68,11 @@ class FirebaseService {
         }
         else {
             try {
-                this.app = initializeApp(this.firebaseConfig);                // Initialize auth with forced token refresh
+                this.app = initializeApp(this.firebaseConfig); // Initialize auth with forced token refresh
                 this.auth = initializeAuth(this.app, {
                     persistence: Platform.OS === 'web'? browserLocalPersistence : getReactNativePersistence(AsyncStorage)
                 });
-                this.analytics = getAnalytics(this.app);
+                // this.analytics = getAnalytics(this.app);
                 // Force token refresh on init
                 await this.auth.currentUser?.reload();
                 
