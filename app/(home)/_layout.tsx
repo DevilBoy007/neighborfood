@@ -1,3 +1,4 @@
+import React from 'react';
 import { Stack, useRouter } from "expo-router";
 import { useFonts } from 'expo-font';
 import { View, StyleSheet, Platform, TouchableOpacity, Image } from 'react-native';
