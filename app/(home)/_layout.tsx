@@ -2,7 +2,6 @@ import React from 'react';
 import { View, StyleSheet, Platform, TouchableOpacity, Image } from 'react-native';
 import { useEffect, useState, useCallback } from 'react';
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { EventRegister } from 'react-native-event-listeners';
 import { Stack, useRouter } from "expo-router";
 import { useFonts } from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
@@ -19,13 +18,12 @@ SplashScreen.preventAutoHideAsync();
 export default function RootLayout() {
   const router = useRouter();
   const storage = Platform.OS === 'web' ? localStorage : AsyncStorage;
-  const [user, setUser] = useState<Object | null>(null);
+  const [userData, setUser] = useState<Object | null>(null);
   const [loaded] = useFonts({
     SpaceMono: require('../../assets/fonts/SpaceMono-Regular.ttf'),
     TitanOne: require('../../assets/fonts/TitanOne-Regular.ttf'),
     TextMeOne: require('../../assets/fonts/TextMeOne-Regular.ttf'),
   });
-  const [userData, setuserData] = useState<Object | null>(null);
 
   useEffect(() => {
     if (!loaded) return;
