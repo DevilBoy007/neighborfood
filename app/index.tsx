@@ -12,7 +12,7 @@ const LoginScreen = () => {
               styles.button,
               pressed && styles.buttonOpacity,
             ]}
-            onPress={() => router.replace('/Market')}
+            onPress={() => router.navigate('/Login')}
           >
             <Text style={styles.buttonText}>Login</Text>
           </Pressable>

@@ -1,5 +1,13 @@
 import { initializeApp, FirebaseApp } from 'firebase/app';
-import { initializeAuth, getReactNativePersistence, createUserWithEmailAndPassword, Auth, UserCredential } from 'firebase/auth';
+import {
+    initializeAuth,
+    getReactNativePersistence,
+    createUserWithEmailAndPassword,
+    signInWithEmailAndPassword,
+    signOut,
+    Auth,
+    UserCredential
+} from 'firebase/auth';
 import ReactNativeAsyncStorage from '@react-native-async-storage/async-storage';
 import {
     getFirestore,
@@ -53,8 +61,14 @@ class FirebaseService {
         }
         else {
             try {
-                this.app = initializeApp(this.firebaseConfig);
-                this.auth = initializeAuth(this.app, { persistence: getReactNativePersistence(ReactNativeAsyncStorage) });
+                this.app = initializeApp(this.firebaseConfig);                // Initialize auth with forced token refresh
+                this.auth = initializeAuth(this.app, {
+                    persistence: getReactNativePersistence(ReactNativeAsyncStorage)
+                });
+                
+                // Force token refresh on init
+                await this.auth.currentUser?.reload();
+                
                 this.db = getFirestore(this.app);
                 console.log('Successfully connected to Firebase');
                 return true;
@@ -63,6 +77,47 @@ class FirebaseService {
                 throw error;
             }
         } 
+    }
+
+    async logout() {
+        try {
+            if (!this.auth) {
+                throw new Error('Firebase Auth is not initialized');
+            }
+            await signOut(this.auth);
+            // Clear any cached data
+            await ReactNativeAsyncStorage.clear();
+            console.log('User logged out successfully');
+            return true;
+        } catch (error) {
+            console.error('Error logging out:', error);
+            throw error;
+        }
+    }
+
+    async login(email: string, password: string): Promise<UserCredential> {
+        try {
+            if (!this.auth) {
+                throw new Error('Firebase Auth is not initialized');
+            }
+            // Clear any existing cached data before login
+            await ReactNativeAsyncStorage.clear();
+            const userCredential = await signInWithEmailAndPassword(this.auth, email, password);
+            console.log('User logged in:', userCredential.user.uid);
+            return userCredential;
+        } catch (error) {
+            console.error('Error logging in:', error);
+            switch (error.code) {
+                case 'auth/invalid-email':
+                    throw new Error('Invalid email');
+                case 'auth/user-not-found':
+                    throw new Error('User not found');
+                case 'auth/wrong-password':
+                    throw new Error('Wrong password');
+                default:
+                    throw error;
+            }
+        }
     }
 
     async registerUser(email: string, password: string, username: string): Promise<UserCredential['user']> {

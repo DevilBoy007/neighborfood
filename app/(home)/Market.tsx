@@ -19,7 +19,7 @@ const MarketScreen = () => {
     const [isMapView, setIsMapView] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
     const [showSortOptions, setShowSortOptions] = useState(false);
-    const [userProfileData, setUserProfileData] = useState({});
+    const [userData, setUserData] = useState({});
 
     const shops = [
         "Ben's Beef",
@@ -34,8 +34,8 @@ const MarketScreen = () => {
                 const userData = await AsyncStorage.getItem('userData');
                 if (userData) {
                     const DATA = JSON.parse(userData);
-                    setUserProfileData(DATA);
-                    console.log('Loaded user data:\n', userProfileData);
+                    setUserData(DATA);
+                    console.log('Loaded user market data:\n', userData);
                 }
             } catch (error) {
                 console.error('Error loading profile data:', error);

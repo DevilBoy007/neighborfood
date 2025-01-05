@@ -14,7 +14,7 @@ import {
 import { KeyboardToolbar } from 'react-native-keyboard-controller';
 import { useRouter } from 'expo-router';
 import 'react-native-get-random-values';
-import { User } from 'firebase/auth'
+import { updateProfile, User } from 'firebase/auth'
 import { EventRegister } from 'react-native-event-listeners';
 import { GooglePlaceData, GooglePlaceDetail, GooglePlacesAutocomplete } from 'react-native-google-places-autocomplete';
 import * as Location from 'expo-location';
@@ -114,7 +114,7 @@ const RegisterScreen = () => {
             }
         })();
 
-        const userLoggedInListener = EventRegister.on('userLoggedIn', (userData) => {
+        const userLoggedInListener = EventRegister.on('userLoggedIn', () => {
             router.replace('/success');
             setTimeout(() => {
                 router.replace('/(home)/Market');
@@ -130,7 +130,7 @@ const RegisterScreen = () => {
         });
 
         return () => {
-            EventRegister.removeEventListener(userLoggedInListener);
+            EventRegister.rm(userLoggedInListener);
             keyboardDidShowListener.remove();
             keyboardDidHideListener.remove();
         };
@@ -209,10 +209,14 @@ const RegisterScreen = () => {
         try {
             setDisabled(true);
             await firebaseService.connect();
+            await firebaseService.logout(); // clear any cached data
             const { email, password, phone, firstName, lastName, dob, location, username } = formData;
             const user = await firebaseService.registerUser(email, password, username);
             setUser(user);
-
+            updateProfile(user, {
+                displayName: username, 
+                photoURL: "https://firebasestorage.googleapis.com/v0/b/neighborfoods/o/cloud.gif?alt=media&token=81350c47-c9e3-4c75-8d9d-d0b9ff6e50f0",
+            })
             const userData = {
                 uid: user.uid,
                 email: user.email,
@@ -222,25 +226,24 @@ const RegisterScreen = () => {
                 dob: dob,
                 location: location,
                 username: username,
-                pfpUrl: 'https://firebasestorage.googleapis.com/v0/b/neighborfoods/o/cloud.gif?alt=media&token=81350c47-c9e3-4c75-8d9d-d0b9ff6e50f0',
                 createdAt: new Date(),
                 lastLogin: new Date()
             };
             await firebaseService.addDocument('user', userData);
             console.log('Registration successful!');
-            handleRegistrationSuccess(userData);
+            handleRegistrationSuccess(user);
         } catch (error) {
             alert(`Error registering user: ${error.message}`);
             setDisabled(false);
         }
     };
 
-    const handleRegistrationSuccess = async (userData: Object) => {
+    const handleRegistrationSuccess = async (user: User) => {
         try {
             // store user data
-            console.log('Saving user data:', userData);
-            await AsyncStorage.setItem('userData', JSON.stringify(userData));
-            EventRegister.emit('userLoggedIn', userData);
+            console.log('Stored user:', user.uid);
+            await AsyncStorage.setItem('userData', JSON.stringify(user));
+            EventRegister.emit('userLoggedIn');
         } catch (error) {
             console.error('Error saving auth data', error);
         }
@@ -255,7 +258,12 @@ const RegisterScreen = () => {
         <View style={styles.container}>
             <Text style={styles.title}>Register</Text>
             <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-                <ScrollView contentContainerStyle={{ flexGrow: 1 }} keyboardDismissMode='on-drag' keyboardShouldPersistTaps='handled' showsVerticalScrollIndicator={false}>
+                <ScrollView
+                    style={styles.scrollView}
+                    contentContainerStyle={{ paddingBottom: 100 }}
+                    keyboardDismissMode='on-drag'
+                    keyboardShouldPersistTaps='handled'
+                    showsVerticalScrollIndicator={false}>
                     {/* Personal Details Section */}
                     <Text style={styles.sectionTitle}>Personal Details</Text>
                     {errorMsg.fields && <Text style={[styles.errorText, styles.largeText]}>{errorMsg.fields}</Text>}
@@ -388,19 +396,22 @@ const RegisterScreen = () => {
                         />
                 </ScrollView>
                 {/* Register Button */}
-                <TouchableOpacity
-                style={[
-                    styles.button,
-                    disabled && styles.buttonDisabled
-                ]}
-                onPress={handleRegister}
-                disabled={disabled}
-                >
-                <Text style={[
-                    styles.buttonText,
-                    disabled && styles.buttonTextDisabled
-                ]}>Register</Text>
-                </TouchableOpacity>
+                <View style={styles.buttonContainer}>
+                    <TouchableOpacity
+                        style={[
+                            styles.button,
+                            disabled && styles.buttonDisabled,
+                        ]}
+                        onPress={handleRegister}
+                    >
+                        <Text style={[
+                            styles.buttonText,
+                            disabled && styles.buttonTextDisabled
+                            ]}>
+                                Register
+                        </Text>
+                    </TouchableOpacity>
+                </View>
             </KeyboardAvoidingView>
             {isKeyboardVisible && <KeyboardToolbar/>}
         </View>
@@ -410,17 +421,19 @@ const RegisterScreen = () => {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        padding: 24,
         backgroundColor: '#B7FFB0',
+    },
+    scrollView: {
+        flexGrow: 1,
+        paddingHorizontal: 10,
     },
     title: {
         fontFamily: 'TitanOne',
         fontSize: 36,
         fontWeight: 'bold',
         color: '#fff',
-        marginTop: 33,
+        marginTop: 40,
         textAlign: 'center',
-        paddingBottom: 16,
     },
     sectionTitle: {
         fontSize: 24,
@@ -457,17 +470,30 @@ const styles = StyleSheet.create({
     marginBottom: {
         marginBottom: 16,
     },
+    buttonContainer: {
+        flex: 1,
+        flexDirection: 'row',
+        justifyContent: 'center',
+        ...Platform.select({
+            ios: {
+                position: 'absolute',
+                bottom: 0,
+                left: 0,
+                right: 0,
+            }
+        })
+    },
     button: {
+        width: '100%',
+        padding: 10,
+        paddingBottom: 33,
         backgroundColor: '#00bfff',
-        padding: 16,
-        borderRadius: 8,
-        marginVertical: 20,
-        alignSelf: 'stretch',
     },
     buttonText: {
-        color: '#fff',
+        color: 'white',
         textAlign: 'center',
-        fontSize: 20,
+        fontSize: 30,
+        fontFamily: 'TextMeOne',
     },
     errorText: {
         color: 'red',
@@ -500,11 +526,11 @@ const styles = StyleSheet.create({
         fontFamily: 'TextMeOne',
     },
     buttonDisabled: {
-        backgroundColor: '#cccccc',
+        backgroundColor: '#ccc',
         opacity: 0.7,
     },
     buttonTextDisabled: {
-        color: '#666666'
+        color: '#666'
     }
 });
 

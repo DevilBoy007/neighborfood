@@ -21,36 +21,42 @@ export default function RootLayout() {
     TitanOne: require('../../assets/fonts/TitanOne-Regular.ttf'),
     TextMeOne: require('../../assets/fonts/TextMeOne-Regular.ttf'),
   });
-  const [userProfileData, setUserProfileData] = useState<Object | null>(null);
-  const [showEditDetails, setShowEditDetails] = useState(false);
+  const [userData, setuserData] = useState<Object | null>(null);
 
   useEffect(() => {
-    if (loaded) {
-      SplashScreen.hideAsync();
-      const checkUser = async () => {
-        try {
-            const userData = await AsyncStorage.getItem('userData');
-            console.log('User data:', userData);
-            if (!userData) {
-              router.replace('/');
-              return;
-            }
-            else {
-              const DATA = JSON.parse(userData);
-              setUserProfileData(DATA);
-              console.log('Loaded user data:\n', userProfileData);
-            }
-        } catch (error) {
-            console.error('User not logged in:', error);
-            router.replace('/');
+    if (!loaded) return;
+
+    const checkUser = async () => {
+      try {
+        const user = await AsyncStorage.getItem('userData');
+        
+        if (!user) {
+          console.log('No user data found');
+          router.replace('/');
+          return;
         }
+
+        const DATA = JSON.parse(user);
+        if (!DATA || !DATA.uid) {
+          console.log('Invalid user data');
+          router.replace('/');
+          return;
+        }
+
+        setuserData(DATA);
+        console.log('Loaded user data:', DATA.uid);
+        
+      } catch (error) {
+        console.error('Error checking user:', error);
+        router.replace('/');
+      }
     };
+
     checkUser();
-    }
   }, [loaded]);
 
-  const toggleEditDetails = useCallback(() => {
-    router.navigate('/EditDetails');
+  const toggleSettings = useCallback(() => {
+    router.navigate('/Settings');
   }, []);
 
   if (!loaded) {
@@ -60,11 +66,11 @@ export default function RootLayout() {
   return (
     <>
         <View style={styles.container}>
-          <Stack.Screen options={{ headerShown: false }} initialParams={{ toggleEditDetails: toggleEditDetails, showEditDetails: showEditDetails }}  />
-          {Platform.OS !== 'web' && !showEditDetails &&
-            <TouchableOpacity onPress={toggleEditDetails} style={styles.profileImage}>
+          <Stack.Screen options={{ headerShown: false }} initialParams={{ toggleSettings: toggleSettings }}  />
+          {Platform.OS !== 'web'  &&
+            <TouchableOpacity onPress={toggleSettings} style={styles.profileImage}>
               <Image
-                source={userProfileData ? { uri: userProfileData.pfpUrl } : profileIcon}
+                source={userData ? { uri: userData.photoURL } : profileIcon}
                 style={styles.profileImage}
               />
             </TouchableOpacity>
@@ -72,9 +78,9 @@ export default function RootLayout() {
           <View style={styles.content}>
           {Platform.OS === 'web' &&
             <View style={styles.footer}>
-              <TouchableOpacity style={styles.iconButton} onPress={ toggleEditDetails }>
+              <TouchableOpacity style={styles.iconButton} onPress={ toggleSettings }>
                 <Image
-                  source={userProfileData ? { uri: userProfileData.pfpUrl } : profileIcon}
+                  source={userData ? { uri: userData.photoURL } : profileIcon}
                   style={[styles.iconButton, styles.profileImage]}
                 />
               </TouchableOpacity>
