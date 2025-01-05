@@ -11,6 +11,7 @@ import pollsIcon from '../../assets/images/surveys.png';
 import marketIcon from '../../assets/images/market.png';
 import tileIcon from '../../assets/images/tiles.png';
 import profileIcon from '../../assets/images/user.png';
+import { User } from 'firebase/auth';
 
 
 SplashScreen.preventAutoHideAsync();
@@ -18,7 +19,7 @@ SplashScreen.preventAutoHideAsync();
 export default function RootLayout() {
   const router = useRouter();
   const storage = Platform.OS === 'web' ? localStorage : AsyncStorage;
-  const [userData, setUser] = useState<Object | null>(null);
+  const [userData, setUser] = useState<User | null>(null);
   const [loaded] = useFonts({
     SpaceMono: require('../../assets/fonts/SpaceMono-Regular.ttf'),
     TitanOne: require('../../assets/fonts/TitanOne-Regular.ttf'),
@@ -71,7 +72,7 @@ export default function RootLayout() {
           {Platform.OS !== 'web'  &&
             <TouchableOpacity onPress={toggleSettings} style={styles.profileImage}>
               <Image
-                source={userData.photoURL ? { uri: userData.photoURL } : profileIcon}
+                source={userData?.photoURL ? { uri: userData.photoURL } : profileIcon}
                 style={styles.profileImage}
               />
             </TouchableOpacity>
@@ -81,7 +82,7 @@ export default function RootLayout() {
             <View style={styles.footer}>
               <TouchableOpacity style={styles.iconButton} onPress={ toggleSettings }>
                 <Image
-                  source={userData.photoURL ? { uri: userData.photoURL } : profileIcon}
+                  source={userData?.photoURL ? { uri: userData.photoURL } : profileIcon}
                   style={[styles.iconButton, styles.profileImage]}
                 />
               </TouchableOpacity>
@@ -160,6 +161,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#87CEFA',
     padding: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#000',
     ...Platform.select({
       ios: {
         position: 'absolute',
