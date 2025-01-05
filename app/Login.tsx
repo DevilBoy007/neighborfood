@@ -66,7 +66,7 @@ const LoginScreen = () => {
         setDisabled(true);
         try {
             await firebaseService.connect();
-            await firebaseService.logout(); // clear any cached data
+            if (user != null) { await firebaseService.logout() } // clear any cached data
             const userCredential = await firebaseService.login(email, password);
             console.log(userCredential.operationType, userCredential.user); // REMOVE IN PRODUCTION
             if (userCredential) {
