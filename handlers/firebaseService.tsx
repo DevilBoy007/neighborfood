@@ -1,6 +1,8 @@
+import { Platform } from 'react-native';
 import { initializeApp, FirebaseApp } from 'firebase/app';
 import {
     initializeAuth,
+    browserLocalPersistence,
     getReactNativePersistence,
     createUserWithEmailAndPassword,
     signInWithEmailAndPassword,
@@ -8,7 +10,7 @@ import {
     Auth,
     UserCredential
 } from 'firebase/auth';
-import ReactNativeAsyncStorage from '@react-native-async-storage/async-storage';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
     getFirestore,
     Firestore,
@@ -63,7 +65,7 @@ class FirebaseService {
             try {
                 this.app = initializeApp(this.firebaseConfig);                // Initialize auth with forced token refresh
                 this.auth = initializeAuth(this.app, {
-                    persistence: getReactNativePersistence(ReactNativeAsyncStorage)
+                    persistence: Platform.OS === 'web'? browserLocalPersistence : getReactNativePersistence(AsyncStorage)
                 });
                 
                 // Force token refresh on init
@@ -86,7 +88,7 @@ class FirebaseService {
             }
             await signOut(this.auth);
             // Clear any cached data
-            await ReactNativeAsyncStorage.clear();
+            await AsyncStorage.clear()
             console.log('User logged out successfully');
             return true;
         } catch (error) {
@@ -101,7 +103,7 @@ class FirebaseService {
                 throw new Error('Firebase Auth is not initialized');
             }
             // Clear any existing cached data before login
-            await ReactNativeAsyncStorage.clear();
+            await AsyncStorage.clear();
             const userCredential = await signInWithEmailAndPassword(this.auth, email, password);
             console.log('User logged in:', userCredential.user.uid);
             return userCredential;
