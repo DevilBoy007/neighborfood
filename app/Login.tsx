@@ -24,12 +24,12 @@ const LoginScreen = () => {
     const [user, setUser] = useState<User | null>(null);
     const [disabled, setDisabled] = useState<boolean>(false);
     const router = useRouter();
+    const storage = Platform.OS === 'web' ? localStorage : AsyncStorage;
 
     useEffect(() => {
         const checkUser = async () => {
             try {
-                const user = await AsyncStorage.getItem('userData');
-
+                const user = await storage.getItem('userData');
                 if (!user) {
                     console.log('No user data found');
                     router.replace('/');
@@ -72,18 +72,19 @@ const LoginScreen = () => {
             await firebaseService.connect();
             await firebaseService.logout(); // clear any cached data
             const userCredential = await firebaseService.login(email, password);
-            console.log(userCredential.operationType, userCredential.user);
+            console.log(userCredential.operationType, userCredential.user); // REMOVE IN PRODUCTION
             if (userCredential) {
                 const userData =  userCredential.user ;
-                await AsyncStorage.setItem('userData', JSON.stringify(userData));
+                await storage.setItem('userData', JSON.stringify(userData));
                 console.log('Stored user:', userData.uid);
                 EventRegister.emit('userLoggedIn');
             }
-        } catch (error) {
-            console.error('Error logging in:', error);
-            setError(error.message);
-            setDisabled(false);
         }
+        catch (error: any) {
+            console.error('Error logging in:', error);
+            setError(error.message || 'An error occurred');
+            setDisabled(false);
+            }
     };
 
     return (

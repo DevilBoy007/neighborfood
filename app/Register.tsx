@@ -24,6 +24,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const RegisterScreen = () => {
     const router = useRouter();
+    const storage = Platform.OS === 'web' ? localStorage : AsyncStorage;
     const [user, setUser] = useState<User | null>(null);
     const [formData, setFormData] = useState({
         firstName: '',
@@ -242,7 +243,7 @@ const RegisterScreen = () => {
         try {
             // store user data
             console.log('Stored user:', user.uid);
-            await AsyncStorage.setItem('userData', JSON.stringify(user));
+            await storage.setItem('userData', JSON.stringify(user));
             EventRegister.emit('userLoggedIn');
         } catch (error) {
             console.error('Error saving auth data', error);
