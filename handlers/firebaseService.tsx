@@ -87,7 +87,7 @@ class FirebaseService {
     async logout() {
         try {
             if (!this.auth) {
-                throw new Error('Firebase Auth is not initialized');
+                this.connect();
             }
             await signOut(this.auth);
             // Clear any cached data
