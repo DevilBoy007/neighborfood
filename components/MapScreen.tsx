@@ -1,37 +1,46 @@
 import React from 'react';
 import { useState, useEffect } from 'react';
-import { StyleSheet, View, Text } from 'react-native';
+import { StyleSheet, View, Text, Platform, LogBox } from 'react-native';
 import * as Location from 'expo-location';
-import 'mapbox-gl/src/css/mapbox-gl.css';
-import MapboxGL from '@rnmapbox/maps';
+import MapView, { PROVIDER_DEFAULT, PROVIDER_GOOGLE } from 'react-native-maps';
 
-MapboxGL.setAccessToken('pk.eyJ1IjoiZGJha3IiLCJhIjoiY20wa2llMWplMTloNTJqcTBpcTBoMGZhMiJ9.cr0XwiK22YtOzeSP2bcKwA');
-const [location, setLocation] = useState<Location.LocationObject | null>(null);
-const [errorMsg, setErrorMsg] = useState<string | null>(null);
-
-useEffect(() => {
-    (async () => {
-
-        let { status } = await Location.requestForegroundPermissionsAsync();
-        if (status !== 'granted') {
-            setErrorMsg('Permission to access location was denied');
-            return;
-        }
-
-        let location = await Location.getCurrentPositionAsync({});
-        setLocation(location);
-    })();
-}, []);
+LogBox.ignoreLogs(['VectorKit']);
 
 const MapScreen = () => {
+    const [location, setLocation] = useState<Location.LocationObjectCoords | null>(null);
+    const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+    useEffect(() => {
+        (async () => {
+            let { status } = await Location.requestForegroundPermissionsAsync();
+            if (status !== 'granted') {
+                setErrorMsg('Permission to access location was denied');
+                return;
+            }
+
+            let location = await Location.getCurrentPositionAsync({
+                accuracy: Location.Accuracy.High,
+            });
+            setLocation(location.coords);
+        })();
+    }, []);
+
     return (
         <View style={styles.container}>
-            <MapboxGL.MapView style={styles.map}>
-                <MapboxGL.Camera
-                    zoomLevel={14}
-                    centerCoordinate={location ? [location.coords.longitude, location.coords.latitude] : [-122.4324, 37.78825]}
+            {location ? (
+                <MapView
+                    provider={Platform.OS === 'ios' ? PROVIDER_DEFAULT : PROVIDER_GOOGLE}
+                    style={styles.map}
+                    initialRegion={{
+                        latitude: location.latitude,
+                        longitude: location.longitude,
+                        latitudeDelta: 0.0922,
+                        longitudeDelta: 0.0421,
+                    }}
                 />
-            </MapboxGL.MapView>
+            ) : (
+                <Text>Loading map...</Text>
+            )}
         </View>
     );
 };
