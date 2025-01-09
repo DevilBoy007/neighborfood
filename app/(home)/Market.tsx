@@ -3,6 +3,8 @@ import { View, Text, TextInput, TouchableOpacity, FlatList, StyleSheet, Platform
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+import MapScreen from '@/components/MapScreen';
+
 // Placeholder for the Shop component
 const Shop = ({ name }: { name: string }) => (
     <View style={styles.shopItem}>
@@ -71,9 +73,8 @@ const MarketScreen = () => {
             </View>
 
             {isMapView ? (
-                <View style={ styles.mapContainer }>
-                    <Text style={ styles.mapPlaceholder }>MAPBOX</Text>
-                </View>
+                <MapScreen/>
+
             ) : (
                 <FlatList
                     data={ shops }
