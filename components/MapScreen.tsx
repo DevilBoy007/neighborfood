@@ -37,6 +37,8 @@ const MapScreen = () => {
                         latitudeDelta: 0.0922,
                         longitudeDelta: 0.0421,
                     }}
+                    showsUserLocation={true}
+                    tintColor='#00bfff'
                 />
             ) : (
                 <Text>Loading map...</Text>
@@ -51,6 +53,7 @@ const styles = StyleSheet.create({
     },
     map: {
         flex: 1,
+        borderRadius: 10,
     },
 });
 
