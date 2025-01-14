@@ -17,9 +17,11 @@
   "dependencies": {
     "@expo/metro-runtime": "~4.0.0",
     "@expo/vector-icons": "^14.0.2",
+    "@react-google-maps/api": "^2.20.5",
     "@react-native-async-storage/async-storage": "1.23.1",
     "@react-native-picker/picker": "2.9.0",
     "@react-navigation/native": "^7.0.0",
+    "@types/google-maps-react": "^2.0.4",
     "expo": "~52.0.25",
     "expo-constants": "~17.0.3",
     "expo-font": "~13.0.1",
@@ -41,12 +43,13 @@
     "react-native-get-random-values": "~1.11.0",
     "react-native-google-places-autocomplete": "^2.5.7",
     "react-native-keyboard-controller": "^1.15.2",
+    "react-native-maps": "1.18.0",
     "react-native-reanimated": "~3.16.1",
     "react-native-safe-area-context": "4.12.0",
     "react-native-screens": "~4.4.0",
     "react-native-web": "~0.19.13",
-    "react-navigation": "^5.0.0",
-    "react-native-maps": "1.18.0"
+    "react-native-web-maps": "^0.3.0",
+    "react-navigation": "^5.0.0"
   },
   "devDependencies": {
     "@babel/core": "^7.20.0",
