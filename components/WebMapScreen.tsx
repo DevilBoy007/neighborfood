@@ -1,6 +1,6 @@
 import React, {useState, useEffect} from 'react';
-import { GoogleMap, LoadScript } from '@react-google-maps/api';
-import { View, StyleSheet, Text } from 'react-native';
+import {APIProvider, Map} from '@vis.gl/react-google-maps'
+import { StyleSheet, Text } from 'react-native';
 import * as Location from 'expo-location';
 
 const MapScreenWeb = () => {
@@ -22,20 +22,18 @@ const MapScreenWeb = () => {
     }, []);
 
     return (
-        <View style={{ flex: 1 }}>
+        <>
             {location &&
-                <LoadScript googleMapsApiKey={process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY}>
-                <GoogleMap
-                    mapContainerStyle={styles.map}
-                    center={{
-                        lat: location?.latitude || 0,
-                        lng: location?.longitude || 0
-                    }}
-                    zoom={15}
-                />
-            </LoadScript>}
+                <APIProvider apiKey={process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY} onLoad={() => console.log('Loaded Google Maps API')}> 
+                    <Map
+                        style = {{width: '100%', height: '100%'}}
+                        defaultCenter={{lat: location.latitude, lng: location.longitude}}
+                        defaultZoom={10}
+                    />
+                </APIProvider>
+    }
             { errorMsg && <Text style={styles.errorText}>{errorMsg}</Text> }
-        </View>
+        </>
     );
 };
 
