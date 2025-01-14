@@ -74,7 +74,6 @@ const MarketScreen = () => {
 
             {isMapView ? (
                 <MapScreen/>
-
             ) : (
                 <FlatList
                     data={ shops }
