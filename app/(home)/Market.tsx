@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import MapScreen from '@/components/MapScreen';
+import WebMapScreen from '@/components/WebMapScreen';
 
 // Placeholder for the Shop component
 const Shop = ({ name }: { name: string }) => (
@@ -73,7 +74,11 @@ const MarketScreen = () => {
             </View>
 
             {isMapView ? (
-                <MapScreen/>
+                Platform.OS === 'web' ? (
+                    <WebMapScreen/>
+                ) : (
+                    <MapScreen/>
+                )
             ) : (
                 <FlatList
                     data={ shops }
