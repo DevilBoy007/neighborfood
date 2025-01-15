@@ -28,7 +28,7 @@ const MapScreenWeb = () => {
                     <Map
                         style = {{width: '100%', height: '100%'}}
                         defaultCenter={{lat: location.latitude, lng: location.longitude}}
-                        defaultZoom={10}
+                        defaultZoom={12}
                     />
                 </APIProvider>
     }
