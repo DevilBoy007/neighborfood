@@ -1,11 +1,36 @@
 import React, { useState, useEffect } from 'react';
-import { APIProvider, Map, AdvancedMarker, Pin } from '@vis.gl/react-google-maps'
+import { APIProvider, Map, AdvancedMarker, Pin, InfoWindow, useAdvancedMarkerRef } from '@vis.gl/react-google-maps'
 import { StyleSheet, Text } from 'react-native';
 import * as Location from 'expo-location';
+
+interface MarkerData {
+    id: string;
+    position: {
+        lat: number;
+        lng: number;
+    };
+    title: string;
+    description: string;
+}
 
 const MapScreenWeb = () => {
     const [location, setLocation] = useState<Location.LocationObjectCoords | null>(null);
     const [errorMsg, setErrorMsg] = useState<string | null>(null);
+    const [selectedMarkerId, setSelectedMarkerId] = useState<string | null>(null);
+
+    const [markers, setMarkers] = useState<MarkerData[]>([
+        {
+            id: '1',
+            position: {
+                lat: location?.latitude || 0,
+                lng: location?.longitude || 0
+            },
+            title: "You are here",
+            description: "This is your current location"
+        },
+        // Add more markers as needed
+    ]);
+
     useEffect(() => {
         (async () => {
             let { status } = await Location.requestForegroundPermissionsAsync();
@@ -18,9 +43,24 @@ const MapScreenWeb = () => {
                 accuracy: Location.Accuracy.High,
             });
             setLocation(location.coords);
+
+            setMarkers(prev => [
+                {
+                    ...prev[0],
+                    position: {
+                        lat: location.coords.latitude,
+                        lng: location.coords.longitude
+                    }
+                },
+                ...prev.slice(1)
+            ]);
         })();
     }, []);
 
+    const handleMarkerClick = (markerId: string) => {
+        setSelectedMarkerId(selectedMarkerId === markerId ? null : markerId);
+    };
+    
     return (
         <>
             {location?.latitude && location?.longitude &&
@@ -32,17 +72,28 @@ const MapScreenWeb = () => {
                         reuseMaps={true}
                         mapId={"market"}
                     >
-                        <AdvancedMarker
-                            position={{lat: location.latitude, lng: location.longitude}}
-                            title="You are here"
-                        >
-                            <Pin
-                                background={'#00bfff'}
-                                borderColor={'#006425'}
-                                glyphColor={'#B7FFB0'}
-                                glyph={'🐰'}
-                            />
-                        </AdvancedMarker>
+                        {markers.map(marker => (
+                            <AdvancedMarker
+                                key={marker.id}
+                                position={marker.position}
+                                title={marker.title}
+                                onClick={() => handleMarkerClick(marker.id)}
+                            >
+                                {selectedMarkerId === marker.id && (
+                                    <InfoWindow
+                                        onCloseClick={() => setSelectedMarkerId(null)}
+                                    >
+                                        <Text>{marker.description}</Text>
+                                    </InfoWindow>
+                                )}
+                                <Pin
+                                    background={'#00bfff'}
+                                    borderColor={'#006425'}
+                                    glyphColor={'#B7FFB0'}
+                                    glyph={'🐰'}
+                                />
+                            </AdvancedMarker>
+                        ))}
                     </Map>
                 </APIProvider>
     }
