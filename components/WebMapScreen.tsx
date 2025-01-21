@@ -1,5 +1,5 @@
 import React, {useState, useEffect} from 'react';
-import {APIProvider, Map, AdvancedMarker} from '@vis.gl/react-google-maps'
+import {APIProvider, Map, AdvancedMarker, Pin} from '@vis.gl/react-google-maps'
 import { StyleSheet, Text } from 'react-native';
 import * as Location from 'expo-location';
 
@@ -35,7 +35,13 @@ const MapScreenWeb = () => {
                         <AdvancedMarker
                             position={{lat: location.latitude, lng: location.longitude}}
                             title="You are here"
-                        />
+                        >
+                            <Pin
+                                background={'#00bfff'}
+                                borderColor={'#006425'}
+                                glyphColor={'#B7FFB0'}
+                            />
+                        </AdvancedMarker>
                     </Map>
                 </APIProvider>
     }
