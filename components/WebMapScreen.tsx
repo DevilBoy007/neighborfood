@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Fragment } from 'react';
 import { APIProvider, Map, AdvancedMarker, Pin, InfoWindow, useAdvancedMarkerRef } from '@vis.gl/react-google-maps'
 import { StyleSheet, Text } from 'react-native';
 import * as Location from 'expo-location';
@@ -18,18 +18,7 @@ const MapScreenWeb = () => {
     const [errorMsg, setErrorMsg] = useState<string | null>(null);
     const [selectedMarkerId, setSelectedMarkerId] = useState<string | null>(null);
 
-    const [markers, setMarkers] = useState<MarkerData[]>([
-        {
-            id: '1',
-            position: {
-                lat: location?.latitude || 0,
-                lng: location?.longitude || 0
-            },
-            title: "You are here",
-            description: "This is your current location"
-        },
-        // Add more markers as needed
-    ]);
+    const [markers, setMarkers] = useState<MarkerData[]>([]);
 
     useEffect(() => {
         (async () => {
@@ -43,24 +32,39 @@ const MapScreenWeb = () => {
                 accuracy: Location.Accuracy.High,
             });
             setLocation(location.coords);
-
-            setMarkers(prev => [
-                {
-                    ...prev[0],
-                    position: {
-                        lat: location.coords.latitude,
-                        lng: location.coords.longitude
-                    }
-                },
-                ...prev.slice(1)
-            ]);
         })();
     }, []);
 
+    // Update markers when location changes
+    useEffect(() => {
+        if (location) {
+            setMarkers([
+                {
+                    id: '1',
+                    position: {
+                        lat: location.latitude,
+                        lng: location.longitude
+                    },
+                    title: "You are here",
+                    description: "This is your current location"
+                },
+                {
+                    id: '2',
+                    position: {
+                        lat: location.latitude + 0.001,
+                        lng: location.longitude + 0.001
+                    },
+                    title: "You are NOT here",
+                    description: "This is NOT your current location"
+                },
+            ]);
+        }
+    }, [location]);
+
     const handleMarkerClick = (markerId: string) => {
-        setSelectedMarkerId(selectedMarkerId === markerId ? null : markerId);
+        setSelectedMarkerId(markerId === selectedMarkerId ? null : markerId);
     };
-    
+
     return (
         <>
             {location?.latitude && location?.longitude &&
@@ -73,26 +77,31 @@ const MapScreenWeb = () => {
                         mapId={"market"}
                     >
                         {markers.map(marker => (
-                            <AdvancedMarker
-                                key={marker.id}
-                                position={marker.position}
-                                title={marker.title}
-                                onClick={() => handleMarkerClick(marker.id)}
-                            >
+                            <Fragment key={marker.id}>
+                                <AdvancedMarker
+                                    position={marker.position}
+                                    title={marker.title}
+                                    onClick={() => handleMarkerClick(marker.id)}
+                                    >
+                                    <Pin
+                                        background={'#00bfff'}
+                                        borderColor={'#006425'}
+                                        glyphColor={'#b7ffb0'}
+                                        glyph={'🐰'}
+                                    />
+                                </AdvancedMarker>
                                 {selectedMarkerId === marker.id && (
                                     <InfoWindow
+                                        position={marker.position}
                                         onCloseClick={() => setSelectedMarkerId(null)}
                                     >
-                                        <Text>{marker.description}</Text>
+                                        <div>
+                                            <h3>{marker.title}</h3>
+                                            <p>{marker.description}</p>
+                                        </div>
                                     </InfoWindow>
                                 )}
-                                <Pin
-                                    background={'#00bfff'}
-                                    borderColor={'#006425'}
-                                    glyphColor={'#B7FFB0'}
-                                    glyph={'🐰'}
-                                />
-                            </AdvancedMarker>
+                            </Fragment>
                         ))}
                     </Map>
                 </APIProvider>
