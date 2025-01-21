@@ -1,5 +1,5 @@
-import React, {useState, useEffect} from 'react';
-import {APIProvider, Map, AdvancedMarker, Pin} from '@vis.gl/react-google-maps'
+import React, { useState, useEffect } from 'react';
+import { APIProvider, Map, AdvancedMarker, Pin } from '@vis.gl/react-google-maps'
 import { StyleSheet, Text } from 'react-native';
 import * as Location from 'expo-location';
 
@@ -23,7 +23,7 @@ const MapScreenWeb = () => {
 
     return (
         <>
-            {location &&
+            {location?.latitude && location?.longitude &&
                 <APIProvider apiKey={process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY} onLoad={() => console.log('Loaded Google Maps API')}> 
                     <Map
                         style = {{width: '100%', height: '100%', borderRadius: 10}}
@@ -40,6 +40,7 @@ const MapScreenWeb = () => {
                                 background={'#00bfff'}
                                 borderColor={'#006425'}
                                 glyphColor={'#B7FFB0'}
+                                glyph={'🐰'}
                             />
                         </AdvancedMarker>
                     </Map>
