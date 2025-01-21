@@ -1,5 +1,5 @@
 import React, {useState, useEffect} from 'react';
-import {APIProvider, Map} from '@vis.gl/react-google-maps'
+import {APIProvider, Map, AdvancedMarker} from '@vis.gl/react-google-maps'
 import { StyleSheet, Text } from 'react-native';
 import * as Location from 'expo-location';
 
@@ -26,10 +26,17 @@ const MapScreenWeb = () => {
             {location &&
                 <APIProvider apiKey={process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY} onLoad={() => console.log('Loaded Google Maps API')}> 
                     <Map
-                        style = {{width: '100%', height: '100%'}}
+                        style = {{width: '100%', height: '100%', borderRadius: 10}}
                         defaultCenter={{lat: location.latitude, lng: location.longitude}}
-                        defaultZoom={12}
-                    />
+                        defaultZoom={16}
+                        reuseMaps={true}
+                        mapId={"market"}
+                    >
+                        <AdvancedMarker
+                            position={{lat: location.latitude, lng: location.longitude}}
+                            title="You are here"
+                        />
+                    </Map>
                 </APIProvider>
     }
             { errorMsg && <Text style={styles.errorText}>{errorMsg}</Text> }
