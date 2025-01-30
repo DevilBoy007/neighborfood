@@ -6,7 +6,6 @@ import {
     TouchableOpacity,
     StyleSheet,
     ScrollView,
-    Keyboard,
     KeyboardAvoidingView,
     Button,
     Platform
@@ -65,7 +64,6 @@ const RegisterScreen = () => {
     });
     const [showDatePicker, setShowDatePicker] = useState<boolean>(false);
     const [disabled, setDisabled] = useState<boolean>(false);
-    const [isKeyboardVisible, setKeyboardVisible] = useState<boolean>(false);
 
     const updateLocationData = (locationInfo) => {
         setFormData(prev => ({
@@ -122,18 +120,8 @@ const RegisterScreen = () => {
             }, 2000);
         });
 
-        const keyboardDidShowListener = Keyboard.addListener('keyboardDidShow', () => {
-            setKeyboardVisible(true);
-        });
-
-        const keyboardDidHideListener = Keyboard.addListener('keyboardDidHide', () => {
-            setKeyboardVisible(false);
-        });
-
         return () => {
             EventRegister.rm(userLoggedInListener);
-            keyboardDidShowListener.remove();
-            keyboardDidHideListener.remove();
         };
     }, []);
 
@@ -258,10 +246,13 @@ const RegisterScreen = () => {
     return (
         <View style={styles.container}>
             <Text style={styles.title}>Register</Text>
-            <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+            <KeyboardAvoidingView 
+                style={{ flex: 1 }} 
+                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}>
                 <ScrollView
                     style={styles.scrollView}
-                    contentContainerStyle={{ paddingBottom: 100 }}
+                    contentContainerStyle={{ paddingBottom: Platform.OS === 'ios' ? 120 : 100 }}
                     keyboardDismissMode='on-drag'
                     keyboardShouldPersistTaps='handled'
                     showsVerticalScrollIndicator={false}>
@@ -396,8 +387,7 @@ const RegisterScreen = () => {
                         onChangeText={(text) => handleChange('confirmPassword', text)}
                         />
                 </ScrollView>
-                {/* Register Button */}
-                <View style={styles.buttonContainer}>
+                <View style={[styles.buttonContainer, Platform.OS === 'ios' && styles.iosButtonContainer]}>
                     <TouchableOpacity
                         style={[
                             styles.button,
@@ -414,7 +404,7 @@ const RegisterScreen = () => {
                     </TouchableOpacity>
                 </View>
             </KeyboardAvoidingView>
-            {isKeyboardVisible && <KeyboardToolbar/>}
+            <KeyboardToolbar/>
         </View>
     );
 };
@@ -472,17 +462,13 @@ const styles = StyleSheet.create({
         marginBottom: 16,
     },
     buttonContainer: {
-        flex: 1,
-        flexDirection: 'row',
-        justifyContent: 'center',
-        ...Platform.select({
-            ios: {
-                position: 'absolute',
-                bottom: 0,
-                left: 0,
-                right: 0,
-            }
-        })
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        right: 0,
+    },
+    iosButtonContainer: {
+        bottom: 0,
     },
     button: {
         width: '100%',
