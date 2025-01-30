@@ -249,10 +249,10 @@ const RegisterScreen = () => {
             <KeyboardAvoidingView 
                 style={{ flex: 1 }} 
                 behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-                keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}>
+                keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 20}>
                 <ScrollView
                     style={styles.scrollView}
-                    contentContainerStyle={{ paddingBottom: Platform.OS === 'ios' ? 120 : 100 }}
+                    contentContainerStyle={{ paddingBottom: Platform.OS === 'ios' ? 200 : 160 }}
                     keyboardDismissMode='on-drag'
                     keyboardShouldPersistTaps='handled'
                     showsVerticalScrollIndicator={false}>
