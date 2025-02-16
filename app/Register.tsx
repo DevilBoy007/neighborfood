@@ -6,7 +6,6 @@ import {
     TouchableOpacity,
     StyleSheet,
     ScrollView,
-    Keyboard,
     KeyboardAvoidingView,
     Button,
     Platform
@@ -65,7 +64,6 @@ const RegisterScreen = () => {
     });
     const [showDatePicker, setShowDatePicker] = useState<boolean>(false);
     const [disabled, setDisabled] = useState<boolean>(false);
-    const [isKeyboardVisible, setKeyboardVisible] = useState<boolean>(false);
 
     const updateLocationData = (locationInfo) => {
         setFormData(prev => ({
@@ -122,18 +120,8 @@ const RegisterScreen = () => {
             }, 2000);
         });
 
-        const keyboardDidShowListener = Keyboard.addListener('keyboardDidShow', () => {
-            setKeyboardVisible(true);
-        });
-
-        const keyboardDidHideListener = Keyboard.addListener('keyboardDidHide', () => {
-            setKeyboardVisible(false);
-        });
-
         return () => {
             EventRegister.rm(userLoggedInListener);
-            keyboardDidShowListener.remove();
-            keyboardDidHideListener.remove();
         };
     }, []);
 
@@ -171,8 +159,9 @@ const RegisterScreen = () => {
     const validateFormData = () => {
         const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         const { firstName, lastName, email, dob, phone, location, username, password, confirmPassword } = formData;
+        setErrorMsg({'fields': '', 'phone': '', 'username1': '', 'username2': '', 'password1': '', 'password2': '', 'email': '', 'location': ''});
         if (!firstName || !lastName || !email || !dob || !phone || !location.address || !username || !password || !confirmPassword) {
-            setErrorMsg({ ...errorMsg, fields: 'All fields are required.' });
+            setErrorMsg({ ...errorMsg, fields: 'All fields are required. If location is unavailable, please refresh the page.' });
             return false;
         }
         if (username.length < 6) {
@@ -255,13 +244,57 @@ const RegisterScreen = () => {
         handleChange('dob', date.toISOString().split('T')[0]);
     };
 
+    const renderDatePicker = () => {
+        if (Platform.OS === 'web') {
+            return (
+                <input
+                    type="date"
+                    style={{
+                        ...styles.input,
+                        flex: 1,
+                        padding: 12,
+                        borderRadius: 8,
+                        fontSize: 16,
+                        border: 'none',
+                        width: '100%'
+                    }}
+                    value={formData.dob}
+                    onChange={(e) => handleChange('dob', e.target.value)}
+                />
+            );
+        }
+
+        return (
+            <View style={[styles.input, styles.flex1, styles.thin]}>
+                <Button
+                    onPress={() => setShowDatePicker(true)}
+                    title={formData.dob ? formData.dob : "d.o.b."}
+                    color={formData.dob ? '#00bfff' : '#999'}
+                />
+                {showDatePicker && (
+                    <DatePicker
+                        modal
+                        open={showDatePicker}
+                        date={formData.dob ? new Date(formData.dob) : new Date()}
+                        mode="date"
+                        onConfirm={handleDateChange}
+                        onCancel={() => setShowDatePicker(false)}
+                    />
+                )}
+            </View>
+        );
+    };
+
     return (
         <View style={styles.container}>
             <Text style={styles.title}>Register</Text>
-            <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+            <KeyboardAvoidingView 
+                style={{ flex: 1 }} 
+                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 20}>
                 <ScrollView
                     style={styles.scrollView}
-                    contentContainerStyle={{ paddingBottom: 100 }}
+                    contentContainerStyle={{ paddingBottom: Platform.OS === 'ios' ? 200 : 160 }}
                     keyboardDismissMode='on-drag'
                     keyboardShouldPersistTaps='handled'
                     showsVerticalScrollIndicator={false}>
@@ -296,19 +329,7 @@ const RegisterScreen = () => {
                             onChangeText={(text) => handleChange('email', text)}
                         />
                         {errorMsg.email && <Text style={styles.errorText}>{errorMsg.email}</Text>}
-                        <View style={[styles.input, styles.flex1, styles.thin]}>
-                            <Button onPress={() => setShowDatePicker(true)} title={formData.dob ? formData.dob : "d.o.b."} color={ formData.dob ? '#00bfff' : '#999' }/>
-                            {showDatePicker && (
-                                <DatePicker
-                                    modal
-                                    open={showDatePicker}
-                                    date={formData.dob ? new Date(formData.dob) : new Date()}
-                                    mode="date"
-                                    onConfirm={handleDateChange}
-                                    onCancel={() => setShowDatePicker(false)}
-                                />
-                            )}
-                        </View>
+                        {renderDatePicker()}
                     </View>
                     <TextInput
                         style={styles.input}
@@ -372,7 +393,7 @@ const RegisterScreen = () => {
                         autoCapitalize='none'
                         onChangeText={(text) => handleChange('username', text)}
                     />
-                    <Text style={[styles.subtitle, styles.marginBottom]}>[ <Text style={errorMsg.username1?styles.errorText:styles.subtitle}>must be at least 6 characters</Text> | cannot contain special characters ]</Text>
+                    <Text style={[styles.subtitle, styles.marginBottom]}>[ <Text style={errorMsg.username1 == '' ? styles.subtitle : styles.errorText}>must be at least 6 characters</Text> | <Text style={errorMsg.username2 == '' ? styles.subtitle : styles.errorText}>cannot contain special characters</Text> ]</Text>
                     <TextInput
                         style={styles.input}
                         placeholder="password"
@@ -396,8 +417,7 @@ const RegisterScreen = () => {
                         onChangeText={(text) => handleChange('confirmPassword', text)}
                         />
                 </ScrollView>
-                {/* Register Button */}
-                <View style={styles.buttonContainer}>
+                <View style={[styles.buttonContainer, Platform.OS === 'ios' && styles.iosButtonContainer]}>
                     <TouchableOpacity
                         style={[
                             styles.button,
@@ -414,7 +434,7 @@ const RegisterScreen = () => {
                     </TouchableOpacity>
                 </View>
             </KeyboardAvoidingView>
-            {isKeyboardVisible && <KeyboardToolbar/>}
+            <KeyboardToolbar/>
         </View>
     );
 };
@@ -472,17 +492,13 @@ const styles = StyleSheet.create({
         marginBottom: 16,
     },
     buttonContainer: {
-        flex: 1,
-        flexDirection: 'row',
-        justifyContent: 'center',
-        ...Platform.select({
-            ios: {
-                position: 'absolute',
-                bottom: 0,
-                left: 0,
-                right: 0,
-            }
-        })
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        right: 0,
+    },
+    iosButtonContainer: {
+        bottom: 0,
     },
     button: {
         width: '100%',
