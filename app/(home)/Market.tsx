@@ -5,18 +5,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import MapScreen from '@/components/MapScreen';
 import WebMapScreen from '@/components/WebMapScreen';
-
-// Placeholder for the Shop component
-const Shop = ({ name }: { name: string }) => (
-    <View style={styles.shopItem}>
-        <Text style={styles.shopName}>{name}</Text>
-        <View style={styles.shopCircles}>
-            {[...Array(4)].map((_, i) => (
-                <View key={i} style={styles.circle} />
-            ))}
-        </View>
-    </View>
-);
+import ShopCard from '@/components/ShopCard';
 
 const MarketScreen = () => {
     const [isMapView, setIsMapView] = useState(true);
@@ -82,7 +71,7 @@ const MarketScreen = () => {
             ) : (
                 <FlatList
                     data={ shops }
-                    renderItem={({ item }) => <Shop name={ item } />}
+                    renderItem={({ item }) => <ShopCard name={ item } />}
                     keyExtractor={ ( item ) => item}
                 />
             )}
@@ -177,28 +166,6 @@ const styles = StyleSheet.create({
                 marginBottom: 20,
             },
         }),
-    },
-    shopItem: {
-        backgroundColor: 'white',
-        padding: 16,
-        marginVertical: 8,
-        marginHorizontal: 16,
-        borderRadius: 8,
-    },
-    shopName: {
-        fontSize: 18,
-        fontWeight: 'bold',
-    },
-    shopCircles: {
-        flexDirection: 'row',
-        marginTop: 8,
-    },
-    circle: {
-        width: 20,
-        height: 20,
-        borderRadius: 10,
-        backgroundColor: 'yellow',
-        marginRight: 8,
     },
 });
 
