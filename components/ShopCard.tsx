@@ -23,6 +23,7 @@ const styles = StyleSheet.create({
     shopName: {
         fontSize: 18,
         fontWeight: 'bold',
+        fontFamily: 'TextMeOne',
     },
     shopCircles: {
         flexDirection: 'row',
