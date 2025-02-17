@@ -38,6 +38,12 @@ export default function Shops() {
                 {mockShops.map((shop) => (
                     <ShopCard name={ shop.name } key={ shop.id }/>
                 ))}
+                <TouchableOpacity
+                    style={ styles.addShopButton }
+                    onPress={() => router.push('/AddShop')}
+                >
+                    <Text style={ styles.addShopButtonText }>Add Shop</Text>
+                </TouchableOpacity>
             </ScrollView>
         </SafeAreaView>
     );
@@ -47,7 +53,7 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: '#b7ffb0',
-        // backgroundColor: '#c2f7d7',
+        // backgroundColor: '#c2f7d7', "mint"
     },
     header: {
         flexDirection: 'row',
@@ -88,5 +94,17 @@ const styles = StyleSheet.create({
     scrollView: {
         flex: 1,
         padding: 16,
+    },
+    addShopButton: {
+        backgroundColor: '#00bfff',
+        padding: 16,
+        borderRadius: 8,
+        marginTop: 16,
+        alignItems: 'center',
+    },
+    addShopButtonText: {
+        fontSize: 24,
+        color: '#fff',
+        fontFamily: 'TextMeOne',
     },
 });
