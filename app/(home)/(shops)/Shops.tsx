@@ -12,9 +12,25 @@ const mockShops: Array<Object> = [
         id: '1',
         name: 'Sample Shop 1',
         description: 'Fresh local produce',
-        image: '/images/shop1.jpg',
+        image: 'assets/images/shop1.jpg',
         rating: 4.5,
         address: '123 Main St',
+    },
+    {
+        id: '2',
+        name: 'Sample Shop 2',
+        description: 'Fresh local produce',
+        image: 'assets/images/shop2.jpg',
+        rating: 4.2,
+        address: '456 Elm St',
+    },
+    {
+        id: '3',
+        name: 'Sample Shop 3',
+        description: 'Fresh local produce',
+        image: 'assets/images/shop3.jpg',
+        rating: 4.0,
+        address: '789 Oak St',
     },
 ];
 
