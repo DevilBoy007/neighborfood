@@ -27,7 +27,7 @@ const mockShops: Array<Object> = [
         id: '2',
         name: 'Bread Head',
         description: 'Fresh local produce',
-        images: [strawberryImage, dillImage, bellPepperImage, tomatoImage],
+        images: [strawberryImage, dillImage, bellPepperImage],
         rating: 4.2,
         address: '456 Elm St',
     },

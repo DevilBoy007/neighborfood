@@ -11,7 +11,7 @@ const ShopCard = ({ name, itemImages }: ShopCardProps) => (
         <TouchableOpacity>
             <Text style={styles.shopName}>{name}</Text>
             <View style={styles.shopCircles}>
-                {itemImages.slice(0, 4).map((image, i) => (
+                {itemImages.slice(0, itemImages.length).map((image, i) => (
                     <Image
                         key={i}
                         source={image}
