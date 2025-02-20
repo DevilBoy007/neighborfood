@@ -1,14 +1,16 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 
 const ShopCard = ({ name }: { name: string }) => (
     <View style={styles.shopItem}>
-        <Text style={styles.shopName}>{name}</Text>
-        <View style={styles.shopCircles}>
-            {[...Array(4)].map((_, i) => (
-                <View key={i} style={styles.circle} />
-            ))}
-        </View>
+        <TouchableOpacity>
+            <Text style={styles.shopName}>{name}</Text>
+            <View style={styles.shopCircles}>
+                {[...Array(4)].map((_, i) => (
+                    <View key={i} style={styles.circle} />
+                ))}
+            </View>
+        </TouchableOpacity>
     </View>
 );
 
