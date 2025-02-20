@@ -1,13 +1,22 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image, ImageSourcePropType } from 'react-native';
 
-const ShopCard = ({ name }: { name: string }) => (
+interface ShopCardProps {
+    name: string;
+    itemImages: ImageSourcePropType[];
+}
+
+const ShopCard = ({ name, itemImages }: ShopCardProps) => (
     <View style={styles.shopItem}>
         <TouchableOpacity>
             <Text style={styles.shopName}>{name}</Text>
             <View style={styles.shopCircles}>
-                {[...Array(4)].map((_, i) => (
-                    <View key={i} style={styles.circle} />
+                {itemImages.slice(0, 4).map((image, i) => (
+                    <Image
+                        key={i}
+                        source={image}
+                        style={styles.itemImage}
+                    />
                 ))}
             </View>
         </TouchableOpacity>
@@ -31,11 +40,10 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         marginTop: 8,
     },
-    circle: {
+    itemImage: {
         width: 20,
         height: 20,
         borderRadius: 10,
-        backgroundColor: 'yellow',
         marginRight: 8,
     },
 });

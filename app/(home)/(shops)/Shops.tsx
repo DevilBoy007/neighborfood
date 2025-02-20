@@ -6,29 +6,36 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import ShopCard from '@/components/ShopCard';
 
+import tomatoImage from '../../../assets/images/tomatoes.png';
+import dillImage from '../../../assets/images/dill.jpeg';
+import bellPepperImage from '../../../assets/images/bellPeppers.jpeg';
+import breadImage from '../../../assets/images/bread.jpeg';
+import strawberryImage from '../../../assets/images/strawberries.jpeg';
+
+
 // Mock data - replace with actual data fetching
 const mockShops: Array<Object> = [
     {
         id: '1',
-        name: 'Sample Shop 1',
+        name: 'Veggie Shop',
         description: 'Fresh local produce',
-        image: 'assets/images/shop1.jpg',
+        images: [bellPepperImage, dillImage,tomatoImage, breadImage],
         rating: 4.5,
         address: '123 Main St',
     },
     {
         id: '2',
-        name: 'Sample Shop 2',
+        name: 'Bread Head',
         description: 'Fresh local produce',
-        image: 'assets/images/shop2.jpg',
+        images: [strawberryImage, dillImage, bellPepperImage, tomatoImage],
         rating: 4.2,
         address: '456 Elm St',
     },
     {
         id: '3',
-        name: 'Sample Shop 3',
+        name: 'Nothin\' but Nuts',
         description: 'Fresh local produce',
-        image: 'assets/images/shop3.jpg',
+        images: [breadImage, bellPepperImage, strawberryImage, dillImage],
         rating: 4.0,
         address: '789 Oak St',
     },
@@ -52,7 +59,7 @@ export default function Shops() {
 
             <ScrollView style={styles.scrollView}>
                 {mockShops.map((shop) => (
-                    <ShopCard name={ shop.name } key={ shop.id }/>
+                    <ShopCard name={ shop.name } itemImages={shop.images} key={ shop.id }/>
                 ))}
                 <TouchableOpacity
                     style={ styles.addShopButton }
