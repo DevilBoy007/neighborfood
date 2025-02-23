@@ -7,6 +7,12 @@ import MapScreen from '@/components/MapScreen';
 import WebMapScreen from '@/components/WebMapScreen';
 import ShopCard from '@/components/ShopCard';
 
+import tomatoImage from '../../assets/images/tomatoes.png';
+import dillImage from '../../assets/images/dill.jpeg';
+import bellPepperImage from '../../assets/images/bellPeppers.jpeg';
+import breadImage from '../../assets/images/bread.jpeg';
+import strawberryImage from '../../assets/images/strawberries.jpeg';
+
 const MarketScreen = () => {
     const [isMapView, setIsMapView] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
@@ -14,10 +20,38 @@ const MarketScreen = () => {
     const [userData, setUserData] = useState({});
 
     const shops = [
-        "Ben's Beef",
-        "Big Baskets",
-        "Ann's Apples",
-        "Happy Alan's Produce"
+        {
+            id: '1',
+            name: "Ben's Beef",
+            description: 'Fresh local meats',
+            images: [bellPepperImage, dillImage, tomatoImage],
+            rating: 4.3,
+            address: '123 Butcher St'
+        },
+        {
+            id: '2',
+            name: "Big Baskets",
+            description: 'Fresh local produce',
+            images: [tomatoImage, strawberryImage, bellPepperImage],
+            rating: 4.7,
+            address: '456 Market Ave'
+        },
+        {
+            id: '3',
+            name: "Ann's Apples",
+            description: 'Local orchard goods',
+            images: [strawberryImage, breadImage, dillImage],
+            rating: 4.4,
+            address: '789 Orchard Ln'
+        },
+        {
+            id: '4',
+            name: "Happy Alan's Produce",
+            description: 'Farm fresh vegetables',
+            images: [bellPepperImage, tomatoImage, dillImage],
+            rating: 4.6,
+            address: '321 Farm Rd'
+        }
     ];
 
     useEffect(() => {
@@ -70,9 +104,15 @@ const MarketScreen = () => {
                 )
             ) : (
                 <FlatList
-                    data={ shops }
-                    renderItem={({ item }) => <ShopCard name={ item } />}
-                    keyExtractor={ ( item ) => item}
+                    data={shops}
+                    renderItem={({ item }) => (
+                        <ShopCard 
+                            name={item.name} 
+                            itemImages={item.images}
+                            key={item.id}
+                        />
+                    )}
+                    keyExtractor={(item) => item.id}
                 />
             )}
         </View>
