@@ -14,7 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Picker } from '@react-native-picker/picker';
 import { useRouter } from 'expo-router';
 
-const weekDays = ['M', 'T', 'W', 'H', 'F', 'Sa', 'Su'];
+const weekDays = ['M', 'T', 'W', 'Th', 'F', 'Sat', 'Sun'];
 const seasons = ['spring', 'summer', 'fall', 'winter'];
 
 export default function ShopRegistrationScreen() {
