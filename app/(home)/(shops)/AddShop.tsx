@@ -14,7 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Picker } from '@react-native-picker/picker';
 import { useRouter } from 'expo-router';
 
-const weekDays = ['M', 'T', 'W', 'Th', 'F', 'Sat', 'Sun'];
+const weekDays = ['M', 'T', 'W', 'Th', 'F', 'Sa', 'Su'];
 const seasons = ['spring', 'summer', 'fall', 'winter'];
 
 export default function ShopRegistrationScreen() {
@@ -92,9 +92,13 @@ export default function ShopRegistrationScreen() {
                             onChange={(e) => setType(e.target.value)}
                         >
                             <option value="">type</option>
-                            <option value="farmers">Farmers Market</option>
-                            <option value="crafts">Crafts Market</option>
-                            <option value="food">Food Market</option>
+                            <option value="general">General</option>
+                            <option value="farm">Farm</option>
+                            <option value="produce">Produce</option>
+                            <option value="butchery">Butchery</option>
+                            <option value="spices">Spices</option>
+                            <option value="bakery">Bakery</option>
+                            <option value="homemade">Homemade Goods</option>
                         </select>
                     ) : (
                         <Picker
@@ -103,9 +107,13 @@ export default function ShopRegistrationScreen() {
                             style={styles.picker}
                         >
                             <Picker.Item label="type" value="" />
-                            <Picker.Item label="Farmers Market" value="farmers" />
-                            <Picker.Item label="Crafts Market" value="crafts" />
-                            <Picker.Item label="Food Market" value="food" />
+                            <Picker.Item label="General" value="general" />
+                            <Picker.Item label="Produce" value="produce" />
+                            <Picker.Item label="Farm" value="farm" />
+                            <Picker.Item label="Butchery" value="butchery" />
+                            <Picker.Item label="Spices" value="spices" />
+                            <Picker.Item label="Bakery" value="bakery" />
+                            <Picker.Item label="Homemade Goods" value="homemade" />
                         </Picker>
                     )}
 
@@ -154,7 +162,8 @@ export default function ShopRegistrationScreen() {
                         <View style={styles.timeInput}>
                             <TextInput
                                 style={styles.input}
-                                placeholder="earlier"
+                                placeholder="7:00-11:00"
+                                placeholderTextColor={'#999'}
                                 value={earlierHours}
                                 onChangeText={setEarlierHours}
                             />
@@ -163,7 +172,8 @@ export default function ShopRegistrationScreen() {
                         <View style={styles.timeInput}>
                             <TextInput
                                 style={styles.input}
-                                placeholder="later"
+                                placeholder="5:30-7:00"
+                                placeholderTextColor={'#999'}
                                 value={laterHours}
                                 onChangeText={setLaterHours}
                             />
@@ -248,16 +258,18 @@ const styles = StyleSheet.create({
     },
     webSelect: {
         backgroundColor: '#fff',
+        height: 50,
         padding: 15,
-        borderRadius: 8,
+        borderRadius: 3,
         marginBottom: 15,
         fontSize: 16,
         width: '100%',
-        border: '1px solid #ddd',
+        border: '1px solid #999',
     },
     picker: {
+        color: '#333',
         backgroundColor: '#fff',
-        marginBottom: 15,
+        marginBottom: 25,
     },
     daysContainer: {
         flexDirection: 'row',
@@ -322,13 +334,13 @@ const styles = StyleSheet.create({
         width: 20,
         height: 20,
         borderWidth: 1,
-        borderColor: '#ddd',
+        borderColor: '#000',
         marginRight: 10,
         borderRadius: 4,
     },
     checkboxChecked: {
-        backgroundColor: '#90EE90',
-        borderColor: '#90EE90',
+        backgroundColor: '#00bfff',
+        borderColor: '#00bfff',
     },
     checkboxLabel: {
         color: '#333',
