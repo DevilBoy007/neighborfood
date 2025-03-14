@@ -121,6 +121,7 @@ export default function ShopRegistrationScreen() {
                     )}
 
                     <Text style={styles.sectionTitle}>Availability</Text>
+                    <Text style={styles.sectionSubtitle}>Days</Text>
                     <View style={styles.daysContainer}>
                         {weekDays.map((day) => (
                             <TouchableOpacity
@@ -140,7 +141,7 @@ export default function ShopRegistrationScreen() {
                             </TouchableOpacity>
                         ))}
                     </View>
-
+                    <Text style={styles.sectionSubtitle}>Seasons</Text>
                     <View style={styles.seasonsContainer}>
                         {seasons.map((season) => (
                             <TouchableOpacity
@@ -155,12 +156,21 @@ export default function ShopRegistrationScreen() {
                                     styles.seasonButtonText,
                                     selectedSeasons.includes(season) && styles.selectedButtonText
                                 ]}>
-                                    {season}
+                                    <Ionicons 
+                                    name={
+                                        season === 'spring' ? 'rose-outline' :
+                                        season === 'summer' ? 'sunny-outline' :
+                                        season === 'fall' ? 'leaf-outline' :
+                                        'snow-outline'
+                                    } 
+                                    size={18} 
+                                    style={selectedSeasons.includes(season) ? {color: '#fff'} : {color: '#333'}}
+                                    />
                                 </Text>
                             </TouchableOpacity>
                         ))}
                     </View>
-
+                    <Text style={styles.sectionSubtitle}>Hours</Text>
                     <View style={styles.hoursContainer}>
                         <View style={styles.timeInput}>
                             <TextInput
@@ -183,7 +193,7 @@ export default function ShopRegistrationScreen() {
                             <Text style={styles.timeLabel}>(after noon)</Text>
                         </View>
                     </View>
-
+                    
                     <View style={styles.checkboxContainer}>
                         <TouchableOpacity
                             style={styles.checkbox}
@@ -247,6 +257,13 @@ const styles = StyleSheet.create({
         marginVertical: 15,
         color: '#fff',
         fontFamily: 'TitanOne'
+    },
+    sectionSubtitle: {
+        fontSize: 18,
+        marginVertical: 15,
+        color: 'black',
+        fontFamily: 'TitanOne',
+        textAlign: 'right',
     },
     input: {
         backgroundColor: '#fff',
