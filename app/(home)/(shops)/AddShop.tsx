@@ -9,6 +9,7 @@ import {
     SafeAreaView,
     KeyboardAvoidingView,
     StyleSheet,
+    Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Picker } from '@react-native-picker/picker';
@@ -18,19 +19,29 @@ const weekDays = ['M', 'T', 'W', 'Th', 'F', 'Sa', 'Su'];
 const seasons = ['spring', 'summer', 'fall', 'winter'];
 
 export default function ShopRegistrationScreen() {
-    const [shopName, setShopName] = useState('');
-    const [description, setDescription] = useState('');
-    const [type, setType] = useState('');
-    const [selectedDays, setSelectedDays] = useState([]);
-    const [selectedSeasons, setSelectedSeasons] = useState([]);
-    const [earlierHours, setEarlierHours] = useState('');
-    const [laterHours, setLaterHours] = useState('');
-    const [allowPickup, setAllowPickup] = useState(false);
-    const [localDelivery, setLocalDelivery] = useState(false);
+    const [shopName, setShopName] = useState<string>('');
+    const [description, setDescription] = useState<string>('');
+    const [type, setType] = useState<string>('');
+    const [selectedDays, setSelectedDays] = useState<string[]>([]);
+    const [selectedSeasons, setSelectedSeasons] = useState<string[]>([]);
+    const [earlierHours, setEarlierHours] = useState<string>('');
+    const [laterHours, setLaterHours] = useState<string>('');
+    const [allowPickup, setAllowPickup] = useState<boolean>(false);
+    const [localDelivery, setLocalDelivery] = useState<boolean>(false);
+    
+    const [errors, setErrors] = useState({
+        shopName: '',
+        description: '',
+        type: '',
+        days: '',
+        seasons: '',
+        hours: '',
+        delivery: '',
+    });
 
     const router = useRouter();
 
-    const toggleDay = (day) => {
+    const toggleDay = (day: string) => {
         if (selectedDays.includes(day)) {
             setSelectedDays(selectedDays.filter(d => d !== day));
         } else {
@@ -38,11 +49,89 @@ export default function ShopRegistrationScreen() {
         }
     };
 
-    const toggleSeason = (season) => {
+    const toggleSeason = (season: string) => {
         if (selectedSeasons.includes(season)) {
             setSelectedSeasons(selectedSeasons.filter(s => s !== season));
         } else {
             setSelectedSeasons([...selectedSeasons, season]);
+        }
+    };
+    
+    const validateForm = () => {
+        let isValid = true;
+        const newErrors = {
+            shopName: '',
+            description: '',
+            type: '',
+            days: '',
+            seasons: '',
+            hours: '',
+            delivery: '',
+        };
+
+        if (!shopName.trim()) {
+            newErrors.shopName = 'Shop name is required';
+            isValid = false;
+        }
+
+        if (!description.trim()) {
+            newErrors.description = 'Description is required';
+            isValid = false;
+        }
+
+        if (!type) {
+            newErrors.type = 'Please select a shop type';
+            isValid = false;
+        }
+
+        if (selectedDays.length === 0) {
+            newErrors.days = 'Please select at least one day';
+            isValid = false;
+        }
+
+        if (selectedSeasons.length === 0) {
+            newErrors.seasons = 'Please select at least one season';
+            isValid = false;
+        }
+
+        if (!earlierHours.trim() && !laterHours.trim()) {
+            newErrors.hours = 'Please provide operating hours';
+            isValid = false;
+        }
+
+        if (!allowPickup && !localDelivery) {
+            newErrors.delivery = 'Please select at least one delivery option';
+            isValid = false;
+        }
+
+        setErrors(newErrors);
+        return isValid;
+    };
+
+    const handleSubmit = () => {
+        if (validateForm()) {
+            const shopData = {
+                shopName,
+                description,
+                type,
+                availability: {
+                    days: selectedDays,
+                    seasons: selectedSeasons,
+                    earlierHours,
+                    laterHours
+                },
+                options: {
+                    allowPickup,
+                    localDelivery
+                }
+            };
+            
+            console.log('Submitting shop data:', shopData);
+            router.navigate('/success');
+        } else {
+            if (Platform.OS === 'web') {
+                window.scrollTo(0, 0);
+            }
         }
     };
 
@@ -68,56 +157,82 @@ export default function ShopRegistrationScreen() {
                 <View style={styles.formContainer}>
                     <Text style={styles.sectionTitle}>Shop Info</Text>
                     <TextInput
-                        style={styles.input}
+                        style={[styles.input, errors.shopName ? styles.inputError : null]}
                         placeholder="shop name"
                         placeholderTextColor={'#999'}
                         value={shopName}
-                        onChangeText={setShopName}
+                        onChangeText={(text) => {
+                            setShopName(text);
+                            if (text.trim()) setErrors({...errors, shopName: ''});
+                        }}
                     />
+                    {errors.shopName ? <Text style={styles.errorText}>{errors.shopName}</Text> : null}
+                    
                     <TextInput
-                        style={[styles.input, styles.textArea]}
+                        style={[styles.input, styles.textArea, errors.description ? styles.inputError : null]}
                         placeholder="description"
                         placeholderTextColor={'#999'}
                         multiline
                         minHeight={Platform.OS === 'ios' ? 80 : null}
                         value={description}
-                        onChangeText={setDescription}
+                        onChangeText={(text) => {
+                            setDescription(text);
+                            if (text.trim()) setErrors({...errors, description: ''});
+                        }}
                     />
+                    {errors.description ? <Text style={styles.errorText}>{errors.description}</Text> : null}
 
                     <Text style={styles.sectionTitle}>Market Info</Text>
                     {Platform.OS === 'web' ? (
-                        <select
-                            style={styles.webSelect}
-                            value={type}
-                            onChange={(e) => setType(e.target.value)}
-                        >
-                            <option value="">type</option>
-                            <option value="general">General</option>
-                            <option value="produce">Produce</option>
-                            <option value="farm">Farm</option>
-                            <option value="grainery">Grainery</option>
-                            <option value="butchery">Butchery</option>
-                            <option value="spices">Spices</option>
-                            <option value="bakery">Bakery</option>
-                            <option value="homemade">Homemade Goods</option>
-                        </select>
+                        <>
+                            <select
+                                style={{
+                                    ...styles.webSelect, 
+                                    ...(errors.type ? styles.webSelectError : {})
+                                }}
+                                value={type}
+                                onChange={(e) => {
+                                    setType(e.target.value);
+                                    if (e.target.value) setErrors({...errors, type: ''});
+                                }}
+                            >
+                                <option value="">type</option>
+                                <option value="general">General</option>
+                                <option value="produce">Produce</option>
+                                <option value="farm">Farm</option>
+                                <option value="grainery">Grainery</option>
+                                <option value="butchery">Butchery</option>
+                                <option value="spices">Spices</option>
+                                <option value="bakery">Bakery</option>
+                                <option value="homemade">Homemade Goods</option>
+                            </select>
+                            {errors.type ? <Text style={styles.errorText}>{errors.type}</Text> : null}
+                        </>
                     ) : (
-                        <Picker
-                            selectedValue={type}
-                            onValueChange={setType}
-                            style={styles.picker}
-                            itemStyle={{ height: 150, fontFamily: 'TextMeOne' }}
-                        >
-                            <Picker.Item color="#00bfff" label="type" value="" />
-                            <Picker.Item color="black" label="General" value="general" />
-                            <Picker.Item color="black" label="Produce" value="produce" />
-                            <Picker.Item color="black" label="Farm" value="farm" />
-                            <Picker.Item color="black" label="Grainery" value="grainery" />
-                            <Picker.Item color="black" label="Butchery" value="butchery" />
-                            <Picker.Item color="black" label="Spices" value="spices" />
-                            <Picker.Item color="black" label="Bakery" value="bakery" />
-                            <Picker.Item color="black" label="Homemade Goods" value="homemade" />
-                        </Picker>
+                        <>
+                            <View style={errors.type ? styles.pickerError : null}>
+                                <Picker
+                                    selectedValue={type}
+                                    onValueChange={(value) => {
+                                        setType(value);
+                                        if (value) setErrors({...errors, type: ''});
+                                    }}
+                                    style={styles.picker}
+                                    itemStyle={{ height: 150, fontFamily: 'TextMeOne' }}
+                                >
+                                    <Picker.Item color="#00bfff" label="type" value="" />
+                                    <Picker.Item color="black" label="General" value="general" />
+                                    <Picker.Item color="black" label="Produce" value="produce" />
+                                    <Picker.Item color="black" label="Farm" value="farm" />
+                                    <Picker.Item color="black" label="Grainery" value="grainery" />
+                                    <Picker.Item color="black" label="Butchery" value="butchery" />
+                                    <Picker.Item color="black" label="Spices" value="spices" />
+                                    <Picker.Item color="black" label="Bakery" value="bakery" />
+                                    <Picker.Item color="black" label="Homemade Goods" value="homemade" />
+                                </Picker>
+                            </View>
+                            {errors.type ? <Text style={styles.errorText}>{errors.type}</Text> : null}
+                        </>
                     )}
 
                     <Text style={styles.sectionTitle}>Availability</Text>
@@ -130,7 +245,10 @@ export default function ShopRegistrationScreen() {
                                     styles.dayButton,
                                     selectedDays.includes(day) && styles.selectedButton
                                 ]}
-                                onPress={() => toggleDay(day)}
+                                onPress={() => {
+                                    toggleDay(day);
+                                    if (selectedDays.length > 0 || day) setErrors({...errors, days: ''});
+                                }}
                             >
                                 <Text style={[
                                     styles.dayButtonText,
@@ -141,6 +259,8 @@ export default function ShopRegistrationScreen() {
                             </TouchableOpacity>
                         ))}
                     </View>
+                    {errors.days ? <Text style={styles.errorText}>{errors.days}</Text> : null}
+                    
                     <Text style={styles.sectionSubtitle}>Seasons</Text>
                     <View style={styles.seasonsContainer}>
                         {seasons.map((season) => (
@@ -150,7 +270,10 @@ export default function ShopRegistrationScreen() {
                                     styles.seasonButton,
                                     selectedSeasons.includes(season) && styles.selectedButton
                                 ]}
-                                onPress={() => toggleSeason(season)}
+                                onPress={() => {
+                                    toggleSeason(season);
+                                    if (selectedSeasons.length > 0 || season) setErrors({...errors, seasons: ''});
+                                }}
                             >
                                 <Text style={[
                                     styles.seasonButtonText,
@@ -170,34 +293,46 @@ export default function ShopRegistrationScreen() {
                             </TouchableOpacity>
                         ))}
                     </View>
+                    {errors.seasons ? <Text style={styles.errorText}>{errors.seasons}</Text> : null}
+                    
                     <Text style={styles.sectionSubtitle}>Hours</Text>
                     <View style={styles.hoursContainer}>
                         <View style={styles.timeInput}>
                             <TextInput
-                                style={styles.input}
+                                style={[styles.input, errors.hours ? styles.inputError : null]}
                                 placeholder="7:00-11:00"
                                 placeholderTextColor={'#999'}
                                 value={earlierHours}
-                                onChangeText={setEarlierHours}
+                                onChangeText={(text) => {
+                                    setEarlierHours(text);
+                                    if (text.trim() || laterHours.trim()) setErrors({...errors, hours: ''});
+                                }}
                             />
                             <Text style={styles.timeLabel}>(earlier hours)</Text>
                         </View>
                         <View style={styles.timeInput}>
                             <TextInput
-                                style={styles.input}
+                                style={[styles.input, errors.hours ? styles.inputError : null]}
                                 placeholder="5:30-7:00"
                                 placeholderTextColor={'#999'}
                                 value={laterHours}
-                                onChangeText={setLaterHours}
+                                onChangeText={(text) => {
+                                    setLaterHours(text);
+                                    if (earlierHours.trim() || text.trim()) setErrors({...errors, hours: ''});
+                                }}
                             />
                             <Text style={styles.timeLabel}>(after noon)</Text>
                         </View>
                     </View>
+                    {errors.hours ? <Text style={styles.errorText}>{errors.hours}</Text> : null}
                     
                     <View style={styles.checkboxContainer}>
                         <TouchableOpacity
                             style={styles.checkbox}
-                            onPress={() => setAllowPickup(!allowPickup)}
+                            onPress={() => {
+                                setAllowPickup(!allowPickup);
+                                if (!allowPickup || localDelivery) setErrors({...errors, delivery: ''});
+                            }}
                         >
                             <View style={[
                                 styles.checkboxBox,
@@ -208,7 +343,10 @@ export default function ShopRegistrationScreen() {
 
                         <TouchableOpacity
                             style={styles.checkbox}
-                            onPress={() => setLocalDelivery(!localDelivery)}
+                            onPress={() => {
+                                setLocalDelivery(!localDelivery);
+                                if (allowPickup || !localDelivery) setErrors({...errors, delivery: ''});
+                            }}
                         >
                             <View style={[
                                 styles.checkboxBox,
@@ -216,12 +354,13 @@ export default function ShopRegistrationScreen() {
                             ]} />
                             <Text style={styles.checkboxLabel}>local delivery</Text>
                         </TouchableOpacity>
+                        {errors.delivery ? <Text style={styles.errorText}>{errors.delivery}</Text> : null}
                     </View>
                 </View>
             </ScrollView>
             </KeyboardAvoidingView>
             <View style={[styles.buttonContainer, Platform.OS === 'ios' && styles.iosButtonContainer]}>
-                <TouchableOpacity style={styles.button}>
+                <TouchableOpacity style={styles.button} onPress={handleSubmit}>
                     <Text style={styles.buttonText}>Create</Text>
                 </TouchableOpacity>
             </View>
@@ -230,6 +369,25 @@ export default function ShopRegistrationScreen() {
 }
 
 const styles = StyleSheet.create({
+    inputError: {
+        borderWidth: 1,
+        borderColor: 'red',
+    },
+    webSelectError: {
+        borderWidth: 1,
+        borderColor: 'red',
+    },
+    pickerError: {
+        borderWidth: 1,
+        borderColor: 'red',
+        borderRadius: 8,
+        overflow: 'hidden',
+    },
+    errorText: {
+        color: 'red',
+        marginBottom: 10,
+        fontSize: 14,
+    },
     container: {
         flex: 1,
         backgroundColor: '#b7ffb0',
@@ -285,7 +443,8 @@ const styles = StyleSheet.create({
         marginBottom: 15,
         fontSize: 16,
         width: '100%',
-        border: '1px solid #999',
+        borderWidth: 1,
+        borderColor: '#999',
     },
     picker: {
         color: '#333',
