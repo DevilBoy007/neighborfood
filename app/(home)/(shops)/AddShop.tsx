@@ -93,8 +93,9 @@ export default function ShopRegistrationScreen() {
                         >
                             <option value="">type</option>
                             <option value="general">General</option>
-                            <option value="farm">Farm</option>
                             <option value="produce">Produce</option>
+                            <option value="farm">Farm</option>
+                            <option value="grainery">Grainery</option>
                             <option value="butchery">Butchery</option>
                             <option value="spices">Spices</option>
                             <option value="bakery">Bakery</option>
@@ -105,15 +106,17 @@ export default function ShopRegistrationScreen() {
                             selectedValue={type}
                             onValueChange={setType}
                             style={styles.picker}
+                            itemStyle={{ height: 150, fontFamily: 'TextMeOne' }}
                         >
-                            <Picker.Item label="type" value="" />
-                            <Picker.Item label="General" value="general" />
-                            <Picker.Item label="Produce" value="produce" />
-                            <Picker.Item label="Farm" value="farm" />
-                            <Picker.Item label="Butchery" value="butchery" />
-                            <Picker.Item label="Spices" value="spices" />
-                            <Picker.Item label="Bakery" value="bakery" />
-                            <Picker.Item label="Homemade Goods" value="homemade" />
+                            <Picker.Item color="#00bfff" label="type" value="" />
+                            <Picker.Item color="black" label="General" value="general" />
+                            <Picker.Item color="black" label="Produce" value="produce" />
+                            <Picker.Item color="black" label="Farm" value="farm" />
+                            <Picker.Item color="black" label="Grainery" value="grainery" />
+                            <Picker.Item color="black" label="Butchery" value="butchery" />
+                            <Picker.Item color="black" label="Spices" value="spices" />
+                            <Picker.Item color="black" label="Bakery" value="bakery" />
+                            <Picker.Item color="black" label="Homemade Goods" value="homemade" />
                         </Picker>
                     )}
 
@@ -250,6 +253,7 @@ const styles = StyleSheet.create({
         padding: 15,
         borderRadius: 8,
         marginBottom: 15,
+        fontFamily: 'TextMeOne',
         fontSize: 16,
     },
     textArea: {
