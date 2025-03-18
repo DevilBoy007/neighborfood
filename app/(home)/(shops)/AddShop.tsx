@@ -260,7 +260,7 @@ export default function ShopRegistrationScreen() {
                         ))}
                     </View>
                     {errors.days ? <Text style={styles.errorText}>{errors.days}</Text> : null}
-                    
+
                     <Text style={styles.sectionSubtitle}>Seasons</Text>
                     <View style={styles.seasonsContainer}>
                         {seasons.map((season) => (
@@ -279,14 +279,14 @@ export default function ShopRegistrationScreen() {
                                     styles.seasonButtonText,
                                     selectedSeasons.includes(season) && styles.selectedButtonText
                                 ]}>
-                                    <Ionicons 
+                                    <Ionicons
                                     name={
                                         season === 'spring' ? 'rose-outline' :
                                         season === 'summer' ? 'sunny-outline' :
                                         season === 'fall' ? 'leaf-outline' :
                                         'snow-outline'
-                                    } 
-                                    size={18} 
+                                    }
+                                    size={18}
                                     style={selectedSeasons.includes(season) ? {color: '#fff'} : {color: '#333'}}
                                     />
                                 </Text>
