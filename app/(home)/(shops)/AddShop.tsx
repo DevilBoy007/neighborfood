@@ -14,6 +14,8 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { Picker } from '@react-native-picker/picker';
 import { useRouter } from 'expo-router';
+import { useUser } from '@/context/userContext';
+import firebaseService from '@/handlers/firebaseService';
 
 const weekDays = Platform.OS === 'web' ? ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'] : ['M', 'T', 'W', 'Th', 'F', 'Sa', 'Su'];
 const seasons = ['spring', 'summer', 'fall', 'winter'];
@@ -39,6 +41,8 @@ export default function ShopRegistrationScreen() {
         delivery: '',
     });
 
+    // Get the user data from context
+    const { userData } = useUser();
     const router = useRouter();
 
     const toggleDay = (day: string) => {
@@ -108,26 +112,50 @@ export default function ShopRegistrationScreen() {
         return isValid;
     };
 
-    const handleSubmit = () => {
+    const handleSubmit = async () => {
         if (validateForm()) {
-            const shopData = {
-                shopName,
-                description,
-                type,
-                availability: {
-                    days: selectedDays,
-                    seasons: selectedSeasons,
-                    earlierHours,
-                    laterHours
-                },
-                options: {
-                    allowPickup,
-                    localDelivery
+            try {
+                // Ensure user is authenticated before creating a shop
+                if (!userData || !userData.uid) {
+                    Alert.alert('Error', 'You must be logged in to create a shop');
+                    return;
                 }
-            };
-            
-            console.log('Submitting shop data:', shopData);
-            router.navigate('/success');
+
+                const shopData = {
+                    shopName,
+                    description,
+                    type,
+                    availability: {
+                        days: selectedDays,
+                        seasons: selectedSeasons,
+                        earlierHours,
+                        laterHours
+                    },
+                    options: {
+                        allowPickup,
+                        localDelivery
+                    },
+                    userId: userData.uid,  // Associate shop with current user
+                    createdAt: new Date()
+                };
+                
+                // Connect to firebase
+                await firebaseService.connect();
+                
+                // Add shop to database
+                await firebaseService.addDocument('shops', shopData);
+                
+                console.log('Shop created successfully!');
+                router.navigate('/success');
+                
+                // Navigate back to shops list after success screen
+                // setTimeout(() => {
+                //     router.replace('/(home)/(shops)');
+                // }, 2000);
+            } catch (error) {
+                console.error('Error creating shop:', error);
+                Alert.alert('Error', 'Failed to create shop. Please try again.');
+            }
         } else {
             if (Platform.OS === 'web') {
                 window.scrollTo(0, 0);
