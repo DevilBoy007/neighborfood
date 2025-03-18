@@ -2,8 +2,28 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
 import { router } from 'expo-router';
 import firebaseService from '@/handlers/firebaseService';
+import { useUser } from '@/context/userContext';
 
 const Settings = () => {
+    // Use the user context for logout
+    const { clearUserData } = useUser();
+
+    const handleLogout = async () => {
+        try {
+            // First logout from Firebase
+            await firebaseService.logout();
+            
+            // Then clear user data from context and storage
+            await clearUserData();
+            
+            // Navigate back to home
+            router.back();
+            router.replace('/');
+        } catch (error) {
+            console.error('Error during logout:', error);
+        }
+    };
+
     return (
         <View style={styles.container}>
             <View style={styles.dragBar}>
@@ -41,12 +61,9 @@ const Settings = () => {
                 <Text style={styles.menuText}>Legal</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.menuItem}
-                onPress={async () => {
-                    await firebaseService.logout();
-                    router.back();
-                    router.replace('/'); 
-                }}
+            <TouchableOpacity 
+                style={styles.menuItem}
+                onPress={handleLogout}
             >
                 <Text style={styles.menuText}>Logout</Text>
             </TouchableOpacity>

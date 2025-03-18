@@ -19,11 +19,11 @@ import { GooglePlaceData, GooglePlaceDetail, GooglePlacesAutocomplete } from 're
 import * as Location from 'expo-location';
 import firebaseService from '@/handlers/firebaseService';
 import DatePicker from 'react-native-date-picker';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useUser } from '@/context/userContext';
 
 const RegisterScreen = () => {
     const router = useRouter();
-    const storage = Platform.OS === 'web' ? localStorage : AsyncStorage;
+    const { setUserData } = useUser();
     const [user, setUser] = useState<User | null>(null);
     const [formData, setFormData] = useState({
         firstName: '',
@@ -198,8 +198,11 @@ const RegisterScreen = () => {
         }
         try {
             setDisabled(true);
-            await firebaseService.connect();
-            await firebaseService.logout(); // clear any cached data
+            
+            if (user) { 
+                await firebaseService.logout();
+            }
+            
             const { email, password, phone, firstName, lastName, dob, location, username } = formData;
             const user = await firebaseService.registerUser(email, password, username);
             setUser(user);
@@ -207,7 +210,18 @@ const RegisterScreen = () => {
                 displayName: username, 
                 photoURL: "https://firebasestorage.googleapis.com/v0/b/neighborfoods/o/cloud.gif?alt=media&token=81350c47-c9e3-4c75-8d9d-d0b9ff6e50f0",
             })
+            
             const userData = {
+                uid: user.uid,
+                email: user.email,
+                displayName: username,
+                photoURL: "https://firebasestorage.googleapis.com/v0/b/neighborfoods/o/cloud.gif?alt=media&token=81350c47-c9e3-4c75-8d9d-d0b9ff6e50f0",
+                first: firstName,
+                last: lastName
+            };
+            
+            // Store additional user data in Firestore
+            const firestoreUserData = {
                 uid: user.uid,
                 email: user.email,
                 first: firstName,
@@ -219,23 +233,15 @@ const RegisterScreen = () => {
                 createdAt: new Date(),
                 lastLogin: new Date()
             };
-            await firebaseService.addDocument('user', userData);
+            await firebaseService.addDocument('user', firestoreUserData);
             console.log('Registration successful!');
-            handleRegistrationSuccess(user);
+            
+            // Store in context
+            setUserData(userData);
+            EventRegister.emit('userLoggedIn');
         } catch (error) {
             alert(`Error registering user: ${error.message}`);
             setDisabled(false);
-        }
-    };
-
-    const handleRegistrationSuccess = async (user: User) => {
-        try {
-            // store user data
-            console.log('Stored user:', user.uid);
-            await storage.setItem('userData', JSON.stringify(user));
-            EventRegister.emit('userLoggedIn');
-        } catch (error) {
-            console.error('Error saving auth data', error);
         }
     };
 
