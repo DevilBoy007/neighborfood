@@ -63,27 +63,42 @@ class FirebaseService {
 
     async connect() {
         try {
-            // Check if we already have a Firebase app instance
+            // Check if Firebase is already initialized
+            if (this.app && this.auth && this.db) {
+                console.log('Firebase already connected');
+                return true;
+            }
+            
             try {
-                this.app = this.app || getApp();
+                this.app = getApp();
                 console.log('Retrieved existing Firebase app');
             } catch (getAppError) {
-                // If no app exists, initialize a new one
                 this.app = initializeApp(this.firebaseConfig);
                 console.log('Initialized new Firebase app');
             }
 
-            // Initialize auth if not already initialized
             if (!this.auth) {
-                this.auth = initializeAuth(this.app, {
-                    persistence: Platform.OS === 'web'
-                        ? browserLocalPersistence
-                        : getReactNativePersistence(AsyncStorage)
-                });
+                try {
+                    this.auth = initializeAuth(this.app, {
+                        persistence: Platform.OS === 'web'
+                            ? browserLocalPersistence
+                            : getReactNativePersistence(AsyncStorage)
+                    });
+                } catch (authError) {
+                    if (authError.code === 'auth/already-initialized') {
+                        const { getAuth } = await import('firebase/auth');
+                        this.auth = getAuth(this.app);
+                        console.log('Retrieved existing auth instance');
+                    } else {
+                        throw authError;
+                    }
+                }
             }
 
             // Force token refresh on init if user exists
-            await this.auth.currentUser?.reload();
+            if (this.auth.currentUser) {
+                await this.auth.currentUser.reload();
+            }
 
             // Initialize Firestore if not already initialized  
             if (!this.db) {
@@ -100,30 +115,48 @@ class FirebaseService {
 
     async logout() {
         try {
-            if (this.auth) { await signOut(this.auth) }
-            else { this.connect() }
-            // Clear any cached data
-            await AsyncStorage.clear()
-            console.log('User logged out successfully');
+            if (this.auth) { 
+                await signOut(this.auth);
+            }
+            else { 
+                this.connect();
+                if (this.auth) await signOut(this.auth);
+            }
+            
+            console.log('User logged out from Firebase');
             return true;
         } catch (error) {
-            console.error('Error logging out:', error);
+            console.error('Error logging out from Firebase:', error);
             throw error;
         }
     }
 
     async login(email: string, password: string): Promise<UserCredential> {
         try {
+            // Make sure Firebase is connected before login
+            await this.connect();
+            
             if (!this.auth) {
                 throw new Error('Firebase Auth is not initialized');
             }
-            // Clear any existing cached data before login
-            await AsyncStorage.clear();
+            
             const userCredential = await signInWithEmailAndPassword(this.auth, email, password);
             console.log('User logged in:', userCredential.user.uid);
             return userCredential;
         } catch (error) {
             console.error('Error logging in:', error);
+            if (error.code === 'auth/already-initialized') {
+                // If we get the already-initialized error, try getting auth again
+                try {
+                    const { getAuth } = await import('firebase/auth');
+                    this.auth = getAuth(this.app);
+                    const userCredential = await signInWithEmailAndPassword(this.auth, email, password);
+                    return userCredential;
+                } catch (secondError) {
+                    throw secondError;
+                }
+            }
+            
             switch (error.code) {
                 case 'auth/invalid-email':
                     throw new Error('Invalid email');
