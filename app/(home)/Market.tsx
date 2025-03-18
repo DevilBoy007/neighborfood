@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, FlatList, StyleSheet, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import MapScreen from '@/components/MapScreen';
 import WebMapScreen from '@/components/WebMapScreen';
 import ShopCard from '@/components/ShopCard';
+import { useUser } from '@/context/userContext';
 
 import tomatoImage from '../../assets/images/tomatoes.png';
 import dillImage from '../../assets/images/dill.jpeg';
@@ -17,7 +17,9 @@ const MarketScreen = () => {
     const [isMapView, setIsMapView] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
     const [showSortOptions, setShowSortOptions] = useState(false);
-    const [userData, setUserData] = useState({});
+    
+    // Use the user context instead of managing userData locally
+    const { userData } = useUser();
 
     const shops = [
         {
@@ -54,21 +56,7 @@ const MarketScreen = () => {
         }
     ];
 
-    useEffect(() => {
-        const loadUserData = async () => {
-            try {
-                const userData = await AsyncStorage.getItem('userData');
-                if (userData) {
-                    const DATA = JSON.parse(userData);
-                    setUserData(DATA);
-                    console.log('Loaded user market data:\n', userData);
-                }
-            } catch (error) {
-                console.error('Error loading profile data:', error);
-            }
-            loadUserData()
-        }
-    });
+    // No need for useEffect to load user data since it's provided by context
 
     const toggleView = () => setIsMapView(!isMapView);
     
@@ -95,6 +83,13 @@ const MarketScreen = () => {
                     <Text style={{ fontFamily: 'TextMeOne' }}>{ isMapView ? 'list' : 'map' }</Text>
                 </TouchableOpacity>
             </View>
+
+            {/* Display welcome message with user's name if available
+            {userData && (
+                <Text style={styles.welcomeText}>
+                    Welcome, {userData.displayName || userData.first || 'User'}!
+                </Text>
+            )} */}
 
             {isMapView ? (
                 Platform.OS === 'web' ? (
@@ -207,6 +202,13 @@ const styles = StyleSheet.create({
             },
         }),
     },
+    welcomeText: {
+        fontSize: 18,
+        fontFamily: 'TextMeOne',
+        textAlign: 'center',
+        color: '#333',
+        marginVertical: 10,
+    }
 });
 
 export default MarketScreen;
