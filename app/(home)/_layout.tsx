@@ -61,10 +61,6 @@ export default function RootLayout() {
     router.navigate('/Settings');
   }, []);
 
-  if (!loaded) {
-    return null;
-  }
-
   return (
     <>
         <View style={styles.container}>
