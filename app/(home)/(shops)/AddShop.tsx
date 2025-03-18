@@ -15,7 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Picker } from '@react-native-picker/picker';
 import { useRouter } from 'expo-router';
 
-const weekDays = ['M', 'T', 'W', 'Th', 'F', 'Sa', 'Su'];
+const weekDays = Platform.OS === 'web' ? ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'] : ['M', 'T', 'W', 'Th', 'F', 'Sa', 'Su'];
 const seasons = ['spring', 'summer', 'fall', 'winter'];
 
 export default function ShopRegistrationScreen() {
@@ -462,6 +462,11 @@ const styles = StyleSheet.create({
         borderRadius: 8,
         width: 40,
         alignItems: 'center',
+        ...Platform.select({
+            web: {
+                width: '10%',
+            }
+        })
     },
     seasonsContainer: {
         flexDirection: 'row',
@@ -473,7 +478,7 @@ const styles = StyleSheet.create({
         backgroundColor: '#fff',
         padding: 10,
         borderRadius: 8,
-        width: '23%',
+        width: '20%',
         alignItems: 'center',
     },
     selectedButton: {
