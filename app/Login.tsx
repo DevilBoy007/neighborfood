@@ -11,9 +11,8 @@ import {
 } from 'react-native';
 import { EventRegister } from 'react-native-event-listeners';
 import { KeyboardToolbar } from 'react-native-keyboard-controller';
-import { User } from 'firebase/auth'
 import { useRouter } from 'expo-router';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useUser } from '@/context/userContext';
 
 import firebaseService from '@/handlers/firebaseService';
 
@@ -21,57 +20,61 @@ const LoginScreen = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
-    const [user, setUser] = useState<User | null>(null);
     const [disabled, setDisabled] = useState<boolean>(false);
     const router = useRouter();
-    const storage = Platform.OS === 'web' ? localStorage : AsyncStorage;
+    
+    // Use the user context
+    const { userData, setUserData } = useUser();
 
     useEffect(() => {
-        const checkUser = async () => {
-            try {
-                const user = await storage.getItem('userData');
-                if (!user) {
-                    console.log('No user data found');
-                    return;
-                }
+        // If user data already exists in context, navigate to the appropriate screen
+        if (userData && userData.uid) {
+            console.log('User already authenticated:', userData.uid);
+            EventRegister.emit('userLoggedIn');
+        }
 
-                const DATA = JSON.parse(user);
-                if (!DATA || !DATA.uid) {
-                    console.log('Invalid user data');
-                    return;
-                }
-
-                setUser(DATA);
-                console.log('Loaded user data:', DATA.uid);
-                EventRegister.emit('userLoggedIn');
-
-            } catch (error) {
-                console.error('Error checking user:', error);
-                return;
-            }
-        };
-        checkUser();
-
-        const userLoggedInListener = EventRegister.on('userLoggedIn', () => {
+        const userLoggedInListener = EventRegister.addEventListener('userLoggedIn', () => {
             router.replace('/success');
             setTimeout(() => {
                 router.replace('/(home)/Market');
             }, 2000);
         });
-    }, []);
-
-    
+        
+        // Clean up the event listener on component unmount
+        return () => {
+            EventRegister.removeEventListener(userLoggedInListener);
+        };
+    }, [userData]);
 
     const handleLogin = async () => {
+        if (!email || !password) {
+            setError('Email and password are required');
+            return;
+        }
+        
         setDisabled(true);
         try {
-            await firebaseService.connect();
-            if (user != null) { await firebaseService.logout() } // clear any cached data
+            // No need to call connect explicitly since it's handled in the login method
+            
+            // Only logout if a user is already logged in
+            if (userData && userData.uid) {
+                await firebaseService.logout();
+            }
+            
             const userCredential = await firebaseService.login(email, password);
-            console.log(userCredential.operationType, userCredential.user); // REMOVE IN PRODUCTION
-            if (userCredential) {
-                const userData =  userCredential.user ;
-                await storage.setItem('userData', JSON.stringify(userData));
+            
+            if (userCredential && userCredential.user) {
+                const user = userCredential.user;
+                // Create a proper user data object
+                const userData = {
+                    uid: user.uid,
+                    email: user.email || '',
+                    displayName: user.displayName || '',
+                    photoURL: user.photoURL || undefined
+                };
+                
+                // Use context's setUserData method which will handle storage
+                setUserData(userData);
                 console.log('Stored user:', userData.uid);
                 EventRegister.emit('userLoggedIn');
             }
@@ -80,7 +83,7 @@ const LoginScreen = () => {
             console.error('Error logging in:', error);
             setError(error.message || 'An error occurred');
             setDisabled(false);
-            }
+        }
     };
 
     return (
@@ -93,22 +96,22 @@ const LoginScreen = () => {
                 <Text style={styles.title}>Login</Text>
                 <View style={styles.inputContainer}>
                     <TextInput
-                    autoCapitalize='none'
-                    style={styles.input}
-                    placeholder="email"
-                    placeholderTextColor={'#fff'}
-                    value={email}
-                    onChangeText={setEmail}
-                />
-                <TextInput
-                    style={styles.input}
-                    placeholder="password"
-                    placeholderTextColor={'#fff'}
-                    value={password}
-                    onChangeText={setPassword}
-                    secureTextEntry
-                />
-                <Text style={styles.errorText}>{error}</Text>
+                        autoCapitalize='none'
+                        style={styles.input}
+                        placeholder="email"
+                        placeholderTextColor={'#fff'}
+                        value={email}
+                        onChangeText={setEmail}
+                    />
+                    <TextInput
+                        style={styles.input}
+                        placeholder="password"
+                        placeholderTextColor={'#fff'}
+                        value={password}
+                        onChangeText={setPassword}
+                        secureTextEntry
+                    />
+                    <Text style={styles.errorText}>{error}</Text>
                 </View>
             </ScrollView>
             <View style={styles.buttonContainer}>
@@ -118,6 +121,7 @@ const LoginScreen = () => {
                         disabled && styles.buttonDisabled,
                     ]}
                     onPress={handleLogin}
+                    disabled={disabled}
                 >
                     <Text style={[
                         styles.buttonText,
@@ -129,7 +133,6 @@ const LoginScreen = () => {
             <KeyboardToolbar />
         </KeyboardAvoidingView>
     );
-
 }
 
 const styles = StyleSheet.create({
