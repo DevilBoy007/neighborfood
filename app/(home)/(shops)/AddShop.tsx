@@ -16,6 +16,7 @@ import { Picker } from '@react-native-picker/picker';
 import { useRouter } from 'expo-router';
 import { useUser } from '@/context/userContext';
 import firebaseService from '@/handlers/firebaseService';
+import { GeoPoint } from 'firebase/firestore';
 
 const weekDays = Platform.OS === 'web' ? ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'] : ['M', 'T', 'W', 'Th', 'F', 'Sa', 'Su'];
 const seasons = ['spring', 'summer', 'fall', 'winter'];
@@ -141,6 +142,7 @@ export default function ShopRegistrationScreen() {
                     closeTime,
                     allowPickup,
                     localDelivery,
+                    location: new GeoPoint(userData.location.coords.latitude, userData.location.coords.longitude),
                     marketId: userData.location.zip || '',  // Associate shop with user's market
                     userId: userData.uid,  // Associate shop with current user
                     createdAt: new Date(),
