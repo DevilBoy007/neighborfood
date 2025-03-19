@@ -26,8 +26,8 @@ export default function ShopRegistrationScreen() {
     const [type, setType] = useState<string>('');
     const [selectedDays, setSelectedDays] = useState<string[]>([]);
     const [selectedSeasons, setSelectedSeasons] = useState<string[]>([]);
-    const [earlierHours, setEarlierHours] = useState<string>('');
-    const [laterHours, setLaterHours] = useState<string>('');
+    const [openTime, setOpenTime] = useState<string>('');
+    const [closeTime, setCloseTime] = useState<string>('');
     const [allowPickup, setAllowPickup] = useState<boolean>(false);
     const [localDelivery, setLocalDelivery] = useState<boolean>(false);
     
@@ -59,6 +59,12 @@ export default function ShopRegistrationScreen() {
         } else {
             setSelectedSeasons([...selectedSeasons, season]);
         }
+    };
+    
+    // Validate time format (24-hour format: HH:MM)
+    const isValidTimeFormat = (time: string): boolean => {
+        const timeRegex = /^([01]?[0-9]|2[0-3]):[0-5][0-9]$/;
+        return timeRegex.test(time);
     };
     
     const validateForm = () => {
@@ -98,8 +104,12 @@ export default function ShopRegistrationScreen() {
             isValid = false;
         }
 
-        if (!earlierHours.trim() && !laterHours.trim()) {
-            newErrors.hours = 'Please provide operating hours';
+        // Validate open and close times
+        if (!openTime.trim() || !closeTime.trim()) {
+            newErrors.hours = 'Please provide both opening and closing times';
+            isValid = false;
+        } else if (!isValidTimeFormat(openTime) || !isValidTimeFormat(closeTime)) {
+            newErrors.hours = 'Times must be in 24-hour format (e.g., 09:00, 17:30)';
             isValid = false;
         }
 
@@ -127,8 +137,8 @@ export default function ShopRegistrationScreen() {
                     type,
                     days: selectedDays,
                     seasons: selectedSeasons,
-                    earlierHours,
-                    laterHours,
+                    openTime,
+                    closeTime,
                     allowPickup,
                     localDelivery,
                     userId: userData.uid,  // Associate shop with current user
@@ -325,28 +335,28 @@ export default function ShopRegistrationScreen() {
                         <View style={styles.timeInput}>
                             <TextInput
                                 style={[styles.input, errors.hours ? styles.inputError : null]}
-                                placeholder="7:00-11:00"
+                                placeholder="09:00"
                                 placeholderTextColor={'#999'}
-                                value={earlierHours}
+                                value={openTime}
                                 onChangeText={(text) => {
-                                    setEarlierHours(text);
-                                    if (text.trim() || laterHours.trim()) setErrors({...errors, hours: ''});
+                                    setOpenTime(text);
+                                    if (text.trim() || closeTime.trim()) setErrors({...errors, hours: ''});
                                 }}
                             />
-                            <Text style={styles.timeLabel}>(earlier hours)</Text>
+                            <Text style={styles.timeLabel}>(opening time)</Text>
                         </View>
                         <View style={styles.timeInput}>
                             <TextInput
                                 style={[styles.input, errors.hours ? styles.inputError : null]}
-                                placeholder="5:30-7:00"
+                                placeholder="17:00"
                                 placeholderTextColor={'#999'}
-                                value={laterHours}
+                                value={closeTime}
                                 onChangeText={(text) => {
-                                    setLaterHours(text);
-                                    if (earlierHours.trim() || text.trim()) setErrors({...errors, hours: ''});
+                                    setCloseTime(text);
+                                    if (openTime.trim() || text.trim()) setErrors({...errors, hours: ''});
                                 }}
                             />
-                            <Text style={styles.timeLabel}>(after noon)</Text>
+                            <Text style={styles.timeLabel}>(closing time)</Text>
                         </View>
                     </View>
                     {errors.hours ? <Text style={styles.errorText}>{errors.hours}</Text> : null}
