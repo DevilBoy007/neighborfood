@@ -24,7 +24,8 @@ import {
     updateDoc,
     deleteDoc,
     doc,
-    getDoc
+    getDoc,
+    arrayUnion
 } from 'firebase/firestore';
 
 class FirebaseService {
@@ -297,6 +298,36 @@ class FirebaseService {
         }
     }
 
+    async createShopForUser(userId: string, shopData: object): Promise<void> {
+        try {
+            if (!this.db) {
+                await this.connect();
+                if (!this.db) {
+                    throw new Error('Error connecting to Firestore');
+                }
+            }
+            
+            const shopsCollectionRef = collection(this.db, 'shops');
+            const userDocRef = doc(this.db, 'users', userId);
+        
+            // Create the shop document
+            const docRef = await addDoc(shopsCollectionRef, shopData);
+            console.log("Shop created with ID: ", docRef.id);
+        
+            const shopDocRef = doc(this.db, 'shops', docRef.id);
+
+            // Update the user's 'shops' array with the document reference
+            await updateDoc(userDocRef, {
+                shops: arrayUnion(shopDocRef)
+            });
+        
+            console.log("Shop reference added to user's shops array.");
+        } catch (error) {
+            console.error("Error creating shop or updating user: ", error);
+            throw error; // Re-throw to allow proper error handling in calling code
+        }
+    }
+    
     disconnect() {
         try {
             this.app = null;
@@ -309,7 +340,9 @@ class FirebaseService {
             throw error;
         }
     }
+
 }
+
 
 const firebaseService = FirebaseService.getInstance();
 export default firebaseService;
