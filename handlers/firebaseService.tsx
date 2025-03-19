@@ -20,6 +20,7 @@ import {
     where,
     getDocs,
     addDoc,
+    setDoc,
     updateDoc,
     deleteDoc,
     doc,
@@ -244,14 +245,24 @@ class FirebaseService {
         }
     }
 
-    async addDocument(collectionPath: string, data: object) {
+    async addDocument(collectionPath: string, data: object, id: string | null) {
         try {
             if (!this.db) {
                 throw new Error('Database not connected. Call connect() first.');
             }
-            const collectionRef = collection(this.db, collectionPath);
-            const docRef = await addDoc(collectionRef, data);
-            return docRef.id;
+            
+            // If ID is provided, use it to create a document with that ID
+            if (id) {
+                const docRef = doc(this.db, collectionPath, id);
+                await setDoc(docRef, data);
+                return id;
+            } 
+            // Otherwise create a document with auto-generated ID
+            else {
+                const collectionRef = collection(this.db, collectionPath);
+                const docRef = await addDoc(collectionRef, data);
+                return docRef.id;
+            }
         } catch (error) {
             console.error('Error adding document:', error);
             throw error;
