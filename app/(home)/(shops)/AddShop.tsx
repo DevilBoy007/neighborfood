@@ -21,7 +21,7 @@ const weekDays = Platform.OS === 'web' ? ['monday', 'tuesday', 'wednesday', 'thu
 const seasons = ['spring', 'summer', 'fall', 'winter'];
 
 export default function ShopRegistrationScreen() {
-    const [shopName, setShopName] = useState<string>('');
+    const [name, setName] = useState<string>('');
     const [description, setDescription] = useState<string>('');
     const [type, setType] = useState<string>('');
     const [selectedDays, setSelectedDays] = useState<string[]>([]);
@@ -32,7 +32,7 @@ export default function ShopRegistrationScreen() {
     const [localDelivery, setLocalDelivery] = useState<boolean>(false);
     
     const [errors, setErrors] = useState({
-        shopName: '',
+        name: '',
         description: '',
         type: '',
         days: '',
@@ -64,7 +64,7 @@ export default function ShopRegistrationScreen() {
     const validateForm = () => {
         let isValid = true;
         const newErrors = {
-            shopName: '',
+            name: '',
             description: '',
             type: '',
             days: '',
@@ -73,8 +73,8 @@ export default function ShopRegistrationScreen() {
             delivery: '',
         };
 
-        if (!shopName.trim()) {
-            newErrors.shopName = 'Shop name is required';
+        if (!name.trim()) {
+            newErrors.name = 'Shop name is required';
             isValid = false;
         }
 
@@ -122,21 +122,18 @@ export default function ShopRegistrationScreen() {
                 }
 
                 const shopData = {
-                    shopName,
+                    name,
                     description,
                     type,
-                    availability: {
-                        days: selectedDays,
-                        seasons: selectedSeasons,
-                        earlierHours,
-                        laterHours
-                    },
-                    options: {
-                        allowPickup,
-                        localDelivery
-                    },
+                    days: selectedDays,
+                    seasons: selectedSeasons,
+                    earlierHours,
+                    laterHours,
+                    allowPickup,
+                    localDelivery,
                     userId: userData.uid,  // Associate shop with current user
-                    createdAt: new Date()
+                    createdAt: new Date(),
+                    backgroundImageUrl: 'https://cdn.shopify.com/s/files/1/0247/7771/9862/files/Kona-Fab-Farm-Quilt_480x480.jpg?v=1718261403'
                 };
                 
                 // Connect to firebase
@@ -185,16 +182,16 @@ export default function ShopRegistrationScreen() {
                 <View style={styles.formContainer}>
                     <Text style={styles.sectionTitle}>Shop Info</Text>
                     <TextInput
-                        style={[styles.input, errors.shopName ? styles.inputError : null]}
+                        style={[styles.input, errors.name ? styles.inputError : null]}
                         placeholder="shop name"
                         placeholderTextColor={'#999'}
-                        value={shopName}
+                        value={name}
                         onChangeText={(text) => {
-                            setShopName(text);
-                            if (text.trim()) setErrors({...errors, shopName: ''});
+                            setName(text);
+                            if (text.trim()) setErrors({...errors, name: ''});
                         }}
                     />
-                    {errors.shopName ? <Text style={styles.errorText}>{errors.shopName}</Text> : null}
+                    {errors.name ? <Text style={styles.errorText}>{errors.name}</Text> : null}
                     
                     <TextInput
                         style={[styles.input, styles.textArea, errors.description ? styles.inputError : null]}
