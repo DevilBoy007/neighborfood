@@ -6,9 +6,23 @@ type UserData = {
   uid: string;
   email: string;
   displayName: string;
-  photoURL?: string;
-  first?: string;
-  last?: string;
+  photoURL: string;
+  // Additional fields from Firestore
+  createdAt: { seconds: number; nanoseconds: number };
+  first: string;
+  last: string;
+  dob: string;
+  phone: string;
+  location: {
+    address: string;
+    city: string;
+    coords: {
+      latitude: number;
+      longitude: number;
+    };
+    state: string;
+    zip?: string;
+  };
 };
 
 type UserContextType = {
@@ -101,7 +115,7 @@ export const UserProvider = ({ children }: UserProviderProps) => {
       isLoading, 
       setUserData, 
       updateUserData, 
-      clearUserData 
+      clearUserData
     }}>
       {children}
     </UserContext.Provider>
