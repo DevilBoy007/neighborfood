@@ -140,7 +140,10 @@ class FirebaseService {
             await this.connect();
             
             if (!this.auth) {
-                throw new Error('Firebase Auth is not initialized');
+                this.connect();
+                if (!this.auth) {
+                    throw new Error('Firebase Auth is not initialized');
+                }
             }
             
             const userCredential = await signInWithEmailAndPassword(this.auth, email, password);
@@ -177,6 +180,9 @@ class FirebaseService {
         try {
             if (!this.auth) {
                 this.connect();
+                if (!this.auth) {
+                    throw new Error('Error connecting to Firebase Authentication');
+                }
             }
             const users = await this.getDocumentsWhere('users', 'username', '==', username);
             if (users.length > 0) {
@@ -201,7 +207,10 @@ class FirebaseService {
     async getDocument(collectionPath: string, docId: string) {
         try {
             if (!this.db) {
-                throw new Error('Database not connected. Call connect() first.');
+                this.connect();
+                if (!this.db) {
+                    throw new Error('Error connecting to Firestore');
+                }
             }
             const docRef = doc(this.db, collectionPath, docId);
             const snapshot = await getDoc(docRef);
@@ -220,7 +229,10 @@ class FirebaseService {
     async getAllDocuments(collectionPath: string) {
         try {
             if (!this.db) {
-                throw new Error('Database not connected. Call connect() first.');
+                this.connect();
+                if (!this.db) {
+                    throw new Error('Error connecting to Firestore');
+                }
             }
             const collectionRef = collection(this.db, collectionPath);
             const snapshot = await getDocs(collectionRef);
@@ -234,7 +246,10 @@ class FirebaseService {
     async getDocumentsWhere(collectionPath: string, field: string, operator: any, value: any) {
         try {
             if (!this.db) {
-                throw new Error('Database not connected. Call connect() first.');
+                this.connect();
+                if (!this.db) {
+                    throw new Error('Error connecting to Firestore');
+                }
             }
             const collectionRef = collection(this.db, collectionPath);
             const q = query(collectionRef, where(field, operator, value));
@@ -249,9 +264,12 @@ class FirebaseService {
     async addDocument(collectionPath: string, data: object, id: string | null) {
         try {
             if (!this.db) {
-                throw new Error('Database not connected. Call connect() first.');
+                this.connect();
+                if (!this.db) {
+                    throw new Error('Error connecting to Firestore');
+                }
             }
-            
+
             // If ID is provided, use it to create a document with that ID
             if (id) {
                 const docRef = doc(this.db, collectionPath, id);
@@ -273,7 +291,10 @@ class FirebaseService {
     async updateDocument(collectionPath: string, docId: string, data: object) {
         try {
             if (!this.db) {
-                throw new Error('Database not connected. Call connect() first.');
+                this.connect();
+                if (!this.db) {
+                    throw new Error('Error connecting to Firestore');
+                }
             }
             const docRef = doc(this.db, collectionPath, docId);
             await updateDoc(docRef, data);
@@ -287,7 +308,10 @@ class FirebaseService {
     async deleteDocument(collectionPath: string, docId: string) {
         try {
             if (!this.db) {
-                throw new Error('Database not connected. Call connect() first.');
+                this.connect();
+                if (!this.db) {
+                    throw new Error('Error connecting to Firestore');
+                }
             }
             const docRef = doc(this.db, collectionPath, docId);
             await deleteDoc(docRef);
