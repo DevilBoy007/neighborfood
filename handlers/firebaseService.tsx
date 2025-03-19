@@ -22,7 +22,8 @@ import {
     addDoc,
     updateDoc,
     deleteDoc,
-    doc
+    doc,
+    getDoc
 } from 'firebase/firestore';
 
 class FirebaseService {
@@ -193,6 +194,24 @@ class FirebaseService {
                 default:
                     throw error;
             }
+        }
+    }
+    async getDocument(collectionPath: string, docId: string) {
+        try {
+            if (!this.db) {
+                throw new Error('Database not connected. Call connect() first.');
+            }
+            const docRef = doc(this.db, collectionPath, docId);
+            const snapshot = await getDoc(docRef);
+            
+            if (snapshot.exists()) {
+                return { id: snapshot.id, ...snapshot.data() };
+            } else {
+                return null; // Document not found
+            }
+        } catch (error) {
+            console.error('Error getting document:', error);
+            throw error;
         }
     }
 
