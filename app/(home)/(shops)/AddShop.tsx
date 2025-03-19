@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
     View,
     Text,
@@ -45,27 +45,6 @@ export default function ShopRegistrationScreen() {
     // Get the user data from context
     const { userData } = useUser();
     const router = useRouter();
-
-    useEffect(() => {
-        const fetchUserData = async () => {
-            if (userData?.uid) {
-                try {
-                    await firebaseService.connect();
-                    const userDocs = await firebaseService.getDocumentsWhere('user', 'uid', '==', userData.uid);
-                    if (userDocs && userDocs.length > 0) {
-                        console.log('User data fetched:', userDocs[0]);
-                        setUserCollectionData(userDocs[0]);
-                    } else {
-                        console.log('No user data found for uid:', userData.uid);
-                    }
-                } catch (error) {
-                    console.error('Error fetching user data:', error);
-                }
-            }
-        };
-
-        fetchUserData();
-    }, [userData]);
 
     const toggleDay = (day: string) => {
         if (selectedDays.includes(day)) {
@@ -163,7 +142,7 @@ export default function ShopRegistrationScreen() {
                     closeTime,
                     allowPickup,
                     localDelivery,
-                    marketId: userCollectionData?.location.zip || '',  // Associate shop with user's market
+                    marketId: userData.location.zip || '',  // Associate shop with user's market
                     userId: userData.uid,  // Associate shop with current user
                     createdAt: new Date(),
                     backgroundImageUrl: 'https://cdn.shopify.com/s/files/1/0247/7771/9862/files/Kona-Fab-Farm-Quilt_480x480.jpg?v=1718261403'
@@ -173,7 +152,7 @@ export default function ShopRegistrationScreen() {
                 await firebaseService.connect();
                 
                 // Add shop to database
-                await firebaseService.addDocument('shops', shopData);
+                await firebaseService.addDocument('shops', shopData, null);
                 
                 console.log('Shop created successfully!');
                 router.navigate('/success');
