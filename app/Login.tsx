@@ -25,6 +25,12 @@ const LoginScreen = () => {
     
     // Use the user context
     const { userData, setUserData } = useUser();
+    const userLoggedInListener = EventRegister.addEventListener('userLoggedIn', () => {
+                router.replace('/success');
+                setTimeout(() => {
+                    router.replace('/(home)/Market');
+                }, 2000);
+            });
 
     useEffect(() => {
         // If user data already exists in context, navigate to the appropriate screen
@@ -32,14 +38,6 @@ const LoginScreen = () => {
             console.log('User already authenticated:', userData.uid);
             EventRegister.emit('userLoggedIn');
         }
-
-        const userLoggedInListener = EventRegister.addEventListener('userLoggedIn', () => {
-            router.replace('/success');
-            setTimeout(() => {
-                router.replace('/(home)/Market');
-            }, 2000);
-        });
-        
         // Clean up the event listener on component unmount
         return () => {
             EventRegister.removeEventListener(userLoggedInListener);
@@ -54,28 +52,45 @@ const LoginScreen = () => {
         
         setDisabled(true);
         try {
-            // No need to call connect explicitly since it's handled in the login method
-            
-            // Only logout if a user is already logged in
-            if (userData && userData.uid) {
-                await firebaseService.logout();
-            }
-            
             const userCredential = await firebaseService.login(email, password);
             
             if (userCredential && userCredential.user) {
                 const user = userCredential.user;
-                // Create a proper user data object
-                const userData = {
+                // Create initial user data object with auth properties
+                let userDataObj = {
                     uid: user.uid,
                     email: user.email || '',
-                    displayName: user.displayName || '',
-                    photoURL: user.photoURL || undefined
+                    displayName: user.displayName,
+                    photoURL: user.photoURL,
+                    createdAt: '',
+                    first: '',
+                    last: '',
+                    dob: '',
+                    phone: '',
+                    location: ''
                 };
                 
+                // Fetch additional user data from Firestore
+                try {
+                    const firestoreUserData = await firebaseService.getDocument('users', user.uid);
+                    if (firestoreUserData) {
+                        // Merge auth data with Firestore data
+                        userDataObj = {
+                            ...userDataObj,
+                            ...firestoreUserData
+                        };
+                        if (userDataObj.username) {
+                            delete userDataObj.username
+                        }
+                    }
+                } catch (firestoreError) {
+                    console.error('Error fetching user data from Firestore:', firestoreError);
+                    // Continue with basic auth data if Firestore fetch fails
+                }
+                
                 // Use context's setUserData method which will handle storage
-                setUserData(userData);
-                console.log('Stored user:', userData.uid);
+                setUserData(userDataObj);
+                console.log('Stored user:', userDataObj.uid);
                 EventRegister.emit('userLoggedIn');
             }
         }

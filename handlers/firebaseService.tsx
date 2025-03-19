@@ -20,9 +20,11 @@ import {
     where,
     getDocs,
     addDoc,
+    setDoc,
     updateDoc,
     deleteDoc,
-    doc
+    doc,
+    getDoc
 } from 'firebase/firestore';
 
 class FirebaseService {
@@ -173,7 +175,7 @@ class FirebaseService {
     async registerUser(email: string, password: string, username: string): Promise<UserCredential['user']> {
         try {
             if (!this.auth) {
-                throw new Error('Firebase Auth is not initialized');
+                this.connect();
             }
             const users = await this.getDocumentsWhere('users', 'username', '==', username);
             if (users.length > 0) {
@@ -193,6 +195,24 @@ class FirebaseService {
                 default:
                     throw error;
             }
+        }
+    }
+    async getDocument(collectionPath: string, docId: string) {
+        try {
+            if (!this.db) {
+                throw new Error('Database not connected. Call connect() first.');
+            }
+            const docRef = doc(this.db, collectionPath, docId);
+            const snapshot = await getDoc(docRef);
+            
+            if (snapshot.exists()) {
+                return { id: snapshot.id, ...snapshot.data() };
+            } else {
+                return null; // Document not found
+            }
+        } catch (error) {
+            console.error('Error getting document:', error);
+            throw error;
         }
     }
 
@@ -225,14 +245,24 @@ class FirebaseService {
         }
     }
 
-    async addDocument(collectionPath: string, data: object) {
+    async addDocument(collectionPath: string, data: object, id: string | null) {
         try {
             if (!this.db) {
                 throw new Error('Database not connected. Call connect() first.');
             }
-            const collectionRef = collection(this.db, collectionPath);
-            const docRef = await addDoc(collectionRef, data);
-            return docRef.id;
+            
+            // If ID is provided, use it to create a document with that ID
+            if (id) {
+                const docRef = doc(this.db, collectionPath, id);
+                await setDoc(docRef, data);
+                return id;
+            } 
+            // Otherwise create a document with auto-generated ID
+            else {
+                const collectionRef = collection(this.db, collectionPath);
+                const docRef = await addDoc(collectionRef, data);
+                return docRef.id;
+            }
         } catch (error) {
             console.error('Error adding document:', error);
             throw error;

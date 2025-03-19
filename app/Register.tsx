@@ -211,32 +211,33 @@ const RegisterScreen = () => {
                 photoURL: "https://firebasestorage.googleapis.com/v0/b/neighborfoods/o/cloud.gif?alt=media&token=81350c47-c9e3-4c75-8d9d-d0b9ff6e50f0",
             })
             
+            // Create comprehensive userData object with all relevant info
             const userData = {
                 uid: user.uid,
                 email: user.email,
                 displayName: username,
                 photoURL: "https://firebasestorage.googleapis.com/v0/b/neighborfoods/o/cloud.gif?alt=media&token=81350c47-c9e3-4c75-8d9d-d0b9ff6e50f0",
-                first: firstName,
-                last: lastName
-            };
-            
-            // Store additional user data in Firestore
-            const firestoreUserData = {
-                uid: user.uid,
-                email: user.email,
+                createdAt: new Date(),
                 first: firstName,
                 last: lastName,
                 phone: phone,
                 dob: dob,
-                location: location,
-                username: username,
-                createdAt: new Date(),
-                lastLogin: new Date()
+                location: location
             };
-            await firebaseService.addDocument('user', firestoreUserData);
+
+            const firestoreData = {
+                createdAt: new Date(),
+                dob: userData.dob,
+                first: userData.first,
+                last: userData.last,
+                location: userData.location,
+                phone: userData.phone
+            }
+            
+            await firebaseService.addDocument('users', firestoreData, userData.uid);
             console.log('Registration successful!');
             
-            // Store in context
+            // Store userData in context
             setUserData(userData);
             EventRegister.emit('userLoggedIn');
         } catch (error) {

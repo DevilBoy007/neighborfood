@@ -21,18 +21,18 @@ const weekDays = Platform.OS === 'web' ? ['monday', 'tuesday', 'wednesday', 'thu
 const seasons = ['spring', 'summer', 'fall', 'winter'];
 
 export default function ShopRegistrationScreen() {
-    const [shopName, setShopName] = useState<string>('');
+    const [name, setName] = useState<string>('');
     const [description, setDescription] = useState<string>('');
     const [type, setType] = useState<string>('');
     const [selectedDays, setSelectedDays] = useState<string[]>([]);
     const [selectedSeasons, setSelectedSeasons] = useState<string[]>([]);
-    const [earlierHours, setEarlierHours] = useState<string>('');
-    const [laterHours, setLaterHours] = useState<string>('');
+    const [openTime, setOpenTime] = useState<string>('');
+    const [closeTime, setCloseTime] = useState<string>('');
     const [allowPickup, setAllowPickup] = useState<boolean>(false);
     const [localDelivery, setLocalDelivery] = useState<boolean>(false);
     
     const [errors, setErrors] = useState({
-        shopName: '',
+        name: '',
         description: '',
         type: '',
         days: '',
@@ -61,10 +61,16 @@ export default function ShopRegistrationScreen() {
         }
     };
     
+    // Validate time format (24-hour format: HH:MM)
+    const isValidTimeFormat = (time: string): boolean => {
+        const timeRegex = /^([01]?[0-9]|2[0-3]):[0-5][0-9]$/;
+        return timeRegex.test(time);
+    };
+    
     const validateForm = () => {
         let isValid = true;
         const newErrors = {
-            shopName: '',
+            name: '',
             description: '',
             type: '',
             days: '',
@@ -73,8 +79,8 @@ export default function ShopRegistrationScreen() {
             delivery: '',
         };
 
-        if (!shopName.trim()) {
-            newErrors.shopName = 'Shop name is required';
+        if (!name.trim()) {
+            newErrors.name = 'Shop name is required';
             isValid = false;
         }
 
@@ -98,8 +104,12 @@ export default function ShopRegistrationScreen() {
             isValid = false;
         }
 
-        if (!earlierHours.trim() && !laterHours.trim()) {
-            newErrors.hours = 'Please provide operating hours';
+        // Validate open and close times
+        if (!openTime.trim() || !closeTime.trim()) {
+            newErrors.hours = 'Please provide both opening and closing times';
+            isValid = false;
+        } else if (!isValidTimeFormat(openTime) || !isValidTimeFormat(closeTime)) {
+            newErrors.hours = 'Times must be in 24-hour format (e.g., 09:00, 17:30)';
             isValid = false;
         }
 
@@ -122,28 +132,26 @@ export default function ShopRegistrationScreen() {
                 }
 
                 const shopData = {
-                    shopName,
+                    name,
                     description,
                     type,
-                    availability: {
-                        days: selectedDays,
-                        seasons: selectedSeasons,
-                        earlierHours,
-                        laterHours
-                    },
-                    options: {
-                        allowPickup,
-                        localDelivery
-                    },
+                    days: selectedDays,
+                    seasons: selectedSeasons,
+                    openTime,
+                    closeTime,
+                    allowPickup,
+                    localDelivery,
+                    marketId: userData.location.zip || '',  // Associate shop with user's market
                     userId: userData.uid,  // Associate shop with current user
-                    createdAt: new Date()
+                    createdAt: new Date(),
+                    backgroundImageUrl: 'https://cdn.shopify.com/s/files/1/0247/7771/9862/files/Kona-Fab-Farm-Quilt_480x480.jpg?v=1718261403'
                 };
                 
                 // Connect to firebase
                 await firebaseService.connect();
                 
                 // Add shop to database
-                await firebaseService.addDocument('shops', shopData);
+                await firebaseService.addDocument('shops', shopData, null);
                 
                 console.log('Shop created successfully!');
                 router.navigate('/success');
@@ -185,16 +193,16 @@ export default function ShopRegistrationScreen() {
                 <View style={styles.formContainer}>
                     <Text style={styles.sectionTitle}>Shop Info</Text>
                     <TextInput
-                        style={[styles.input, errors.shopName ? styles.inputError : null]}
+                        style={[styles.input, errors.name ? styles.inputError : null]}
                         placeholder="shop name"
                         placeholderTextColor={'#999'}
-                        value={shopName}
+                        value={name}
                         onChangeText={(text) => {
-                            setShopName(text);
-                            if (text.trim()) setErrors({...errors, shopName: ''});
+                            setName(text);
+                            if (text.trim()) setErrors({...errors, name: ''});
                         }}
                     />
-                    {errors.shopName ? <Text style={styles.errorText}>{errors.shopName}</Text> : null}
+                    {errors.name ? <Text style={styles.errorText}>{errors.name}</Text> : null}
                     
                     <TextInput
                         style={[styles.input, styles.textArea, errors.description ? styles.inputError : null]}
@@ -328,28 +336,28 @@ export default function ShopRegistrationScreen() {
                         <View style={styles.timeInput}>
                             <TextInput
                                 style={[styles.input, errors.hours ? styles.inputError : null]}
-                                placeholder="7:00-11:00"
+                                placeholder="09:00"
                                 placeholderTextColor={'#999'}
-                                value={earlierHours}
+                                value={openTime}
                                 onChangeText={(text) => {
-                                    setEarlierHours(text);
-                                    if (text.trim() || laterHours.trim()) setErrors({...errors, hours: ''});
+                                    setOpenTime(text);
+                                    if (text.trim() || closeTime.trim()) setErrors({...errors, hours: ''});
                                 }}
                             />
-                            <Text style={styles.timeLabel}>(earlier hours)</Text>
+                            <Text style={styles.timeLabel}>(opening time)</Text>
                         </View>
                         <View style={styles.timeInput}>
                             <TextInput
                                 style={[styles.input, errors.hours ? styles.inputError : null]}
-                                placeholder="5:30-7:00"
+                                placeholder="17:00"
                                 placeholderTextColor={'#999'}
-                                value={laterHours}
+                                value={closeTime}
                                 onChangeText={(text) => {
-                                    setLaterHours(text);
-                                    if (earlierHours.trim() || text.trim()) setErrors({...errors, hours: ''});
+                                    setCloseTime(text);
+                                    if (openTime.trim() || text.trim()) setErrors({...errors, hours: ''});
                                 }}
                             />
-                            <Text style={styles.timeLabel}>(after noon)</Text>
+                            <Text style={styles.timeLabel}>(closing time)</Text>
                         </View>
                     </View>
                     {errors.hours ? <Text style={styles.errorText}>{errors.hours}</Text> : null}
