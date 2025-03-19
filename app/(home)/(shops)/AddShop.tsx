@@ -30,7 +30,6 @@ export default function ShopRegistrationScreen() {
     const [closeTime, setCloseTime] = useState<string>('');
     const [allowPickup, setAllowPickup] = useState<boolean>(false);
     const [localDelivery, setLocalDelivery] = useState<boolean>(false);
-    const [userCollectionData, setUserCollectionData] = useState<any>(null);
     
     const [errors, setErrors] = useState({
         name: '',
