@@ -175,7 +175,7 @@ class FirebaseService {
     async registerUser(email: string, password: string, username: string): Promise<UserCredential['user']> {
         try {
             if (!this.auth) {
-                throw new Error('Firebase Auth is not initialized');
+                this.connect();
             }
             const users = await this.getDocumentsWhere('users', 'username', '==', username);
             if (users.length > 0) {
