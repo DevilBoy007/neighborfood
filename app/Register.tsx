@@ -20,6 +20,8 @@ import * as Location from 'expo-location';
 import firebaseService from '@/handlers/firebaseService';
 import DatePicker from 'react-native-date-picker';
 import { useUser } from '@/context/userContext';
+import { GeoPoint } from 'firebase/firestore';
+
 
 const RegisterScreen = () => {
     const router = useRouter();
@@ -36,8 +38,10 @@ const RegisterScreen = () => {
             city: '',
             state: '',
             zip: '',
-            latitude: null,
-            longitude: null
+            coords: {
+                latitude: null,
+                longitude: null
+            }
         },
         username: '',
         password: '',
@@ -73,8 +77,10 @@ const RegisterScreen = () => {
                 city: locationInfo.city || '',
                 state: locationInfo.state || '',
                 zip: locationInfo.zip || '',
-                latitude: locationInfo.latitude || null,
-                longitude: locationInfo.longitude || null
+                coords: {
+                    latitude: locationInfo.latitude || null,
+                    longitude: locationInfo.longitude || null
+                }
             }
         }));
     };
@@ -145,13 +151,16 @@ const RegisterScreen = () => {
                 component.types.includes('postal_code')
             );
 
+            const latitude = details.geometry.location.lat;
+            const longitude = details.geometry.location.lng;
+            
             updateLocationData({
                 address: details.formatted_address,
                 city: cityComponent ? cityComponent.long_name : '',
                 state: stateComponent ? stateComponent.short_name : '',
                 zip: zipComponent ? zipComponent.long_name : '',
-                latitude: details.geometry.location.lat,
-                longitude: details.geometry.location.lng
+                latitude: latitude,
+                longitude: longitude
             });
         }
     };
@@ -225,12 +234,21 @@ const RegisterScreen = () => {
                 location: location
             };
 
+            // Convert coords to GeoPoint for Firestore
+            const locationWithGeoPoint = {
+                ...location,
+                coords: new GeoPoint(
+                    location.coords.latitude ?? 0, 
+                    location.coords.longitude ?? 0
+                )
+            };
+
             const firestoreData = {
                 createdAt: new Date(),
                 dob: userData.dob,
                 first: userData.first,
                 last: userData.last,
-                location: userData.location,
+                location: locationWithGeoPoint,
                 phone: userData.phone
             }
             
