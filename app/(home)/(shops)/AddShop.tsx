@@ -151,17 +151,17 @@ export default function ShopRegistrationScreen() {
                 await firebaseService.connect();
                 
                 // Add shop to database
-                await firebaseService.addDocument('shops', shopData, null);
-                
-                console.log('Shop created successfully!');
-                router.navigate('/success');
+                await firebaseService.createShopForUser(userData.uid, shopData)
+                .then(() => {
+                    console.log('Shop created successfully!');
+                    router.navigate('/success');
+                });
                 
                 // Navigate back to shops list after success screen
                 // setTimeout(() => {
                 //     router.replace('/(home)/(shops)');
                 // }, 2000);
             } catch (error) {
-                console.error('Error creating shop:', error);
                 Alert.alert('Error', 'Failed to create shop. Please try again.');
             }
         } else {
