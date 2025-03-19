@@ -25,7 +25,7 @@ import {
     deleteDoc,
     doc,
     getDoc,
-    arrayUnion
+    arrayUnion,
 } from 'firebase/firestore';
 
 class FirebaseService {
@@ -351,7 +351,89 @@ class FirebaseService {
             throw error; // Re-throw to allow proper error handling in calling code
         }
     }
-    
+
+    async getShopsAndItemsForUser(userId: string): Promise<{ shops: any[]; items: any[] }> {
+        try {
+            if (!this.db) {
+                await this.connect();
+                if (!this.db) {
+                    throw new Error('Error connecting to Firestore');
+                }
+            }
+            // 1. Get the shops for the user
+            const shopsSnapshot = await this.getDocumentsWhere('shops', 'userId', '==', userId);
+            const shops: any[] = [];
+            const shopIds: string[] = [];
+
+            shopsSnapshot.forEach((shopDoc) => {
+                const { id, ...shopData } = shopDoc;
+                shops.push({ id, ...shopData });
+                shopIds.push(shopDoc.id);
+            });
+
+            // 2. Get the items for each shop
+            const items: any[] = [];
+            // Using Promise.all to handle async operations in parallel
+            await Promise.all(shopIds.map(async (shopId) => {
+                // Get all items for this shop
+                const itemsForShop = await this.getDocumentsWhere('items', 'shopId', '==', shopId);
+                itemsForShop.forEach(item => {
+                    items.push(item);
+                });
+            }));
+
+            return { shops, items };
+
+        } catch (error) {
+            console.error("Error fetching shops and items:", error);
+            throw error;
+        }
+    }
+
+    async getItemsForShop(shopId: string): Promise<any[]> {
+        try {
+            if (!this.db) {
+                await this.connect();
+                if (!this.db) {
+                    throw new Error('Error connecting to Firestore');
+                }
+            }
+            const shopRef = doc(this.db, "shops", shopId);
+            const itemsSnapshot = await this.getDocumentsWhere('items', 'shop', '==', shopRef);
+            const items: any[] = [];
+
+            itemsSnapshot.forEach((doc) => {
+                items.push({ id: doc.id, ...doc.data() });
+            });
+
+            return items;
+        } catch (error) {
+            console.error("Error fetching items for shop:", error);
+            throw error;
+        }
+    }
+
+    async getShopsForMarket(marketId: string): Promise<any[]> {
+        try {
+            if (!this.db) {
+                await this.connect();
+                if (!this.db) {
+                    throw new Error('Error connecting to Firestore');
+                }
+            }
+            const shopsSnapshot = await this.getDocumentsWhere('shops', 'marketId', '==', marketId);
+            const shops: any[] = [];
+            shopsSnapshot.forEach((shopDoc) => {
+                const { id, ...shopData } = shopDoc;
+                shops.push({ id, ...shopData });
+            });
+            return shops;
+        } catch (error) {
+            console.error("Error fetching shops for market:", error);
+            throw error;
+        }
+    }
+
     disconnect() {
         try {
             this.app = null;
