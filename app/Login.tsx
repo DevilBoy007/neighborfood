@@ -52,13 +52,6 @@ const LoginScreen = () => {
         
         setDisabled(true);
         try {
-            // No need to call connect explicitly since it's handled in the login method
-            
-            // Only logout if a user is already logged in
-            if (userData && userData.uid) {
-                await firebaseService.logout();
-            }
-            
             const userCredential = await firebaseService.login(email, password);
             
             if (userCredential && userCredential.user) {
@@ -67,7 +60,7 @@ const LoginScreen = () => {
                 let userDataObj = {
                     uid: user.uid,
                     email: user.email || '',
-                    displayName: user.displayName || '',
+                    displayName: user.displayName,
                     photoURL: user.photoURL,
                     createdAt: '',
                     first: '',
@@ -86,6 +79,9 @@ const LoginScreen = () => {
                             ...userDataObj,
                             ...firestoreUserData
                         };
+                        if (userDataObj.username) {
+                            delete userDataObj.username
+                        }
                     }
                 } catch (firestoreError) {
                     console.error('Error fetching user data from Firestore:', firestoreError);
