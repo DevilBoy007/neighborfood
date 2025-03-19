@@ -6,9 +6,23 @@ type UserData = {
   uid: string;
   email: string;
   displayName: string;
-  photoURL?: string;
-  first?: string;
-  last?: string;
+  photoURL: string;
+  // Additional fields from Firestore
+  createdAt: { seconds: number; nanoseconds: number };
+  first: string;
+  last: string;
+  dob: string;
+  phone: string;
+  location: {
+    address: string;
+    city: string;
+    coords: {
+      latitude: number;
+      longitude: number;
+    };
+    state: string;
+    zip?: string;
+  };
 };
 
 type UserContextType = {
@@ -17,6 +31,7 @@ type UserContextType = {
   setUserData: (data: UserData | null) => void;
   updateUserData: (data: Partial<UserData>) => void;
   clearUserData: () => void;
+  mergeFirestoreData: (firestoreData: any) => void;
 };
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -95,13 +110,34 @@ export const UserProvider = ({ children }: UserProviderProps) => {
     }
   };
 
+  // New function to merge Firestore user data with the existing userData
+  const mergeFirestoreData = async (firestoreData: any) => {
+    try {
+      if (!userData) return;
+      
+      const mergedData: UserData = {
+        ...userData,
+        ...firestoreData,
+        // Ensure we don't lose authentication data
+        uid: userData.uid || firestoreData.uid,
+        email: userData.email || firestoreData.email,
+      };
+      
+      setUserDataState(mergedData);
+      await storage.setItem('userData', JSON.stringify(mergedData));
+    } catch (error) {
+      console.error('Error merging Firestore user data:', error);
+    }
+  };
+
   return (
     <UserContext.Provider value={{ 
       userData, 
       isLoading, 
       setUserData, 
       updateUserData, 
-      clearUserData 
+      clearUserData,
+      mergeFirestoreData
     }}>
       {children}
     </UserContext.Provider>
