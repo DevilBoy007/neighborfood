@@ -26,7 +26,6 @@ import {
     doc,
     getDoc,
     arrayUnion,
-    DocumentReference,
 } from 'firebase/firestore';
 
 class FirebaseService {
@@ -323,7 +322,7 @@ class FirebaseService {
         }
     }
 
-    async createShopForUser(userId: string, shopData: {marketId: string, [key: string]: any}): Promise<void> {
+    async createShopForUser(userId: string, shopData: object): Promise<void> {
         try {
             if (!this.db) {
                 await this.connect();
@@ -334,15 +333,9 @@ class FirebaseService {
             
             const shopsCollectionRef = collection(this.db, 'shops');
             const userDocRef = doc(this.db, 'users', userId);
-            
-            // Convert market ID (postal code) to a Firestore document reference
-            const marketDocRef = doc(this.db, 'markets', shopData.marketId) 
-            
-            // Create a copy of shopData to avoid modifying the original
-            const shopDataToSave = { ...shopData, marketId: marketDocRef };
-            
+        
             // Create the shop document
-            const docRef = await addDoc(shopsCollectionRef, shopDataToSave);
+            const docRef = await addDoc(shopsCollectionRef, shopData);
             console.log("Shop created with ID: ", docRef.id);
         
             const shopDocRef = doc(this.db, 'shops', docRef.id);
