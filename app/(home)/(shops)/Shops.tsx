@@ -1,47 +1,62 @@
 'use client';
 
-import React from 'react';
-import { SafeAreaView, ScrollView, View, Text, StyleSheet, Platform, TouchableOpacity } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { SafeAreaView, ScrollView, View, Text, StyleSheet, Platform, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import ShopCard from '@/components/ShopCard';
+import { useUser } from '@/context/userContext';
 
-import tomatoImage from '../../../assets/images/tomatoes.png';
-import dillImage from '../../../assets/images/dill.jpeg';
-import bellPepperImage from '../../../assets/images/bellPeppers.jpeg';
-import breadImage from '../../../assets/images/bread.jpeg';
-import strawberryImage from '../../../assets/images/strawberries.jpeg';
+import firebaseService from '@/handlers/firebaseService';
 
-
-// Mock data - replace with actual data fetching
-const mockShops: Array<Object> = [
-    {
-        id: '1',
-        name: 'Veggie Shop',
-        description: 'Fresh local produce',
-        images: [bellPepperImage, dillImage,tomatoImage, breadImage],
-        rating: 4.5,
-        address: '123 Main St',
-    },
-    {
-        id: '2',
-        name: 'Bread Head',
-        description: 'Fresh local produce',
-        images: [strawberryImage, dillImage, bellPepperImage],
-        rating: 4.2,
-        address: '456 Elm St',
-    },
-    {
-        id: '3',
-        name: 'Nothin\' but Nuts',
-        description: 'Fresh local produce',
-        images: [breadImage, bellPepperImage, strawberryImage, dillImage],
-        rating: 4.0,
-        address: '789 Oak St',
-    },
-];
 
 export default function Shops() {
+    const { userData } = useUser();
+    const [shops, setShops] = useState([]);
+    const [items, setItems] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+    
+    // Group items by shop for easy access to item images
+    const [shopItemsMap, setShopItemsMap] = useState({});
+
+    useEffect(() => {
+        async function fetchShopsAndItems() {
+            if (!userData?.uid) {
+                setLoading(false);
+                console.log('No user data found');
+                return;
+            }
+            try {
+                setLoading(true);
+                const { shops, items } = await firebaseService.getShopsAndItemsForUser(userData.uid);
+                setShops(shops);
+                setItems(items);
+                console.log('Shops:', shops);
+                console.log('Items:', items);
+                // Create a map of shop IDs to arrays of item images
+                const itemsByShop = {};
+                items.forEach(item => {
+                    if (!itemsByShop[item.shopId]) {
+                        itemsByShop[item.shopId] = [];
+                    }
+                    if (item.imageUrl) {
+                        itemsByShop[item.shopId].push(item.imageUrl);
+                    }
+                });
+                console.log('Items by shop:', itemsByShop);
+                setShopItemsMap(itemsByShop);
+            } catch (err) {
+                console.error('Error fetching shops and items:', err);
+                setError(err.message);
+            } finally {
+                setLoading(false);
+            }
+        }
+        
+        fetchShopsAndItems();
+    }, [userData]);
+    
     const router = useRouter();
     return (
         <SafeAreaView style={styles.container}>
@@ -58,9 +73,21 @@ export default function Shops() {
             </View>
 
             <ScrollView style={styles.scrollView}>
-                {mockShops.map((shop) => (
-                    <ShopCard name={ shop.name } itemImages={shop.images} key={ shop.id }/>
-                ))}
+                {loading ? (
+                    <ActivityIndicator size="large" color="#00bfff" style={styles.loader} />
+                ) : error ? (
+                    <Text style={styles.errorText}>Error: {error}</Text>
+                ) : shops.length === 0 ? (
+                    <Text style={styles.noShopsText}>No shops available</Text>
+                ) : (
+                    shops.map((shop) => (
+                        <ShopCard 
+                            name={shop.name} 
+                            itemImages={shopItemsMap[shop.id] || []} 
+                            key={shop.id}
+                        />
+                    ))
+                )}
                 <TouchableOpacity
                     style={ styles.addShopButton }
                     onPress={() => router.push('/AddShop')}
@@ -129,5 +156,20 @@ const styles = StyleSheet.create({
         fontSize: 24,
         color: '#fff',
         fontFamily: 'TextMeOne',
+    },
+    loader: {
+        marginTop: 20,
+    },
+    errorText: {
+        color: 'red',
+        textAlign: 'center',
+        marginTop: 20,
+        fontSize: 16,
+    },
+    noShopsText: {
+        textAlign: 'center',
+        marginTop: 20,
+        fontSize: 16,
+        color: '#555',
     },
 });
