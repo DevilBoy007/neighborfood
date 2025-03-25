@@ -158,7 +158,7 @@ export default function ShopRegistrationScreen() {
                     console.log('Shop created successfully!');
                     router.navigate('/success');
                     setTimeout(() => {
-                        router.replace('/(home)/(shops)/Shops');
+                        router.back();
                     }, 2000);
                 });
             } catch (error) {
