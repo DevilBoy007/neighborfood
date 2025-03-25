@@ -125,7 +125,7 @@ const styles = StyleSheet.create({
     header: {
         flexDirection: 'row',
         alignItems: 'center',
-        padding: 16,
+        padding: 24,
         ...Platform.select({
             ios: {
                 justifyContent: 'flex-end',

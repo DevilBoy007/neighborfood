@@ -149,7 +149,7 @@ const styles = StyleSheet.create({
     header: {
         flexDirection: 'row',
         alignItems: 'center',
-        padding: 16,
+        padding: 24,
         borderBottomWidth: 1,
         borderBottomColor: '#000',
         fontFamily: 'TextMeOne',
