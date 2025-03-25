@@ -440,6 +440,8 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         padding: 16,
+        borderBottomColor: '#000',
+        borderBottomWidth: 1,
         ...Platform.select({
             ios: {
                 justifyContent: 'flex-end',
