@@ -249,7 +249,8 @@ const RegisterScreen = () => {
                 first: userData.first,
                 last: userData.last,
                 location: locationWithGeoPoint,
-                phone: userData.phone
+                phone: userData.phone,
+                username: username
             }
             
             await firebaseService.addDocument('users', firestoreData, userData.uid);
