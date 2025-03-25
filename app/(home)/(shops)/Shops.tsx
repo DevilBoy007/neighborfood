@@ -21,7 +21,6 @@ export default function Shops() {
     // Group items by shop for easy access to item images
     const [shopItemsMap, setShopItemsMap] = useState({});
     
-    // Function to fetch shops and items
     async function fetchShopsAndItems() {
         if (!userData?.uid) {
             setLoading(false);
