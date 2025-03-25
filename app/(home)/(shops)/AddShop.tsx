@@ -156,10 +156,17 @@ export default function ShopRegistrationScreen() {
                 await firebaseService.createShopForUser(userData.uid, shopData)
                 .then(() => {
                     console.log('Shop created successfully!');
-                    router.navigate('/success');
-                    setTimeout(() => {
-                        router.back();
-                    }, 2000);
+                    if (Platform.OS === 'web') {
+                        router.navigate('/success');
+                        setTimeout(() => {
+                            router.back();
+                        }, 2100);
+                    } else {
+                        router.navigate('/success');
+                        setTimeout(() => {
+                            router.back();
+                        }, 2000);
+                    }
                 });
             } catch (error) {
                 Alert.alert('Error', 'Failed to create shop. Please try again.');
