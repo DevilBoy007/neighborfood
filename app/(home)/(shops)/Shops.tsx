@@ -6,6 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import ShopCard from '@/components/ShopCard';
 import { useUser } from '@/context/userContext';
+import { useFocusEffect } from '@react-navigation/native';
 
 import firebaseService from '@/handlers/firebaseService';
 
@@ -19,43 +20,59 @@ export default function Shops() {
     
     // Group items by shop for easy access to item images
     const [shopItemsMap, setShopItemsMap] = useState({});
-
-    useEffect(() => {
-        async function fetchShopsAndItems() {
-            if (!userData?.uid) {
-                setLoading(false);
-                console.log('No user data found');
-                return;
-            }
-            try {
-                setLoading(true);
-                const { shops, items } = await firebaseService.getShopsAndItemsForUser(userData.uid);
-                setShops(shops);
-                setItems(items);
-                console.log('Shops:', shops);
-                console.log('Items:', items);
-                // Create a map of shop IDs to arrays of item images
-                const itemsByShop = {};
-                items.forEach(item => {
-                    if (!itemsByShop[item.shopId]) {
-                        itemsByShop[item.shopId] = [];
-                    }
-                    if (item.imageUrl) {
-                        itemsByShop[item.shopId].push(item.imageUrl);
-                    }
-                });
-                console.log('Items by shop:', itemsByShop);
-                setShopItemsMap(itemsByShop);
-            } catch (err) {
-                console.error('Error fetching shops and items:', err);
-                setError(err.message);
-            } finally {
-                setLoading(false);
-            }
+    
+    // Function to fetch shops and items
+    async function fetchShopsAndItems() {
+        if (!userData?.uid) {
+            setLoading(false);
+            console.log('No user data found');
+            return;
         }
-        
-        fetchShopsAndItems();
-    }, [userData]);
+        try {
+            setLoading(true);
+            const { shops, items } = await firebaseService.getShopsAndItemsForUser(userData.uid);
+            setShops(shops);
+            setItems(items);
+            console.log('Shops:', shops);
+            console.log('Items:', items);
+            // Create a map of shop IDs to arrays of item images
+            const itemsByShop = {};
+            items.forEach(item => {
+                if (!itemsByShop[item.shopId]) {
+                    itemsByShop[item.shopId] = [];
+                }
+                if (item.imageUrl) {
+                    itemsByShop[item.shopId].push(item.imageUrl);
+                }
+            });
+            console.log('Items by shop:', itemsByShop);
+            setShopItemsMap(itemsByShop);
+        } catch (err) {
+            console.error('Error fetching shops and items:', err);
+            setError(err.message);
+        } finally {
+            setLoading(false);
+        }
+    }
+
+    // Use React.useCallback to memoize the fetchShopsAndItems function
+    const memoizedFetchShopsAndItems = React.useCallback(fetchShopsAndItems, [userData]);
+    
+    // Initial data fetch
+    useEffect(() => {
+        memoizedFetchShopsAndItems();
+    }, [memoizedFetchShopsAndItems]);
+    
+    // Refresh data when the screen comes into focus
+    useFocusEffect(
+        React.useCallback(() => {
+            console.log('Shops screen in focus, refreshing data');
+            memoizedFetchShopsAndItems();
+            return () => {
+                // Optional cleanup if needed
+            };
+        }, [memoizedFetchShopsAndItems])
+    );
     
     const router = useRouter();
     return (
