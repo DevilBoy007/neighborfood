@@ -157,12 +157,10 @@ export default function ShopRegistrationScreen() {
                 .then(() => {
                     console.log('Shop created successfully!');
                     router.navigate('/success');
+                    setTimeout(() => {
+                        router.replace('/(home)/(shops)/Shops');
+                    }, 2000);
                 });
-                
-                // Navigate back to shops list after success screen
-                // setTimeout(() => {
-                //     router.replace('/(home)/(shops)');
-                // }, 2000);
             } catch (error) {
                 Alert.alert('Error', 'Failed to create shop. Please try again.');
             }
