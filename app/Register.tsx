@@ -20,6 +20,8 @@ import * as Location from 'expo-location';
 import firebaseService from '@/handlers/firebaseService';
 import DatePicker from 'react-native-date-picker';
 import { useUser } from '@/context/userContext';
+import { GeoPoint } from 'firebase/firestore';
+
 
 const RegisterScreen = () => {
     const router = useRouter();
@@ -36,8 +38,10 @@ const RegisterScreen = () => {
             city: '',
             state: '',
             zip: '',
-            latitude: null,
-            longitude: null
+            coords: {
+                latitude: null,
+                longitude: null
+            }
         },
         username: '',
         password: '',
@@ -73,8 +77,10 @@ const RegisterScreen = () => {
                 city: locationInfo.city || '',
                 state: locationInfo.state || '',
                 zip: locationInfo.zip || '',
-                latitude: locationInfo.latitude || null,
-                longitude: locationInfo.longitude || null
+                coords: {
+                    latitude: locationInfo.latitude || null,
+                    longitude: locationInfo.longitude || null
+                }
             }
         }));
     };
@@ -145,13 +151,16 @@ const RegisterScreen = () => {
                 component.types.includes('postal_code')
             );
 
+            const latitude = details.geometry.location.lat;
+            const longitude = details.geometry.location.lng;
+            
             updateLocationData({
                 address: details.formatted_address,
                 city: cityComponent ? cityComponent.long_name : '',
                 state: stateComponent ? stateComponent.short_name : '',
                 zip: zipComponent ? zipComponent.long_name : '',
-                latitude: details.geometry.location.lat,
-                longitude: details.geometry.location.lng
+                latitude: latitude,
+                longitude: longitude
             });
         }
     };
@@ -211,32 +220,43 @@ const RegisterScreen = () => {
                 photoURL: "https://firebasestorage.googleapis.com/v0/b/neighborfoods/o/cloud.gif?alt=media&token=81350c47-c9e3-4c75-8d9d-d0b9ff6e50f0",
             })
             
+            // Create comprehensive userData object with all relevant info
             const userData = {
                 uid: user.uid,
                 email: user.email,
                 displayName: username,
                 photoURL: "https://firebasestorage.googleapis.com/v0/b/neighborfoods/o/cloud.gif?alt=media&token=81350c47-c9e3-4c75-8d9d-d0b9ff6e50f0",
-                first: firstName,
-                last: lastName
-            };
-            
-            // Store additional user data in Firestore
-            const firestoreUserData = {
-                uid: user.uid,
-                email: user.email,
+                createdAt: new Date(),
                 first: firstName,
                 last: lastName,
                 phone: phone,
                 dob: dob,
-                location: location,
-                username: username,
-                createdAt: new Date(),
-                lastLogin: new Date()
+                location: location
             };
-            await firebaseService.addDocument('user', firestoreUserData);
+
+            // Convert coords to GeoPoint for Firestore
+            const locationWithGeoPoint = {
+                ...location,
+                coords: new GeoPoint(
+                    location.coords.latitude ?? 0, 
+                    location.coords.longitude ?? 0
+                )
+            };
+
+            const firestoreData = {
+                createdAt: new Date(),
+                dob: userData.dob,
+                first: userData.first,
+                last: userData.last,
+                location: locationWithGeoPoint,
+                phone: userData.phone,
+                username: username
+            }
+            
+            await firebaseService.addDocument('users', firestoreData, userData.uid);
             console.log('Registration successful!');
             
-            // Store in context
+            // Store userData in context
             setUserData(userData);
             EventRegister.emit('userLoggedIn');
         } catch (error) {

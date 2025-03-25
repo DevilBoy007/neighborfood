@@ -14,7 +14,7 @@ const ShopCard = ({ name, itemImages }: ShopCardProps) => (
                 {itemImages.slice(0, itemImages.length).map((image, i) => (
                     <Image
                         key={i}
-                        source={image}
+                        source={typeof image === 'string' ? { uri: image } : image}
                         style={styles.itemImage}
                     />
                 ))}

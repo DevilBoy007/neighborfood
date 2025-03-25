@@ -20,9 +20,12 @@ import {
     where,
     getDocs,
     addDoc,
+    setDoc,
     updateDoc,
     deleteDoc,
-    doc
+    doc,
+    getDoc,
+    arrayUnion,
 } from 'firebase/firestore';
 
 class FirebaseService {
@@ -137,7 +140,10 @@ class FirebaseService {
             await this.connect();
             
             if (!this.auth) {
-                throw new Error('Firebase Auth is not initialized');
+                this.connect();
+                if (!this.auth) {
+                    throw new Error('Firebase Auth is not initialized');
+                }
             }
             
             const userCredential = await signInWithEmailAndPassword(this.auth, email, password);
@@ -173,7 +179,10 @@ class FirebaseService {
     async registerUser(email: string, password: string, username: string): Promise<UserCredential['user']> {
         try {
             if (!this.auth) {
-                throw new Error('Firebase Auth is not initialized');
+                this.connect();
+                if (!this.auth) {
+                    throw new Error('Error connecting to Firebase Authentication');
+                }
             }
             const users = await this.getDocumentsWhere('users', 'username', '==', username);
             if (users.length > 0) {
@@ -195,11 +204,35 @@ class FirebaseService {
             }
         }
     }
+    async getDocument(collectionPath: string, docId: string) {
+        try {
+            if (!this.db) {
+                this.connect();
+                if (!this.db) {
+                    throw new Error('Error connecting to Firestore');
+                }
+            }
+            const docRef = doc(this.db, collectionPath, docId);
+            const snapshot = await getDoc(docRef);
+            
+            if (snapshot.exists()) {
+                return { id: snapshot.id, ...snapshot.data() };
+            } else {
+                return null; // Document not found
+            }
+        } catch (error) {
+            console.error('Error getting document:', error);
+            throw error;
+        }
+    }
 
     async getAllDocuments(collectionPath: string) {
         try {
             if (!this.db) {
-                throw new Error('Database not connected. Call connect() first.');
+                this.connect();
+                if (!this.db) {
+                    throw new Error('Error connecting to Firestore');
+                }
             }
             const collectionRef = collection(this.db, collectionPath);
             const snapshot = await getDocs(collectionRef);
@@ -213,7 +246,10 @@ class FirebaseService {
     async getDocumentsWhere(collectionPath: string, field: string, operator: any, value: any) {
         try {
             if (!this.db) {
-                throw new Error('Database not connected. Call connect() first.');
+                this.connect();
+                if (!this.db) {
+                    throw new Error('Error connecting to Firestore');
+                }
             }
             const collectionRef = collection(this.db, collectionPath);
             const q = query(collectionRef, where(field, operator, value));
@@ -225,14 +261,27 @@ class FirebaseService {
         }
     }
 
-    async addDocument(collectionPath: string, data: object) {
+    async addDocument(collectionPath: string, data: object, id: string | null) {
         try {
             if (!this.db) {
-                throw new Error('Database not connected. Call connect() first.');
+                this.connect();
+                if (!this.db) {
+                    throw new Error('Error connecting to Firestore');
+                }
             }
-            const collectionRef = collection(this.db, collectionPath);
-            const docRef = await addDoc(collectionRef, data);
-            return docRef.id;
+
+            // If ID is provided, use it to create a document with that ID
+            if (id) {
+                const docRef = doc(this.db, collectionPath, id);
+                await setDoc(docRef, data);
+                return id;
+            } 
+            // Otherwise create a document with auto-generated ID
+            else {
+                const collectionRef = collection(this.db, collectionPath);
+                const docRef = await addDoc(collectionRef, data);
+                return docRef.id;
+            }
         } catch (error) {
             console.error('Error adding document:', error);
             throw error;
@@ -242,7 +291,10 @@ class FirebaseService {
     async updateDocument(collectionPath: string, docId: string, data: object) {
         try {
             if (!this.db) {
-                throw new Error('Database not connected. Call connect() first.');
+                this.connect();
+                if (!this.db) {
+                    throw new Error('Error connecting to Firestore');
+                }
             }
             const docRef = doc(this.db, collectionPath, docId);
             await updateDoc(docRef, data);
@@ -256,13 +308,132 @@ class FirebaseService {
     async deleteDocument(collectionPath: string, docId: string) {
         try {
             if (!this.db) {
-                throw new Error('Database not connected. Call connect() first.');
+                this.connect();
+                if (!this.db) {
+                    throw new Error('Error connecting to Firestore');
+                }
             }
             const docRef = doc(this.db, collectionPath, docId);
             await deleteDoc(docRef);
             return true;
         } catch (error) {
             console.error('Error deleting document:', error);
+            throw error;
+        }
+    }
+
+    async createShopForUser(userId: string, shopData: object): Promise<void> {
+        try {
+            if (!this.db) {
+                await this.connect();
+                if (!this.db) {
+                    throw new Error('Error connecting to Firestore');
+                }
+            }
+            
+            const shopsCollectionRef = collection(this.db, 'shops');
+            const userDocRef = doc(this.db, 'users', userId);
+        
+            // Create the shop document
+            const docRef = await addDoc(shopsCollectionRef, shopData);
+            console.log("Shop created with ID: ", docRef.id);
+        
+            const shopDocRef = doc(this.db, 'shops', docRef.id);
+
+            // Update the user's 'shops' array with the document reference
+            await updateDoc(userDocRef, {
+                shops: arrayUnion(shopDocRef)
+            });
+        
+            console.log("Shop reference added to user's shops array.");
+        } catch (error) {
+            console.error("Error creating shop or updating user: ", error);
+            throw error;
+        }
+    }
+
+    async getShopsAndItemsForUser(userId: string): Promise<{ shops: any[]; items: any[] }> {
+        try {
+            if (!this.db) {
+                await this.connect();
+                if (!this.db) {
+                    throw new Error('Error connecting to Firestore');
+                }
+            }
+            // 1. Get the shops for the user
+            const shopsSnapshot = await this.getDocumentsWhere('shops', 'userId', '==', userId);
+            const shops: any[] = [];
+            const shopIds: string[] = [];
+
+            shopsSnapshot.forEach((shopDoc) => {
+                const { id, ...shopData } = shopDoc;
+                console.log('Fetching shop:', shopData.name);
+                shops.push({ id, ...shopData });
+                shopIds.push(shopDoc.id);
+            });
+
+            // 2. Get the items for each shop
+            const items: any[] = [];
+            // Using Promise.all to handle async operations in parallel
+            await Promise.all(shopIds.map(async (shopId) => {
+                // Get all items for this shop
+                console.log('Fetching items for shop ID:', shopId);
+                const itemsForShop = await this.getDocumentsWhere('items', 'shopId', '==', shopId);
+                console.log(`Found ${itemsForShop.length} items for shop ${shopId}`);
+                itemsForShop.forEach(item => {
+                    console.log('Fetching item:', item.name);
+                    items.push(item);
+                });
+            }));
+
+            return { shops, items };
+
+        } catch (error) {
+            console.error("Error fetching shops and items:", error);
+            throw error;
+        }
+    }
+
+    async getItemsForShop(shopId: string): Promise<any[]> {
+        try {
+            if (!this.db) {
+                await this.connect();
+                if (!this.db) {
+                    throw new Error('Error connecting to Firestore');
+                }
+            }
+            const shopRef = doc(this.db, "shops", shopId);
+            const itemsSnapshot = await this.getDocumentsWhere('items', 'shop', '==', shopRef);
+            const items: any[] = [];
+
+            itemsSnapshot.forEach((doc) => {
+                items.push({ id: doc.id, ...doc.data() });
+            });
+
+            return items;
+        } catch (error) {
+            console.error("Error fetching items for shop:", error);
+            throw error;
+        }
+    }
+
+    async getShopsForMarket(marketId: string): Promise<any[]> {
+        try {
+            if (!this.db) {
+                await this.connect();
+                if (!this.db) {
+                    throw new Error('Error connecting to Firestore');
+                }
+            }
+            const shopsSnapshot = await this.getDocumentsWhere('shops', 'marketId', '==', marketId);
+            const shops: any[] = [];
+            shopsSnapshot.forEach((shopDoc) => {
+                const { id, ...shopData } = shopDoc;
+                shops.push({ id, ...shopData });
+            });
+            return shops;
+        } catch (error) {
+            console.error("Error fetching shops for market:", error);
             throw error;
         }
     }
@@ -279,7 +450,9 @@ class FirebaseService {
             throw error;
         }
     }
+
 }
+
 
 const firebaseService = FirebaseService.getInstance();
 export default firebaseService;
