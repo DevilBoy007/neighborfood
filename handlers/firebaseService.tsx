@@ -348,7 +348,7 @@ class FirebaseService {
             console.log("Shop reference added to user's shops array.");
         } catch (error) {
             console.error("Error creating shop or updating user: ", error);
-            throw error; // Re-throw to allow proper error handling in calling code
+            throw error;
         }
     }
 
@@ -367,6 +367,7 @@ class FirebaseService {
 
             shopsSnapshot.forEach((shopDoc) => {
                 const { id, ...shopData } = shopDoc;
+                console.log('Fetching shop:', shopData.name);
                 shops.push({ id, ...shopData });
                 shopIds.push(shopDoc.id);
             });
@@ -376,8 +377,11 @@ class FirebaseService {
             // Using Promise.all to handle async operations in parallel
             await Promise.all(shopIds.map(async (shopId) => {
                 // Get all items for this shop
+                console.log('Fetching items for shop ID:', shopId);
                 const itemsForShop = await this.getDocumentsWhere('items', 'shopId', '==', shopId);
+                console.log(`Found ${itemsForShop.length} items for shop ${shopId}`);
                 itemsForShop.forEach(item => {
+                    console.log('Fetching item:', item.name);
                     items.push(item);
                 });
             }));
