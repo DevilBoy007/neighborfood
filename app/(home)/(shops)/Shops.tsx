@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { SafeAreaView, ScrollView, View, Text, StyleSheet, Platform, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { SafeAreaView, ScrollView, View, Text, StyleSheet, Platform, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import ShopCard from '@/components/ShopCard';
@@ -88,14 +88,21 @@ export default function Shops() {
                 </Text>
             </View>
 
-            <ScrollView style={styles.scrollView}>
-                {loading ? (
-                    <ActivityIndicator size="large" color="#00bfff" style={styles.loader} />
-                ) : error ? (
+            <ScrollView style={styles.scrollView} refreshControl={ 
+                <RefreshControl
+                    refreshing={loading}
+                    onRefresh={memoizedFetchShopsAndItems}
+                    tintColor={"#00bfff"}
+                    title='Fetching shops...'
+                    titleColor={"#00bfff"}
+                    colors={["#00bfff", "#000"]}
+                    />
+                }>
+                {!loading && error ? (
                     <Text style={styles.errorText}>Error: {error}</Text>
-                ) : shops.length === 0 ? (
+                ) : !loading && shops.length === 0 ? (
                     <Text style={styles.noShopsText}>No shops available</Text>
-                ) : (
+                ) : !loading && (
                     shops.map((shop) => (
                         <ShopCard 
                             name={shop.name} 
