@@ -1,11 +1,6 @@
 import React from 'react';
 import { Stack } from "expo-router";
-import * as SplashScreen from 'expo-splash-screen';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
-
-
-
-SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
     return (
