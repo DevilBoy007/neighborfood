@@ -1,7 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, SafeAreaView, Platform, Dimensions } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, SafeAreaView, Platform, KeyboardAvoidingView } from 'react-native';
 import { useRouter } from 'expo-router';
+import { ScrollView } from 'react-native-gesture-handler';
 
 const ContactScreen = () => {
     const router = useRouter();
@@ -24,36 +25,49 @@ const ContactScreen = () => {
                 <TouchableOpacity style={styles.backButton} onPress={()=>{ router.back() }}>
                     <Ionicons name='chevron-back' color="#000" size={24} />
                 </TouchableOpacity>
-                <Text style={styles.headerText}>menu</Text>
+                <Text style={styles.headerText}>Contact Us</Text>
             </View>
-            <Text style={styles.headerText}>Contact Us</Text>
-            <View style={styles.content}>
+            <View style={{ paddingHorizontal: 16, paddingBottom: 0 }}>
                 <Text style={styles.title}>what's on your mind?</Text>
-
-                {options.map((option) => (
-                    <TouchableOpacity
-                        key={option}
-                        style={[
-                            styles.optionButton,
-                            selectedOption === option && styles.selectedOption
-                        ]}
-                        onPress={() => setSelectedOption(option)}
-                    >
-                        <Text style={styles.optionText}>{option}</Text>
-                    </TouchableOpacity>
-                ))}
-
-                {selectedOption && (
-                    <TextInput
-                        style={styles.textInput}
-                        multiline
-                        placeholder="Type your message here..."
-                        placeholderTextColor={'#999'}
-                        value={message}
-                        onChangeText={setMessage}
-                    />
-                )}
             </View>
+            <KeyboardAvoidingView 
+                style={{ flex: 1 }}
+                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                keyboardVerticalOffset={ 15}>
+                    <ScrollView
+                        contentContainerStyle={{ flexGrow: 1 }}
+                        keyboardShouldPersistTaps="handled"
+                        keyboardDismissMode='interactive'
+                    >
+                        <View style={styles.content}>
+                            {options.map((option) => (
+                                <TouchableOpacity
+                                    key={option}
+                                    style={[
+                                        styles.optionButton,
+                                        selectedOption === option && styles.selectedOption
+                                    ]}
+                                    onPress={() => setSelectedOption(option)}
+                                >
+                                    <Text style={styles.optionText}>{option}</Text>
+                                </TouchableOpacity>
+                            ))}
+
+                            {selectedOption && (
+                                <TextInput
+                                    style={styles.textInput}
+                                    multiline
+                                    placeholder="Type your message here..."
+                                    placeholderTextColor={'#999'}
+                                    value={message}
+                                    onChangeText={setMessage}
+                                    blurOnSubmit={false}
+                                    returnKeyType="default"
+                                />
+                            )}
+                        </View>
+                    </ScrollView>
+            </KeyboardAvoidingView>
 
             <TouchableOpacity
                 style={[
@@ -101,7 +115,7 @@ const styles = StyleSheet.create({
     },
     title: {
         fontSize: 24,
-        marginBottom: 24,
+        marginBottom: 1,
         borderBottomWidth: 1,
         borderBottomColor: '#000',
         paddingBottom: 8,

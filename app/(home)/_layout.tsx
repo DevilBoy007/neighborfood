@@ -3,8 +3,6 @@ import { View, StyleSheet, Platform, TouchableOpacity, Image } from 'react-nativ
 import { useEffect, useState, useCallback } from 'react';
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Stack, useRouter } from "expo-router";
-import { useFonts } from 'expo-font';
-import * as SplashScreen from 'expo-splash-screen';
 
 import chatIcon from '../../assets/images/chat.png';
 import pollsIcon from '../../assets/images/surveys.png';
@@ -13,22 +11,12 @@ import tileIcon from '../../assets/images/tiles.png';
 import profileIcon from '../../assets/images/user.png';
 import { User } from 'firebase/auth';
 
-
-SplashScreen.preventAutoHideAsync();
-
 export default function RootLayout() {
   const router = useRouter();
   const storage = Platform.OS === 'web' ? localStorage : AsyncStorage;
   const [userData, setUser] = useState<User | null>(null);
-  const [loaded] = useFonts({
-    SpaceMono: require('../../assets/fonts/SpaceMono-Regular.ttf'),
-    TitanOne: require('../../assets/fonts/TitanOne-Regular.ttf'),
-    TextMeOne: require('../../assets/fonts/TextMeOne-Regular.ttf'),
-  });
 
   useEffect(() => {
-    if (!loaded) return;
-
     const checkUser = async () => {
       try {
         const user = await storage.getItem('userData');
@@ -55,7 +43,7 @@ export default function RootLayout() {
       }
     };
     checkUser();
-  }, [loaded]);
+  }, []);
 
   const toggleSettings = useCallback(() => {
     router.navigate('/Settings');
