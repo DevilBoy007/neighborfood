@@ -5,8 +5,8 @@ import firebaseService from '@/handlers/firebaseService';
 import { useUser } from '@/context/userContext';
 
 const Settings = () => {
-    // Use the user context for logout
-    const { clearUserData } = useUser();
+    // Use the user context for logout and to get user data
+    const { clearUserData, userData } = useUser();
 
     const handleLogout = async () => {
         try {
@@ -36,6 +36,11 @@ const Settings = () => {
                 >
                     X
                 </Text>}
+            </View>
+
+            {/* User profile header */}
+            <View style={styles.userHeader}>
+                <Text style={styles.welcomeText}>Logged in as: {userData?.displayName || 'not logged in'}</Text>
             </View>
 
             <TouchableOpacity
@@ -95,6 +100,20 @@ const styles = StyleSheet.create({
         right: 0,
         fontSize: 24,
         padding: 10,
+    },
+    userHeader: {
+        padding: 15,
+        borderRadius: 10,
+        borderColor: '#000',
+        borderWidth: 1,
+        marginBottom: 20,
+        alignItems: 'center',
+    },
+    welcomeText: {
+        fontSize: 24,
+        fontFamily: 'TextMeOne',
+        color: '#000',
+        textAlign: 'center',
     },
     menuItem: {
         backgroundColor: '#00bfff',
