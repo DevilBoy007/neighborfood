@@ -63,7 +63,7 @@ const MenuScreen = () => {
             <ScrollView contentContainerStyle={styles.scrollContent}>
                 <View style={styles.menuGrid}>
                     <MenuButton icon="+" title="add item" />
-                    <MenuButton icon={shopIcon} title="manage shops" />
+                    <MenuButton icon={shopIcon} title="manage shops" destination={"./(shops)/Shops"}/>
                     <MenuButton icon={dashboardIcon} title="dashboard" />
                     <MenuButton icon={receiptIcon} title="order history" destination={"./(orders)/"}/>
                     <MenuButton icon={contactUsIcon} title="contact us" destination={"./(contact)"}/>

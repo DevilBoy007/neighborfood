@@ -1,50 +1,74 @@
+import React from 'react';
+import { View, StyleSheet, Platform, TouchableOpacity, Image } from 'react-native';
+import { useEffect, useState, useCallback } from 'react';
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Stack, useRouter } from "expo-router";
 import { useFonts } from 'expo-font';
-import { View, StyleSheet, Platform, TouchableOpacity, Image } from 'react-native';
 import * as SplashScreen from 'expo-splash-screen';
-import { useEffect, useState, useCallback } from 'react';
 
 import chatIcon from '../../assets/images/chat.png';
 import pollsIcon from '../../assets/images/surveys.png';
 import marketIcon from '../../assets/images/market.png';
 import tileIcon from '../../assets/images/tiles.png';
 import profileIcon from '../../assets/images/user.png';
+import { User } from 'firebase/auth';
 
 
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
   const router = useRouter();
+  const storage = Platform.OS === 'web' ? localStorage : AsyncStorage;
+  const [userData, setUser] = useState<User | null>(null);
   const [loaded] = useFonts({
     SpaceMono: require('../../assets/fonts/SpaceMono-Regular.ttf'),
     TitanOne: require('../../assets/fonts/TitanOne-Regular.ttf'),
     TextMeOne: require('../../assets/fonts/TextMeOne-Regular.ttf'),
   });
 
-  const [showEditDetails, setShowEditDetails] = useState(false);
-
   useEffect(() => {
-    if (loaded) {
-      SplashScreen.hideAsync();
-    }
+    if (!loaded) return;
+
+    const checkUser = async () => {
+      try {
+        const user = await storage.getItem('userData');
+        if (!user) {
+          console.log('No user data found');
+          router.navigate('/Login');
+          return;
+        }
+
+        const DATA = JSON.parse(user);
+        if (!DATA || !DATA.uid) {
+          console.log('Invalid user data');
+          router.navigate('/Login');
+          return;
+        }
+
+        setUser(DATA);
+        console.log('Loaded user data:', DATA.uid);
+
+      } catch (error) {
+        console.error('Error checking user:', error);
+        router.navigate('/Login');
+        return;
+      }
+    };
+    checkUser();
   }, [loaded]);
 
-  const toggleEditDetails = useCallback(() => {
-    router.navigate('/EditDetails');
+  const toggleSettings = useCallback(() => {
+    router.navigate('/Settings');
   }, []);
-
-  if (!loaded) {
-    return null;
-  }
 
   return (
     <>
         <View style={styles.container}>
-          <Stack.Screen options={{ headerShown: false }} initialParams={{ toggleEditDetails: toggleEditDetails, showEditDetails: showEditDetails }}  />
-          {Platform.OS !== 'web' && !showEditDetails &&
-            <TouchableOpacity onPress={toggleEditDetails} style={styles.profileImage}>
+          <Stack.Screen options={{ headerShown: false }} initialParams={{ toggleSettings: toggleSettings }}  />
+          {Platform.OS !== 'web'  &&
+            <TouchableOpacity onPress={toggleSettings} style={styles.profileImage}>
               <Image
-                source={profileIcon}
+                source={userData?.photoURL ? { uri: userData.photoURL } : profileIcon}
                 style={styles.profileImage}
               />
             </TouchableOpacity>
@@ -52,9 +76,9 @@ export default function RootLayout() {
           <View style={styles.content}>
           {Platform.OS === 'web' &&
             <View style={styles.footer}>
-              <TouchableOpacity style={styles.iconButton} onPress={ toggleEditDetails }>
+              <TouchableOpacity style={styles.iconButton} onPress={ toggleSettings }>
                 <Image
-                  source={profileIcon}
+                  source={userData?.photoURL ? { uri: userData.photoURL } : profileIcon}
                   style={[styles.iconButton, styles.profileImage]}
                 />
               </TouchableOpacity>
@@ -133,28 +157,26 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#87CEFA',
     padding: 10,
+    
     ...Platform.select({
       ios: {
         position: 'absolute',
         bottom: 0,
         left: 0,
         right: 0,
+        height: 75,
+        borderTopWidth: 1,
+        borderTopColor: '#000',
       },
       web: {
         flexDirection: 'column',
         width: 175,
         height: '100%',
         justifyContent: 'center',
+        borderRightWidth: 1,
+        borderRightColor: '#000',
       },
     }),
-  },
-  editDetailsContainer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    // Adjust the height as needed
-    height: '90%',
   },
   iconButton: {
     padding: 10,
@@ -167,11 +189,5 @@ const styles = StyleSheet.create({
   icon: {
     width: 50,
     height: 50,
-    ...Platform.select({
-      ios: {
-        width: 30,
-        height: 30,
-      },
-    }),
   },
 });

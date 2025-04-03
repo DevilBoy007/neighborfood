@@ -136,7 +136,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         ...Platform.select({
             ios: {
-                marginBottom: 36,
+                marginBottom: 40,
             }
         })
     },

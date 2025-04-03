@@ -12,7 +12,7 @@ const LoginScreen = () => {
               styles.button,
               pressed && styles.buttonOpacity,
             ]}
-            onPress={() => router.replace('/Market')}
+            onPress={() => router.navigate('/Login')}
           >
             <Text style={styles.buttonText}>Login</Text>
           </Pressable>
@@ -21,8 +21,9 @@ const LoginScreen = () => {
             styles.button,
             pressed && styles.buttonOpacity,
           ]}
+          onPress = {() => router.navigate('/Register')}
         >
-          <Text style={styles.buttonText} onPress={() => alert('sign up')}>Sign Up</Text>
+          <Text style={styles.buttonText}>Sign Up</Text>
         </Pressable>
       </View>
     </View>
@@ -48,7 +49,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     fontFamily: 'TitanOne',
     color: '#fff',
-    marginTop: 20,
+    marginTop: 40,
   },
   titleWeb: {
     textAlign: 'center',
@@ -56,21 +57,20 @@ const styles = StyleSheet.create({
   },
   buttonContainer: {
     flexDirection: 'row',
-    justifyContent: 'center',
+    justifyContent: 'space-around',
     alignItems: 'center',
-    marginBottom: 20,
   },
   button: {
     backgroundColor: '#00bfff',
-    padding: 10,
+    padding: 15,
     borderRadius: 5,
     marginHorizontal: 5,
-    width: 100,
+    width: 150,
     marginTop: 20,
   },
   buttonText: {
     color: 'white',
-    fontSize: 16,
+    fontSize: 20,
     fontWeight: 'bold',
     textAlign: 'center',
   },

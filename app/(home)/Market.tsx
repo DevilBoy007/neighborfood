@@ -2,29 +2,61 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, FlatList, StyleSheet, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
-// Placeholder for the Shop component
-const Shop = ({ name }: { name: string }) => (
-    <View style={styles.shopItem}>
-        <Text style={styles.shopName}>{name}</Text>
-        <View style={styles.shopCircles}>
-            {[...Array(4)].map((_, i) => (
-                <View key={i} style={styles.circle} />
-            ))}
-        </View>
-    </View>
-);
+import MapScreen from '@/components/MapScreen';
+import WebMapScreen from '@/components/WebMapScreen';
+import ShopCard from '@/components/ShopCard';
+import { useUser } from '@/context/userContext';
+
+import tomatoImage from '../../assets/images/tomatoes.png';
+import dillImage from '../../assets/images/dill.jpeg';
+import bellPepperImage from '../../assets/images/bellPeppers.jpeg';
+import breadImage from '../../assets/images/bread.jpeg';
+import strawberryImage from '../../assets/images/strawberries.jpeg';
 
 const MarketScreen = () => {
     const [isMapView, setIsMapView] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
     const [showSortOptions, setShowSortOptions] = useState(false);
     
+    // Use the user context instead of managing userData locally
+    const { userData } = useUser();
+
     const shops = [
-        "Ben's Beef",
-        "Big Baskets",
-        "Ann's Apples",
-        "Happy Alan's Produce"
-    ]; // this is a placeholder for the list of shops which will eventually load from a data source
+        {
+            id: '1',
+            name: "Ben's Beef",
+            description: 'Fresh local meats',
+            images: [bellPepperImage, dillImage, tomatoImage],
+            rating: 4.3,
+            address: '123 Butcher St'
+        },
+        {
+            id: '2',
+            name: "Big Baskets",
+            description: 'Fresh local produce',
+            images: [tomatoImage, strawberryImage, bellPepperImage],
+            rating: 4.7,
+            address: '456 Market Ave'
+        },
+        {
+            id: '3',
+            name: "Ann's Apples",
+            description: 'Local orchard goods',
+            images: [strawberryImage, breadImage, dillImage],
+            rating: 4.4,
+            address: '789 Orchard Ln'
+        },
+        {
+            id: '4',
+            name: "Happy Alan's Produce",
+            description: 'Farm fresh vegetables',
+            images: [bellPepperImage, tomatoImage, dillImage],
+            rating: 4.6,
+            address: '321 Farm Rd'
+        }
+    ];
+
+    // No need for useEffect to load user data since it's provided by context
 
     const toggleView = () => setIsMapView(!isMapView);
     
@@ -52,15 +84,30 @@ const MarketScreen = () => {
                 </TouchableOpacity>
             </View>
 
+            {/* Display welcome message with user's name if available
+            {userData && (
+                <Text style={styles.welcomeText}>
+                    Welcome, {userData.displayName || userData.first || 'User'}!
+                </Text>
+            )} */}
+
             {isMapView ? (
-                <View style={ styles.mapContainer }>
-                    <Text style={ styles.mapPlaceholder }>MAPBOX</Text>
-                </View>
+                Platform.OS === 'web' ? (
+                    <WebMapScreen/>
+                ) : (
+                    <MapScreen/>
+                )
             ) : (
                 <FlatList
-                    data={ shops }
-                    renderItem={({ item }) => <Shop name={ item } />}
-                    keyExtractor={ ( item ) => item}
+                    data={shops}
+                    renderItem={({ item }) => (
+                        <ShopCard 
+                            name={item.name} 
+                            itemImages={item.images}
+                            key={item.id}
+                        />
+                    )}
+                    keyExtractor={(item) => item.id}
                 />
             )}
         </View>
@@ -155,28 +202,13 @@ const styles = StyleSheet.create({
             },
         }),
     },
-    shopItem: {
-        backgroundColor: 'white',
-        padding: 16,
-        marginVertical: 8,
-        marginHorizontal: 16,
-        borderRadius: 8,
-    },
-    shopName: {
+    welcomeText: {
         fontSize: 18,
-        fontWeight: 'bold',
-    },
-    shopCircles: {
-        flexDirection: 'row',
-        marginTop: 8,
-    },
-    circle: {
-        width: 20,
-        height: 20,
-        borderRadius: 10,
-        backgroundColor: 'yellow',
-        marginRight: 8,
-    },
+        fontFamily: 'TextMeOne',
+        textAlign: 'center',
+        color: '#333',
+        marginVertical: 10,
+    }
 });
 
 export default MarketScreen;
