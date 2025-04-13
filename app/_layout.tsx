@@ -5,6 +5,11 @@ import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { UserProvider } from "@/context/userContext";
+import { LocationProvider, useLocation } from "@/context/locationContext";
+import { ShopProvider } from "@/context/shopContext";
+import { ItemProvider } from "@/context/itemContext";
+import { OrderProvider } from "@/context/orderContext";
+import { CartProvider } from "@/context/cartContext";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -26,26 +31,28 @@ export default function RootLayout() {
     }
     return (
         <UserProvider>
-            <KeyboardProvider>
-                <GestureHandlerRootView style={{ flex: 1 }}>
-                    <Stack>
-                        <Stack.Screen name="index" options={{ headerShown: false }} />
-                        <Stack.Screen name="Register" options={{ headerShown: false }} />
-                        <Stack.Screen name="Login" options={{ headerShown: false }} />
-                        <Stack.Screen name="+not-found" options={{ headerShown: false }} />
-                        <Stack.Screen name="success" options={{ headerShown: false, animation: 'fade' }} />
-                        <Stack.Screen name="EditDetails" options={{ headerShown: false }} />
-                        <Stack.Screen
-                            name="Settings"
-                            options={{
-                                headerShown: false,
-                                presentation: 'modal',
-                                animation: 'slide_from_bottom',
-                            }}
-                        />
-                    </Stack>
-                </GestureHandlerRootView>
-            </KeyboardProvider>
+            <LocationProvider>
+                <KeyboardProvider>
+                    <GestureHandlerRootView style={{ flex: 1 }}>
+                        <Stack>
+                            <Stack.Screen name="index" options={{ headerShown: false }} />
+                            <Stack.Screen name="Register" options={{ headerShown: false }} />
+                            <Stack.Screen name="Login" options={{ headerShown: false }} />
+                            <Stack.Screen name="+not-found" options={{ headerShown: false }} />
+                            <Stack.Screen name="success" options={{ headerShown: false, animation: 'fade' }} />
+                            <Stack.Screen name="EditDetails" options={{ headerShown: false }} />
+                            <Stack.Screen
+                                name="Settings"
+                                options={{
+                                    headerShown: false,
+                                    presentation: 'modal',
+                                    animation: 'slide_from_bottom',
+                                }}
+                            />
+                        </Stack>
+                    </GestureHandlerRootView>
+                </KeyboardProvider>
+            </LocationProvider>
         </UserProvider>
     );
 }
