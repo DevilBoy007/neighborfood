@@ -467,6 +467,43 @@ class FirebaseService {
         }
     }
 
+    /**
+     * Get shops by either ZIP code prefix or by coordinates within a radius
+     */
+    async getShopsNearby(zipPrefix, userCoords, userId) {
+        try {
+            let query = collection(this.db, 'shops');
+
+            if (zipPrefix) {
+                // Use the existing ZIP code prefix query
+                query = query.where('zipPrefix', '==', zipPrefix);
+            } else if (userCoords) {
+                // If no ZIP but we have coordinates, we'd use geolocation query
+                // Note: This would require Firestore GeoPoint and geohashing setup
+                // For simplicity, you might just return all shops and filter them client-side for now
+            }
+
+            const querySnapshot = await getDocs(query);
+            const shops = [];
+
+            querySnapshot.forEach((doc) => {
+                const shopData = doc.data();
+                // Don't include the user's own shop
+                if (shopData.ownerId !== userId) {
+                    shops.push({
+                        id: doc.id,
+                        ...shopData
+                    });
+                }
+            });
+
+            return shops;
+        } catch (error) {
+            console.error("Error getting shops:", error);
+            throw error;
+        }
+    }
+
     disconnect() {
         try {
             this.app = null;
