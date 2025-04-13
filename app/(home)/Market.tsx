@@ -6,6 +6,7 @@ import MapScreen from '@/components/MapScreen';
 import WebMapScreen from '@/components/WebMapScreen';
 import ShopCard from '@/components/ShopCard';
 import { useUser } from '@/context/userContext';
+import { useLocation } from '@/context/locationContext';
 import firebaseService from '@/handlers/firebaseService';
 
 const MarketScreen = () => {
@@ -20,16 +21,26 @@ const MarketScreen = () => {
     // Group items by shop for easy access to item images
     const [shopItemsMap, setShopItemsMap] = useState({});
     
-    // Use the user context instead of managing userData locally
+    // Use both user context and location context
     const { userData } = useUser();
+    const { locationData } = useLocation();
 
-    // Fetch shops based on user's ZIP code
+    // Fetch shops based on current location or fallback to user's stored location
     const fetchShopsAndItems = async () => {
         try {
             setLoading(true);
-            if (userData?.location?.zip) {
+            
+            // Try to use current location's ZIP code first
+            let zipToUse = locationData.zipCode;
+            
+            // Fall back to user's stored ZIP if current location isn't available
+            if (!zipToUse && userData?.location?.zip) {
+                zipToUse = userData.location.zip;
+            }
+            
+            if (zipToUse) {
                 // Get first 2 digits of ZIP code
-                const zipPrefix = userData.location?.zip.substring(0, 2);
+                const zipPrefix = zipToUse.substring(0, 2);
                 const shopsData = await firebaseService.getShopsByZipCodePrefix(zipPrefix, userData.uid);
                 setShops(shopsData || []);
                 
@@ -54,7 +65,7 @@ const MarketScreen = () => {
                 
                 setShopItemsMap(itemsByShop);
             } else {
-                // If no user ZIP code, just set empty shops array
+                // If no ZIP code available, set empty shops array
                 setShops([]);
             }
         } catch (error) {
@@ -66,9 +77,10 @@ const MarketScreen = () => {
         }
     };
 
+    // Update when either userData or locationData changes
     useEffect(() => {
         fetchShopsAndItems();
-    }, [userData]);
+    }, [userData, locationData.zipCode]);
 
     const toggleView = () => setIsMapView(!isMapView);
     
@@ -100,54 +112,54 @@ const MarketScreen = () => {
         }
         
         return (
-            <FlatList
-                contentContainerStyle={{ paddingBottom: 300 }}
-                data={shops}
-                renderItem={({ item }) => (
-                    <ShopCard 
-                        name={item.name} 
-                        itemImages={shopItemsMap[item.id] || []}
-                        key={item.id}
-                    />
-                )}
-                keyExtractor={(item) => item.id}
-                refreshControl={
-                    <RefreshControl
-                        refreshing={refreshing}
-                        onRefresh={onRefresh}
-                    />
-                }
-            />
+            <View style={styles.listContainer}>
+                <FlatList
+                    contentContainerStyle={styles.flatListContent}
+                    data={shops}
+                    renderItem={({ item }) => (
+                        <ShopCard 
+                            name={item.name} 
+                            itemImages={shopItemsMap[item.id] || []}
+                            key={item.id}
+                        />
+                    )}
+                    keyExtractor={(item) => item.id}
+                    refreshControl={
+                        <RefreshControl
+                            refreshing={refreshing}
+                            onRefresh={onRefresh}
+                        />
+                    }
+                />
+            </View>
         );
     };
     
     return (
-        <>
         <View style={styles.container}>
             <View style={styles.header}>
                 <Text style={styles.title}>market</Text>
             </View>
 
-            <View style={ styles.searchContainer }>
-                <Ionicons name="search" size={ 20 } color="gray" style={ styles.searchIcon } />
+            <View style={styles.searchContainer}>
+                <Ionicons name="search" size={20} color="gray" style={styles.searchIcon} />
                 <TextInput
-                    style= {styles.searchInput }
+                    style={styles.searchInput}
                     placeholder="search"
-                    placeholderTextColor={ '#999' }
-                    value={ searchQuery }
-                    onChangeText={ setSearchQuery }
+                    placeholderTextColor="#999"
+                    value={searchQuery}
+                    onChangeText={setSearchQuery}
                 />
-                <TouchableOpacity style={ styles.textButton }>
+                <TouchableOpacity style={styles.textButton}>
                     <Text style={{ fontFamily: 'TextMeOne' }}>sort</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={ styles.textButton } onPress={ toggleView }>
-                    <Text style={{ fontFamily: 'TextMeOne' }}>{ isMapView ? 'list' : 'map' }</Text>
+                <TouchableOpacity style={styles.textButton} onPress={toggleView}>
+                    <Text style={{ fontFamily: 'TextMeOne' }}>{isMapView ? 'list' : 'map'}</Text>
                 </TouchableOpacity>
             </View>
 
             {renderContent()}
         </View>
-        </>
     );
 };
 
@@ -156,8 +168,11 @@ const styles = StyleSheet.create({
         backgroundColor: '#B7FFB0',
         minHeight: '100%',
         ...Platform.select({
-            web:{
+            web: {
                 minWidth: '100%',
+                height: '100vh',
+                display: 'flex',
+                flexDirection: 'column'
             }
         })
     },
@@ -257,6 +272,24 @@ const styles = StyleSheet.create({
         color: '#333',
         textAlign: 'center',
         marginTop: 10,
+    },
+    listContainer: {
+        flex: 1,
+        ...Platform.select({
+            web: {
+                overflow: 'auto',
+                height: '100%',
+                flex: 1
+            }
+        })
+    },
+    flatListContent: {
+        paddingBottom: 100,
+        ...Platform.select({
+            web: {
+                minWidth: '100%'
+            }
+        })
     }
 });
 

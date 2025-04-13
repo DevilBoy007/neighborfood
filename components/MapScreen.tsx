@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { StyleSheet, View, Text, Platform, LogBox } from 'react-native';
 import * as Location from 'expo-location';
 import MapView, { PROVIDER_DEFAULT, PROVIDER_GOOGLE, Marker, Callout } from 'react-native-maps';
+import { useLocation } from '@/context/locationContext';
 
 interface MarkerData {
     id: string;
@@ -17,34 +18,23 @@ interface MarkerData {
 LogBox.ignoreLogs(['VectorKit']);
 
 const MapScreen = () => {
-    const [location, setLocation] = useState<Location.LocationObjectCoords | null>(null);
-    const [errorMsg, setErrorMsg] = useState<string | null>(null);
+    // Use the location context instead of local state
+    const { locationData, fetchCurrentLocation } = useLocation();
     const [markers, setMarkers] = useState<MarkerData[]>([]);
     const [selectedMarkerId, setSelectedMarkerId] = useState<string | null>(null);
 
     useEffect(() => {
-        (async () => {
-            let { status } = await Location.requestForegroundPermissionsAsync();
-            if (status !== 'granted') {
-                setErrorMsg('Permission to access location was denied');
-                return;
-            }
-
-            let location = await Location.getCurrentPositionAsync({
-                accuracy: Location.Accuracy.High,
-            });
-            setLocation(location.coords);
-        })();
+        fetchCurrentLocation();
     }, []);
 
     useEffect(() => {
-        if (location) {
+        if (locationData.coords) {
             const newMarkers = [
                 {
                     id: '1',
                     coordinate: {
-                        latitude: location.latitude,
-                        longitude: location.longitude,
+                        latitude: locationData.coords.latitude,
+                        longitude: locationData.coords.longitude,
                     },
                     title: 'Your Location',
                     description: 'You are here'
@@ -52,17 +42,16 @@ const MapScreen = () => {
                 {
                     id: '2',
                     coordinate: {
-                        latitude: (location.latitude + 0.002),
-                        longitude: (location.longitude + 0.002),
+                        latitude: (locationData.coords.latitude + 0.002),
+                        longitude: (locationData.coords.longitude + 0.002),
                     },
                     title: 'Test Location',
                     description: 'Test marker'
                 }
             ];
-            console.log('Setting markers:', newMarkers);
             setMarkers(newMarkers);
         }
-    }, [location]);
+    }, [locationData.coords]);
 
     const handleMarkerPress = (markerId: string) => {
         setSelectedMarkerId(markerId === selectedMarkerId ? null : markerId);
@@ -70,13 +59,13 @@ const MapScreen = () => {
 
     return (
         <View style={styles.container}>
-            {location ? (
+            {locationData.coords ? (
                 <MapView
                     provider={Platform.OS === 'ios' ? PROVIDER_DEFAULT : PROVIDER_GOOGLE}
                     style={styles.map}
                     initialRegion={{
-                        latitude: location.latitude,
-                        longitude: location.longitude,
+                        latitude: locationData.coords.latitude,
+                        longitude: locationData.coords.longitude,
                         latitudeDelta: 0.0922,
                         longitudeDelta: 0.0421,
                     }}
