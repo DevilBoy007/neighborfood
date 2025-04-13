@@ -14,7 +14,6 @@ const MarketScreen = () => {
     const [searchQuery, setSearchQuery] = useState('');
     const [showSortOptions, setShowSortOptions] = useState(false);
     const [shops, setShops] = useState([]);
-    const [items, setItems] = useState([]);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     
