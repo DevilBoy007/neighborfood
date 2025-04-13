@@ -458,8 +458,8 @@ class FirebaseService {
             );
             
             // Then filter out the user's own shops in the client
-            const first = await getDocs(q);
-            return first.docs
+            const shops = await getDocs(q);
+            return shops.docs
                 .map(doc => ({ id: doc.id, ...doc.data() }))
                 .filter(shop => shop.userId !== userId);
         } catch (error) {
