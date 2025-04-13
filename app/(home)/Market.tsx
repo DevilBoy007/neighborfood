@@ -94,7 +94,7 @@ const MarketScreen = () => {
             return (
                 <View style={styles.centeredContainer}>
                     <ActivityIndicator size="large" color="#333" />
-                    <Text style={styles.messageText}>Loading shops...</Text>
+                    <Text style={styles.messageText}>Fetching shops...</Text>
                 </View>
             );
         }
@@ -128,6 +128,10 @@ const MarketScreen = () => {
                         <RefreshControl
                             refreshing={refreshing}
                             onRefresh={onRefresh}
+                            tintColor={"#00bfff"}
+                            title='Fetching shops...'
+                            titleColor={"#00bfff"}
+                            colors={["#00bfff", "#000"]}
                         />
                     }
                 />
