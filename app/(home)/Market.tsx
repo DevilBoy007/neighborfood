@@ -1,64 +1,87 @@
-import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, FlatList, StyleSheet, Platform } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, TextInput, TouchableOpacity, FlatList, StyleSheet, Platform, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import MapScreen from '@/components/MapScreen';
 import WebMapScreen from '@/components/WebMapScreen';
 import ShopCard from '@/components/ShopCard';
 import { useUser } from '@/context/userContext';
-
-import tomatoImage from '../../assets/images/tomatoes.png';
-import dillImage from '../../assets/images/dill.jpeg';
-import bellPepperImage from '../../assets/images/bellPeppers.jpeg';
-import breadImage from '../../assets/images/bread.jpeg';
-import strawberryImage from '../../assets/images/strawberries.jpeg';
+import firebaseService from '@/handlers/firebaseService';
 
 const MarketScreen = () => {
     const [isMapView, setIsMapView] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
     const [showSortOptions, setShowSortOptions] = useState(false);
+    const [shops, setShops] = useState([]);
+    const [loading, setLoading] = useState(true);
     
     // Use the user context instead of managing userData locally
     const { userData } = useUser();
 
-    const shops = [
-        {
-            id: '1',
-            name: "Ben's Beef",
-            description: 'Fresh local meats',
-            images: [bellPepperImage, dillImage, tomatoImage],
-            rating: 4.3,
-            address: '123 Butcher St'
-        },
-        {
-            id: '2',
-            name: "Big Baskets",
-            description: 'Fresh local produce',
-            images: [tomatoImage, strawberryImage, bellPepperImage],
-            rating: 4.7,
-            address: '456 Market Ave'
-        },
-        {
-            id: '3',
-            name: "Ann's Apples",
-            description: 'Local orchard goods',
-            images: [strawberryImage, breadImage, dillImage],
-            rating: 4.4,
-            address: '789 Orchard Ln'
-        },
-        {
-            id: '4',
-            name: "Happy Alan's Produce",
-            description: 'Farm fresh vegetables',
-            images: [bellPepperImage, tomatoImage, dillImage],
-            rating: 4.6,
-            address: '321 Farm Rd'
-        }
-    ];
+    // Fetch shops based on user's ZIP code
+    useEffect(() => {
+        const fetchShops = async () => {
+            try {
+                setLoading(true);
+                if (userData?.location?.zip) {
+                    // Get first 2 digits of ZIP code
+                    const zipPrefix = userData.location?.zip.substring(0, 2);
+                    const shopsData = await firebaseService.getShopsByZipCodePrefix(zipPrefix, userData.uid);
+                    setShops(shopsData || []);
+                } else {
+                    // If no user ZIP code, just set empty shops array
+                    setShops([]);
+                }
+            } catch (error) {
+                console.error("Error fetching shops:", error);
+                setShops([]);
+            } finally {
+                setLoading(false);
+            }
+        };
 
-    // No need for useEffect to load user data since it's provided by context
+        fetchShops();
+    }, [userData]);
 
     const toggleView = () => setIsMapView(!isMapView);
+    
+    const renderContent = () => {
+        if (loading) {
+            return (
+                <View style={styles.centeredContainer}>
+                    <ActivityIndicator size="large" color="#333" />
+                    <Text style={styles.messageText}>Loading shops...</Text>
+                </View>
+            );
+        }
+        
+        if (isMapView) {
+            return Platform.OS === 'web' ? <WebMapScreen/> : <MapScreen/>;
+        }
+        
+        if (shops.length === 0) {
+            return (
+                <View style={styles.centeredContainer}>
+                    <Text style={styles.messageText}>No shops found in your area</Text>
+                </View>
+            );
+        }
+        
+        return (
+            <FlatList
+                contentContainerStyle={{ paddingBottom: 300 }}
+                data={shops}
+                renderItem={({ item }) => (
+                    <ShopCard 
+                        name={item.name} 
+                        itemImages={item.images}
+                        key={item.id}
+                    />
+                )}
+                keyExtractor={(item) => item.id}
+            />
+        );
+    };
     
     return (
         <>
@@ -84,32 +107,7 @@ const MarketScreen = () => {
                 </TouchableOpacity>
             </View>
 
-            {/* Display welcome message with user's name if available
-            {userData && (
-                <Text style={styles.welcomeText}>
-                    Welcome, {userData.displayName || userData.first || 'User'}!
-                </Text>
-            )} */}
-
-            {isMapView ? (
-                Platform.OS === 'web' ? (
-                    <WebMapScreen/>
-                ) : (
-                    <MapScreen/>
-                )
-            ) : (
-                <FlatList
-                    data={shops}
-                    renderItem={({ item }) => (
-                        <ShopCard 
-                            name={item.name} 
-                            itemImages={item.images}
-                            key={item.id}
-                        />
-                    )}
-                    keyExtractor={(item) => item.id}
-                />
-            )}
+            {renderContent()}
         </View>
         </>
     );
@@ -208,6 +206,19 @@ const styles = StyleSheet.create({
         textAlign: 'center',
         color: '#333',
         marginVertical: 10,
+    },
+    centeredContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: 20,
+    },
+    messageText: {
+        fontFamily: 'TextMeOne',
+        fontSize: 18,
+        color: '#333',
+        textAlign: 'center',
+        marginTop: 10,
     }
 });
 
