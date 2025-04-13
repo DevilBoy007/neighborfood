@@ -438,6 +438,36 @@ class FirebaseService {
         }
     }
 
+    async getShopsByZipCodePrefix(zipPrefix: string, userId: string): Promise<any[]> {
+        try {
+            if (!this.db) {
+                await this.connect();
+                if (!this.db) {
+                    throw new Error('Error connecting to Firestore');
+                }
+            }
+            
+            // Query for shops where marketId starts with the zip prefix
+            const collectionRef = collection(this.db, 'shops');
+            
+            // First get all shops with matching zip prefix
+            const q = query(
+                collectionRef,
+                where('marketId', '>=', zipPrefix),
+                where('marketId', '<=', zipPrefix + '\uf8ff')
+            );
+            
+            // Then filter out the user's own shops in the client
+            const first = await getDocs(q);
+            return first.docs
+                .map(doc => ({ id: doc.id, ...doc.data() }))
+                .filter(shop => shop.userId !== userId);
+        } catch (error) {
+            console.error('Error getting shops by zip code prefix:', error);
+            throw error;
+        }
+    }
+
     disconnect() {
         try {
             this.app = null;
