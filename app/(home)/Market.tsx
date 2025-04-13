@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, FlatList, StyleSheet, Platform, ActivityIndicator } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, FlatList, StyleSheet, Platform, ActivityIndicator, RefreshControl } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import MapScreen from '@/components/MapScreen';
@@ -13,40 +13,72 @@ const MarketScreen = () => {
     const [searchQuery, setSearchQuery] = useState('');
     const [showSortOptions, setShowSortOptions] = useState(false);
     const [shops, setShops] = useState([]);
+    const [items, setItems] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [refreshing, setRefreshing] = useState(false);
+    
+    // Group items by shop for easy access to item images
+    const [shopItemsMap, setShopItemsMap] = useState({});
     
     // Use the user context instead of managing userData locally
     const { userData } = useUser();
 
     // Fetch shops based on user's ZIP code
-    useEffect(() => {
-        const fetchShops = async () => {
-            try {
-                setLoading(true);
-                if (userData?.location?.zip) {
-                    // Get first 2 digits of ZIP code
-                    const zipPrefix = userData.location?.zip.substring(0, 2);
-                    const shopsData = await firebaseService.getShopsByZipCodePrefix(zipPrefix, userData.uid);
-                    setShops(shopsData || []);
-                } else {
-                    // If no user ZIP code, just set empty shops array
-                    setShops([]);
-                }
-            } catch (error) {
-                console.error("Error fetching shops:", error);
+    const fetchShopsAndItems = async () => {
+        try {
+            setLoading(true);
+            if (userData?.location?.zip) {
+                // Get first 2 digits of ZIP code
+                const zipPrefix = userData.location?.zip.substring(0, 2);
+                const shopsData = await firebaseService.getShopsByZipCodePrefix(zipPrefix, userData.uid);
+                setShops(shopsData || []);
+                
+                // Create a map of shop IDs to arrays of item images
+                const itemsByShop = {};
+                
+                // Fetch items for each shop
+                await Promise.all(shopsData.map(async (shop) => {
+                    try {
+                        const shopItems = await firebaseService.getItemsForShop(shop.id);
+                        if (shopItems && shopItems.length > 0) {
+                            const imageUrls = shopItems
+                                .filter(item => item.imageUrl)
+                                .map(item => item.imageUrl);
+                            
+                            itemsByShop[shop.id] = imageUrls;
+                        }
+                    } catch (err) {
+                        console.error(`Error fetching items for shop ${shop.id}:`, err);
+                    }
+                }));
+                
+                setShopItemsMap(itemsByShop);
+            } else {
+                // If no user ZIP code, just set empty shops array
                 setShops([]);
-            } finally {
-                setLoading(false);
             }
-        };
+        } catch (error) {
+            console.error("Error fetching shops:", error);
+            setShops([]);
+        } finally {
+            setLoading(false);
+            setRefreshing(false);
+        }
+    };
 
-        fetchShops();
+    useEffect(() => {
+        fetchShopsAndItems();
     }, [userData]);
 
     const toggleView = () => setIsMapView(!isMapView);
     
+    const onRefresh = () => {
+        setRefreshing(true);
+        fetchShopsAndItems();
+    };
+    
     const renderContent = () => {
-        if (loading) {
+        if (loading && !refreshing) {
             return (
                 <View style={styles.centeredContainer}>
                     <ActivityIndicator size="large" color="#333" />
@@ -74,11 +106,17 @@ const MarketScreen = () => {
                 renderItem={({ item }) => (
                     <ShopCard 
                         name={item.name} 
-                        itemImages={item.images}
+                        itemImages={shopItemsMap[item.id] || []}
                         key={item.id}
                     />
                 )}
                 keyExtractor={(item) => item.id}
+                refreshControl={
+                    <RefreshControl
+                        refreshing={refreshing}
+                        onRefresh={onRefresh}
+                    />
+                }
             />
         );
     };
