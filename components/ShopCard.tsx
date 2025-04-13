@@ -11,13 +11,20 @@ const ShopCard = ({ name, itemImages }: ShopCardProps) => (
         <TouchableOpacity>
             <Text style={styles.shopName}>{name}</Text>
             <View style={styles.shopCircles}>
-                {itemImages.slice(0, itemImages.length).map((image, i) => (
-                    <Image
-                        key={i}
-                        source={typeof image === 'string' ? { uri: image } : image}
-                        style={styles.itemImage}
-                    />
-                ))}
+                {itemImages && itemImages.length > 0 ? (
+                    itemImages.map((image, i) => (
+                        <Image
+                            key={i}
+                            source={typeof image === 'string' ? { uri: image } : image}
+                            style={styles.itemImage}
+                        />
+                    ))
+                ) : (
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                        <View style={{ width: 20, height: 20, backgroundColor: '#f0f0f0', borderRadius: 10 }} />
+                        <Text style={{ marginLeft: 8, color: '#888', fontStyle: 'italic' }}>No items yet</Text>
+                    </View>
+                )}
             </View>
         </TouchableOpacity>
     </View>
