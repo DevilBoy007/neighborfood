@@ -402,12 +402,11 @@ class FirebaseService {
                     throw new Error('Error connecting to Firestore');
                 }
             }
-            const shopRef = doc(this.db, "shops", shopId);
-            const itemsSnapshot = await this.getDocumentsWhere('items', 'shop', '==', shopRef);
+            const itemsSnapshot = await this.getDocumentsWhere('items', 'shopId', '==', shopId);
             const items: any[] = [];
 
             itemsSnapshot.forEach((doc) => {
-                items.push({ id: doc.id, ...doc.data() });
+                items.push({ ...doc });
             });
 
             return items;
