@@ -1,6 +1,6 @@
 import React from 'react';
 import { useState, useEffect } from 'react';
-import { StyleSheet, View, Text, Platform, LogBox, ActivityIndicator } from 'react-native';
+import { StyleSheet, View, Text, Image, Platform, LogBox, ActivityIndicator } from 'react-native';
 import MapView, { PROVIDER_DEFAULT, PROVIDER_GOOGLE, Marker, Callout } from 'react-native-maps';
 import { useLocation } from '@/context/locationContext';
 import icon from '@/assets/images/rabbit-icon.png'
@@ -13,6 +13,7 @@ interface MarkerData {
     };
     title: string;
     description: string;
+    image: string;
 }
 
 interface Shop {
@@ -23,6 +24,7 @@ interface Shop {
         latitude: number;
         longitude: number;
     };
+    backgroundImageUrl: string;
 }
 
 interface MapScreenProps {
@@ -50,7 +52,8 @@ const MapScreen = ({ shops = [] }: MapScreenProps) => {
                     longitude: shop.location.longitude
                 },
                 title: shop.name || 'Shop',
-                description: shop.description || ''
+                description: shop.description || '',
+                image: shop.backgroundImageUrl || ''
             }));
             setMarkers(shopMarkers);
 
@@ -114,6 +117,11 @@ const MapScreen = ({ shops = [] }: MapScreenProps) => {
                         >
                             <Callout>
                                 <View style={{ width: 150, height: 150 }}>
+                                    <Image
+                                        source={{ uri: marker.image }}
+                                        style={{ width: 100, height: 50, borderRadius: 10 }}
+                                        resizeMode="cover"
+                                    />
                                     <Text style={ styles.calloutTitle }>{marker.title}</Text>
                                     <Text style={ styles.calloutDescription }>{marker.description}</Text>
                                 </View>
