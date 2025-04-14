@@ -106,7 +106,7 @@ const MapScreenWeb = ({ shops = [] }: WebMapScreenProps) => {
                 }}
                 defaultZoom={12}
                 mapId={"market"}
-                
+                reuseMaps={true}
             >
                 {markers.map(marker => (
                     <Fragment key={marker.id}>
