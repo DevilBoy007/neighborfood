@@ -11,6 +11,7 @@ interface MarkerData {
     };
     title: string;
     description: string;
+    image?: string;
 }
 
 interface Shop {
@@ -21,6 +22,7 @@ interface Shop {
         latitude: number;
         longitude: number;
     };
+    backgroundImageUrl?: string;
 }
 
 interface WebMapScreenProps {
@@ -28,7 +30,7 @@ interface WebMapScreenProps {
 }
 
 const MapScreenWeb = ({ shops = [] }: WebMapScreenProps) => {
-    // Use the location context instead of local state
+
     const { locationData, fetchCurrentLocation } = useLocation();
     const [selectedMarkerId, setSelectedMarkerId] = useState<string | null>(null);
     const [markers, setMarkers] = useState<MarkerData[]>([]);
@@ -38,7 +40,6 @@ const MapScreenWeb = ({ shops = [] }: WebMapScreenProps) => {
         fetchCurrentLocation();
     }, []);
 
-    // Update markers when location changes from context or shops prop changes
     useEffect(() => {
         if (locationData.coords) {
             // Create user location marker
@@ -50,7 +51,8 @@ const MapScreenWeb = ({ shops = [] }: WebMapScreenProps) => {
                         lng: locationData.coords.longitude
                     },
                     title: "You are here",
-                    description: "This is your current location"
+                    description: "This is your current location",
+                    image: ""
                 }
             ];
             
@@ -62,7 +64,8 @@ const MapScreenWeb = ({ shops = [] }: WebMapScreenProps) => {
                     lng: shop.location.longitude
                 },
                 title: shop.name,
-                description: shop.description
+                description: shop.description,
+                image: shop.backgroundImageUrl
             }));
             
             setMarkers([...baseMarkers, ...shopMarkers]);
@@ -95,7 +98,7 @@ const MapScreenWeb = ({ shops = [] }: WebMapScreenProps) => {
 
     return (
         <APIProvider 
-            apiKey={process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY} 
+            apiKey={process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || ''} 
             key={mapKey} // Use key to force re-render
         >
             <Map
@@ -124,12 +127,13 @@ const MapScreenWeb = ({ shops = [] }: WebMapScreenProps) => {
                         </AdvancedMarker>
                         {selectedMarkerId === marker.id && (
                             <InfoWindow
+                                headerContent={<img src={marker.image} style={{height: 75, width: 200}}/>}
                                 position={marker.position}
                                 onCloseClick={() => setSelectedMarkerId(null)}
                             >
                                 <div>
                                     <h3>{marker.title}</h3>
-                                    <p>{marker.description}</p>
+                                    <p><i>{marker.description}</i></p>
                                 </div>
                             </InfoWindow>
                         )}
