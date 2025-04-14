@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { StyleSheet, View, Text, Platform, LogBox, ActivityIndicator } from 'react-native';
 import MapView, { PROVIDER_DEFAULT, PROVIDER_GOOGLE, Marker, Callout } from 'react-native-maps';
 import { useLocation } from '@/context/locationContext';
+import icon from '@/assets/images/rabbit-icon.png'
 
 interface MarkerData {
     id: string;
@@ -106,6 +107,8 @@ const MapScreen = ({ shops = [] }: MapScreenProps) => {
                                 longitude: marker.location.longitude
                             }}
                             title={marker.title}
+                            icon={icon}
+                            image={icon}
                             pinColor="#b7ffb0"
                             onPress={() => handleMarkerPress(marker.id)}
                         >
