@@ -31,7 +31,6 @@ interface MapScreenProps {
 LogBox.ignoreLogs(['VectorKit']);
 
 const MapScreen = ({ shops = [] }: MapScreenProps) => {
-    // Use the location context instead of local state
     const { locationData, fetchCurrentLocation } = useLocation();
     const [markers, setMarkers] = useState<MarkerData[]>([]);
     const [selectedMarkerId, setSelectedMarkerId] = useState<string | null>(null);
@@ -43,20 +42,6 @@ const MapScreen = ({ shops = [] }: MapScreenProps) => {
 
     useEffect(() => {
         if (locationData.coords) {
-            // Create base markers for user location
-            const baseMarkers = [
-                {
-                    id: 'user-location',
-                    location: {
-                        latitude: locationData.coords.latitude,
-                        longitude: locationData.coords.longitude,
-                    },
-                    title: 'Your Location',
-                    description: 'You are here'
-                },
-            ];
-            
-            // Add shop markers
             const shopMarkers = shops.map(shop => ({
                 id: `shop-${shop.id}`,
                 location: {
@@ -66,14 +51,7 @@ const MapScreen = ({ shops = [] }: MapScreenProps) => {
                 title: shop.name || 'Shop',
                 description: shop.description || ''
             }));
-            
-            // Debug logging (remove in production)
-            console.log('User location:', baseMarkers[0].location);
-            console.log('Shops count:', shops.length);
-            console.log('Valid shop markers:', shopMarkers.length);
-            
-            // Combine all markers
-            setMarkers([...baseMarkers, ...shopMarkers]);
+            setMarkers(shopMarkers);
 
             // Force map to re-render when coordinates are available
             setMapKey(Date.now());
@@ -120,9 +98,6 @@ const MapScreen = ({ shops = [] }: MapScreenProps) => {
                 tintColor='#00bfff'
             >
                 {markers.map(marker => {
-                    // Debug logging (remove in production)
-                    console.log('Rendering marker:', marker.id, marker.location);
-                    
                     return (
                         <Marker
                             key={marker.id}
@@ -131,7 +106,7 @@ const MapScreen = ({ shops = [] }: MapScreenProps) => {
                                 longitude: marker.location.longitude
                             }}
                             title={marker.title}
-                            pinColor={marker.id === 'user-location' ? "#00bfff" : "#b7ffb0"}
+                            pinColor="#b7ffb0"
                             onPress={() => handleMarkerPress(marker.id)}
                         >
                             <Callout>
