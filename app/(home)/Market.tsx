@@ -99,7 +99,9 @@ const MarketScreen = () => {
         }
         
         if (isMapView) {
-            return Platform.OS === 'web' ? <WebMapScreen/> : <MapScreen/>;
+            return Platform.OS === 'web' 
+                ? <WebMapScreen shops={shops} /> 
+                : <MapScreen shops={shops} />;
         }
         
         if (shops.length === 0) {

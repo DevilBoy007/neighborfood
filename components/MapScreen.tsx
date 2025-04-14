@@ -6,7 +6,7 @@ import { useLocation } from '@/context/locationContext';
 
 interface MarkerData {
     id: string;
-    coordinate: {
+    location: {
         latitude: number;
         longitude: number;
     };
@@ -14,9 +14,23 @@ interface MarkerData {
     description: string;
 }
 
+interface Shop {
+    id: string;
+    name: string;
+    description: string;
+    location: {
+        latitude: number;
+        longitude: number;
+    };
+}
+
+interface MapScreenProps {
+    shops?: Shop[];
+}
+
 LogBox.ignoreLogs(['VectorKit']);
 
-const MapScreen = () => {
+const MapScreen = ({ shops = [] }: MapScreenProps) => {
     // Use the location context instead of local state
     const { locationData, fetchCurrentLocation } = useLocation();
     const [markers, setMarkers] = useState<MarkerData[]>([]);
@@ -29,32 +43,42 @@ const MapScreen = () => {
 
     useEffect(() => {
         if (locationData.coords) {
-            const newMarkers = [
+            // Create base markers for user location
+            const baseMarkers = [
                 {
-                    id: '1',
-                    coordinate: {
+                    id: 'user-location',
+                    location: {
                         latitude: locationData.coords.latitude,
                         longitude: locationData.coords.longitude,
                     },
                     title: 'Your Location',
                     description: 'You are here'
                 },
-                {
-                    id: '2',
-                    coordinate: {
-                        latitude: (locationData.coords.latitude + 0.002),
-                        longitude: (locationData.coords.longitude + 0.002),
-                    },
-                    title: 'Test Location',
-                    description: 'Test marker'
-                }
             ];
-            setMarkers(newMarkers);
+            
+            // Add shop markers
+            const shopMarkers = shops.map(shop => ({
+                id: `shop-${shop.id}`,
+                location: {
+                    latitude: shop.location.latitude,
+                    longitude: shop.location.longitude
+                },
+                title: shop.name || 'Shop',
+                description: shop.description || ''
+            }));
+            
+            // Debug logging (remove in production)
+            console.log('User location:', baseMarkers[0].location);
+            console.log('Shops count:', shops.length);
+            console.log('Valid shop markers:', shopMarkers.length);
+            
+            // Combine all markers
+            setMarkers([...baseMarkers, ...shopMarkers]);
 
             // Force map to re-render when coordinates are available
             setMapKey(Date.now());
         }
-    }, [locationData.coords]);
+    }, [locationData.coords, shops]);
 
     const handleMarkerPress = (markerId: string) => {
         setSelectedMarkerId(markerId === selectedMarkerId ? null : markerId);
@@ -95,22 +119,30 @@ const MapScreen = () => {
                 showsUserLocation={true}
                 tintColor='#00bfff'
             >
-                {markers.map(marker => (
-                    <Marker
-                        key={marker.id}
-                        coordinate={marker.coordinate}
-                        title={marker.title}
-                        pinColor="#b7ffb0"
-                        onPress={() => handleMarkerPress(marker.id)}
-                    >
-                        <Callout>
-                            <View>
-                                <Text>{marker.title}</Text>
-                                <Text>{marker.description}</Text>
-                            </View>
-                        </Callout>
-                    </Marker>
-                ))}
+                {markers.map(marker => {
+                    // Debug logging (remove in production)
+                    console.log('Rendering marker:', marker.id, marker.location);
+                    
+                    return (
+                        <Marker
+                            key={marker.id}
+                            coordinate={{
+                                latitude: marker.location.latitude,
+                                longitude: marker.location.longitude
+                            }}
+                            title={marker.title}
+                            pinColor={marker.id === 'user-location' ? "#00bfff" : "#b7ffb0"}
+                            onPress={() => handleMarkerPress(marker.id)}
+                        >
+                            <Callout>
+                                <View style={{ width: 150, height: 150 }}>
+                                    <Text style={ styles.calloutTitle }>{marker.title}</Text>
+                                    <Text style={ styles.calloutDescription }>{marker.description}</Text>
+                                </View>
+                            </Callout>
+                        </Marker>
+                    );
+                })}
             </MapView>
         </View>
     );
@@ -142,7 +174,13 @@ const styles = StyleSheet.create({
         marginHorizontal: 2,
         fontFamily: 'TextMeOne',
         fontSize: 21,
-    }
+    },
+    calloutTitle: {
+        fontWeight: 'bold',
+    },
+    calloutDescription: {
+        fontStyle: 'italic',
+    },
 });
 
 export default MapScreen;

@@ -13,7 +13,21 @@ interface MarkerData {
     description: string;
 }
 
-const MapScreenWeb = () => {
+interface Shop {
+    id: string;
+    name: string;
+    description: string;
+    location: {
+        latitude: number;
+        longitude: number;
+    };
+}
+
+interface WebMapScreenProps {
+    shops?: Shop[];
+}
+
+const MapScreenWeb = ({ shops = [] }: WebMapScreenProps) => {
     // Use the location context instead of local state
     const { locationData, fetchCurrentLocation } = useLocation();
     const [selectedMarkerId, setSelectedMarkerId] = useState<string | null>(null);
@@ -24,34 +38,39 @@ const MapScreenWeb = () => {
         fetchCurrentLocation();
     }, []);
 
-    // Update markers when location changes from context
+    // Update markers when location changes from context or shops prop changes
     useEffect(() => {
         if (locationData.coords) {
-            setMarkers([
+            // Create user location marker
+            const baseMarkers = [
                 {
-                    id: '1',
+                    id: 'user-location',
                     position: {
                         lat: locationData.coords.latitude,
                         lng: locationData.coords.longitude
                     },
                     title: "You are here",
                     description: "This is your current location"
+                }
+            ];
+            
+            // Create shop markers
+            const shopMarkers = shops.map(shop => ({
+                id: `shop-${shop.id}`,
+                position: {
+                    lat: shop.location.latitude,
+                    lng: shop.location.longitude
                 },
-                {
-                    id: '2',
-                    position: {
-                        lat: locationData.coords.latitude + 0.001,
-                        lng: locationData.coords.longitude + 0.001
-                    },
-                    title: "You are NOT here",
-                    description: "This is NOT your current location"
-                },
-            ]);
+                title: shop.name,
+                description: shop.description
+            }));
+            
+            setMarkers([...baseMarkers, ...shopMarkers]);
             
             // Force map to re-render when coordinates are available
             setMapKey(Date.now());
         }
-    }, [locationData.coords]);
+    }, [locationData.coords, shops]);
 
     const handleMarkerClick = (markerId: string) => {
         setSelectedMarkerId(markerId === selectedMarkerId ? null : markerId);
@@ -85,8 +104,9 @@ const MapScreenWeb = () => {
                     lat: locationData.coords.latitude,
                     lng: locationData.coords.longitude
                 }}
-                defaultZoom={16}
+                defaultZoom={12}
                 mapId={"market"}
+                
             >
                 {markers.map(marker => (
                     <Fragment key={marker.id}>
@@ -96,10 +116,10 @@ const MapScreenWeb = () => {
                             onClick={() => handleMarkerClick(marker.id)}
                         >
                             <Pin
-                                background={'#00bfff'}
+                                background={marker.id === 'user-location' ? '#00bfff' : '#b7ffb0'}
                                 borderColor={'#006425'}
-                                glyphColor={'#b7ffb0'}
-                                glyph={'🐰'}
+                                glyphColor={'#ffffff'}
+                                glyph={marker.id === 'user-location' ? '📍' : '🐰'}
                             />
                         </AdvancedMarker>
                         {selectedMarkerId === marker.id && (
