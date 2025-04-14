@@ -31,6 +31,7 @@ export default function ShopRegistrationScreen() {
     const [closeTime, setCloseTime] = useState<string>('');
     const [allowPickup, setAllowPickup] = useState<boolean>(false);
     const [localDelivery, setLocalDelivery] = useState<boolean>(false);
+    const imageUrls = ["https://firebasestorage.googleapis.com/v0/b/neighborfoods/o/banner.JPG?alt=media&token=f47ea7ab-2e7e-4ea5-978e-bee307112bc6", "https://www.datocms-assets.com/75076/1656656339-macgregor_tartan_2.jpeg?auto=format&w=1600"]
     
     const [errors, setErrors] = useState({
         name: '',
@@ -132,6 +133,10 @@ export default function ShopRegistrationScreen() {
                     return;
                 }
 
+                // Get a random image URL from the imageUrls array
+                const randomIndex = Math.floor(Math.random() * imageUrls.length);
+                const randomImageUrl = imageUrls[randomIndex];
+
                 const shopData = {
                     name,
                     description,
@@ -146,7 +151,7 @@ export default function ShopRegistrationScreen() {
                     marketId: userData.location.zip || '',  // Associate shop with user's market
                     userId: userData.uid,  // Associate shop with current user
                     createdAt: new Date(),
-                    backgroundImageUrl: 'https://cdn.shopify.com/s/files/1/0247/7771/9862/files/Kona-Fab-Farm-Quilt_480x480.jpg?v=1718261403'
+                    backgroundImageUrl: randomImageUrl
                 };
                 
                 // Connect to firebase
