@@ -17,9 +17,6 @@ const MarketScreen = () => {
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     
-    // Group items by shop for easy access to item images
-    const [shopItemsMap, setShopItemsMap] = useState({});
-    
     // Use both user context and location context
     const { userData } = useUser();
     const { locationData } = useLocation();
@@ -41,28 +38,25 @@ const MarketScreen = () => {
                 // Get first 2 digits of ZIP code
                 const zipPrefix = zipToUse.substring(0, 2);
                 const shopsData = await firebaseService.getShopsByZipCodePrefix(zipPrefix, userData.uid);
-                setShops(shopsData || []);
                 
-                // Create a map of shop IDs to arrays of item images
-                const itemsByShop = {};
-                
-                // Fetch items for each shop
-                await Promise.all(shopsData.map(async (shop) => {
+                // Fetch items for each shop and attach them directly to the shop objects
+                const shopsWithItems = await Promise.all(shopsData.map(async (shop) => {
                     try {
                         const shopItems = await firebaseService.getItemsForShop(shop.id);
-                        if (shopItems && shopItems.length > 0) {
-                            const imageUrls = shopItems
-                                .filter(item => item.imageUrl)
-                                .map(item => item.imageUrl);
-                            
-                            itemsByShop[shop.id] = imageUrls;
-                        }
+                        return {
+                            ...shop,
+                            items: shopItems || []
+                        };
                     } catch (err) {
                         console.error(`Error fetching items for shop ${shop.id}:`, err);
+                        return {
+                            ...shop,
+                            items: []
+                        };
                     }
                 }));
                 
-                setShopItemsMap(itemsByShop);
+                setShops(shopsWithItems || []);
             } else {
                 // If no ZIP code available, set empty shops array
                 setShops([]);
@@ -119,8 +113,8 @@ const MarketScreen = () => {
                     data={shops}
                     renderItem={({ item }) => (
                         <ShopCard 
-                            name={item.name} 
-                            itemImages={shopItemsMap[item.id] || []}
+                            name={item.name}
+                            shop={item}
                             key={item.id}
                         />
                     )}
