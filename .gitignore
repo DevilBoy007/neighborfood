@@ -1,5 +1,12 @@
+# personal
+notes/
+
 # config / env variables
 .env
+
+# firebase
+.firebaserc
+firebase.json
 
 # build outputs
 assets/mascot/
