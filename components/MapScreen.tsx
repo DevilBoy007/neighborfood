@@ -46,7 +46,7 @@ const MapScreen = ({ shops = [] }: MapScreenProps) => {
     useEffect(() => {
         if (locationData.coords) {
             const shopMarkers = shops.map(shop => ({
-                id: `shop-${shop.id}`,
+                id: shop.id,
                 location: {
                     latitude: shop.location.latitude,
                     longitude: shop.location.longitude
