@@ -2,8 +2,10 @@ import React from 'react';
 import { useState, useEffect } from 'react';
 import { StyleSheet, View, Text, Image, Platform, LogBox, ActivityIndicator } from 'react-native';
 import MapView, { PROVIDER_DEFAULT, PROVIDER_GOOGLE, Marker, Callout } from 'react-native-maps';
-import { useLocation } from '@/context/locationContext';
 import icon from '@/assets/images/rabbit-icon.png'
+
+import { useLocation } from '@/context/locationContext';
+import { useShop } from '@/context/shopContext';
 
 interface MarkerData {
     id: string;
@@ -35,6 +37,7 @@ LogBox.ignoreLogs(['VectorKit']);
 
 const MapScreen = ({ shops = [] }: MapScreenProps) => {
     const { locationData, fetchCurrentLocation } = useLocation();
+    const { selectedShop, setSelectedShop } = useShop();
     const [markers, setMarkers] = useState<MarkerData[]>([]);
     const [selectedMarkerId, setSelectedMarkerId] = useState<string | null>(null);
     const [mapKey, setMapKey] = useState(Date.now()); // Add key to force re-render
