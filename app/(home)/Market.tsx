@@ -1,117 +1,170 @@
-import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, FlatList, StyleSheet, Platform } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, TextInput, TouchableOpacity, FlatList, StyleSheet, Platform, ActivityIndicator, RefreshControl } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import MapScreen from '@/components/MapScreen';
 import WebMapScreen from '@/components/WebMapScreen';
 import ShopCard from '@/components/ShopCard';
 import { useUser } from '@/context/userContext';
-
-import tomatoImage from '../../assets/images/tomatoes.png';
-import dillImage from '../../assets/images/dill.jpeg';
-import bellPepperImage from '../../assets/images/bellPeppers.jpeg';
-import breadImage from '../../assets/images/bread.jpeg';
-import strawberryImage from '../../assets/images/strawberries.jpeg';
+import { useLocation } from '@/context/locationContext';
+import firebaseService from '@/handlers/firebaseService';
 
 const MarketScreen = () => {
     const [isMapView, setIsMapView] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
     const [showSortOptions, setShowSortOptions] = useState(false);
+    const [shops, setShops] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [refreshing, setRefreshing] = useState(false);
     
-    // Use the user context instead of managing userData locally
+    // Group items by shop for easy access to item images
+    const [shopItemsMap, setShopItemsMap] = useState({});
+    
+    // Use both user context and location context
     const { userData } = useUser();
+    const { locationData } = useLocation();
 
-    const shops = [
-        {
-            id: '1',
-            name: "Ben's Beef",
-            description: 'Fresh local meats',
-            images: [bellPepperImage, dillImage, tomatoImage],
-            rating: 4.3,
-            address: '123 Butcher St'
-        },
-        {
-            id: '2',
-            name: "Big Baskets",
-            description: 'Fresh local produce',
-            images: [tomatoImage, strawberryImage, bellPepperImage],
-            rating: 4.7,
-            address: '456 Market Ave'
-        },
-        {
-            id: '3',
-            name: "Ann's Apples",
-            description: 'Local orchard goods',
-            images: [strawberryImage, breadImage, dillImage],
-            rating: 4.4,
-            address: '789 Orchard Ln'
-        },
-        {
-            id: '4',
-            name: "Happy Alan's Produce",
-            description: 'Farm fresh vegetables',
-            images: [bellPepperImage, tomatoImage, dillImage],
-            rating: 4.6,
-            address: '321 Farm Rd'
+    // Fetch shops based on current location or fallback to user's stored location
+    const fetchShopsAndItems = async () => {
+        try {
+            setLoading(true);
+            
+            // Try to use current location's ZIP code first
+            let zipToUse = locationData.zipCode;
+            
+            // Fall back to user's stored ZIP if current location isn't available
+            if (!zipToUse && userData?.location?.zip) {
+                zipToUse = userData.location.zip;
+            }
+            
+            if (zipToUse) {
+                // Get first 2 digits of ZIP code
+                const zipPrefix = zipToUse.substring(0, 2);
+                const shopsData = await firebaseService.getShopsByZipCodePrefix(zipPrefix, userData.uid);
+                setShops(shopsData || []);
+                
+                // Create a map of shop IDs to arrays of item images
+                const itemsByShop = {};
+                
+                // Fetch items for each shop
+                await Promise.all(shopsData.map(async (shop) => {
+                    try {
+                        const shopItems = await firebaseService.getItemsForShop(shop.id);
+                        if (shopItems && shopItems.length > 0) {
+                            const imageUrls = shopItems
+                                .filter(item => item.imageUrl)
+                                .map(item => item.imageUrl);
+                            
+                            itemsByShop[shop.id] = imageUrls;
+                        }
+                    } catch (err) {
+                        console.error(`Error fetching items for shop ${shop.id}:`, err);
+                    }
+                }));
+                
+                setShopItemsMap(itemsByShop);
+            } else {
+                // If no ZIP code available, set empty shops array
+                setShops([]);
+            }
+        } catch (error) {
+            console.error("Error fetching shops:", error);
+            setShops([]);
+        } finally {
+            setLoading(false);
+            setRefreshing(false);
         }
-    ];
+    };
 
-    // No need for useEffect to load user data since it's provided by context
+    // Update when either userData or locationData changes
+    useEffect(() => {
+        fetchShopsAndItems();
+    }, [userData, locationData.zipCode]);
 
     const toggleView = () => setIsMapView(!isMapView);
     
+    const onRefresh = () => {
+        setRefreshing(true);
+        fetchShopsAndItems();
+    };
+    
+    const renderContent = () => {
+        if (loading && !refreshing) {
+            return (
+                <View style={styles.centeredContainer}>
+                    <ActivityIndicator size="large" color="#333" />
+                    <Text style={styles.messageText}>Fetching shops...</Text>
+                </View>
+            );
+        }
+        
+        if (isMapView) {
+            return Platform.OS === 'web' 
+                ? <WebMapScreen shops={shops} /> 
+                : <MapScreen shops={shops} />;
+        }
+        
+        if (shops.length === 0) {
+            return (
+                <View style={styles.centeredContainer}>
+                    <Text style={styles.messageText}>No shops found in your area</Text>
+                </View>
+            );
+        }
+        
+        return (
+            <View style={styles.listContainer}>
+                <FlatList
+                    contentContainerStyle={styles.flatListContent}
+                    data={shops}
+                    renderItem={({ item }) => (
+                        <ShopCard 
+                            name={item.name} 
+                            itemImages={shopItemsMap[item.id] || []}
+                            key={item.id}
+                        />
+                    )}
+                    keyExtractor={(item) => item.id}
+                    refreshControl={
+                        <RefreshControl
+                            refreshing={refreshing}
+                            onRefresh={onRefresh}
+                            tintColor={"#00bfff"}
+                            title='Fetching shops...'
+                            titleColor={"#00bfff"}
+                            colors={["#00bfff", "#000"]}
+                        />
+                    }
+                />
+            </View>
+        );
+    };
+    
     return (
-        <>
         <View style={styles.container}>
             <View style={styles.header}>
                 <Text style={styles.title}>market</Text>
             </View>
 
-            <View style={ styles.searchContainer }>
-                <Ionicons name="search" size={ 20 } color="gray" style={ styles.searchIcon } />
+            <View style={styles.searchContainer}>
+                <Ionicons name="search" size={20} color="gray" style={styles.searchIcon} />
                 <TextInput
-                    style= {styles.searchInput }
+                    style={styles.searchInput}
                     placeholder="search"
-                    placeholderTextColor={ '#999' }
-                    value={ searchQuery }
-                    onChangeText={ setSearchQuery }
+                    placeholderTextColor="#999"
+                    value={searchQuery}
+                    onChangeText={setSearchQuery}
                 />
-                <TouchableOpacity style={ styles.textButton }>
+                <TouchableOpacity style={styles.textButton}>
                     <Text style={{ fontFamily: 'TextMeOne' }}>sort</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={ styles.textButton } onPress={ toggleView }>
-                    <Text style={{ fontFamily: 'TextMeOne' }}>{ isMapView ? 'list' : 'map' }</Text>
+                <TouchableOpacity style={styles.textButton} onPress={toggleView}>
+                    <Text style={{ fontFamily: 'TextMeOne' }}>{isMapView ? 'list' : 'map'}</Text>
                 </TouchableOpacity>
             </View>
 
-            {/* Display welcome message with user's name if available
-            {userData && (
-                <Text style={styles.welcomeText}>
-                    Welcome, {userData.displayName || userData.first || 'User'}!
-                </Text>
-            )} */}
-
-            {isMapView ? (
-                Platform.OS === 'web' ? (
-                    <WebMapScreen/>
-                ) : (
-                    <MapScreen/>
-                )
-            ) : (
-                <FlatList
-                    data={shops}
-                    renderItem={({ item }) => (
-                        <ShopCard 
-                            name={item.name} 
-                            itemImages={item.images}
-                            key={item.id}
-                        />
-                    )}
-                    keyExtractor={(item) => item.id}
-                />
-            )}
+            {renderContent()}
         </View>
-        </>
     );
 };
 
@@ -120,8 +173,11 @@ const styles = StyleSheet.create({
         backgroundColor: '#B7FFB0',
         minHeight: '100%',
         ...Platform.select({
-            web:{
+            web: {
                 minWidth: '100%',
+                height: '100vh',
+                display: 'flex',
+                flexDirection: 'column'
             }
         })
     },
@@ -208,6 +264,37 @@ const styles = StyleSheet.create({
         textAlign: 'center',
         color: '#333',
         marginVertical: 10,
+    },
+    centeredContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: 20,
+    },
+    messageText: {
+        fontFamily: 'TextMeOne',
+        fontSize: 18,
+        color: '#333',
+        textAlign: 'center',
+        marginTop: 10,
+    },
+    listContainer: {
+        flex: 1,
+        ...Platform.select({
+            web: {
+                overflow: 'auto',
+                height: '100%',
+                flex: 1
+            }
+        })
+    },
+    flatListContent: {
+        paddingBottom: 100,
+        ...Platform.select({
+            web: {
+                minWidth: '100%'
+            }
+        })
     }
 });
 

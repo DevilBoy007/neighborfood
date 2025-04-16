@@ -402,12 +402,11 @@ class FirebaseService {
                     throw new Error('Error connecting to Firestore');
                 }
             }
-            const shopRef = doc(this.db, "shops", shopId);
-            const itemsSnapshot = await this.getDocumentsWhere('items', 'shop', '==', shopRef);
+            const itemsSnapshot = await this.getDocumentsWhere('items', 'shopId', '==', shopId);
             const items: any[] = [];
 
             itemsSnapshot.forEach((doc) => {
-                items.push({ id: doc.id, ...doc.data() });
+                items.push({ ...doc });
             });
 
             return items;
@@ -434,6 +433,73 @@ class FirebaseService {
             return shops;
         } catch (error) {
             console.error("Error fetching shops for market:", error);
+            throw error;
+        }
+    }
+
+    async getShopsByZipCodePrefix(zipPrefix: string, userId: string): Promise<any[]> {
+        try {
+            if (!this.db) {
+                await this.connect();
+                if (!this.db) {
+                    throw new Error('Error connecting to Firestore');
+                }
+            }
+            
+            // Query for shops where marketId starts with the zip prefix
+            const collectionRef = collection(this.db, 'shops');
+            
+            // First get all shops with matching zip prefix
+            const q = query(
+                collectionRef,
+                where('marketId', '>=', zipPrefix),
+                where('marketId', '<=', zipPrefix + '\uf8ff')
+            );
+            
+            // Then filter out the user's own shops in the client
+            const shops = await getDocs(q);
+            return shops.docs
+                .map(doc => ({ id: doc.id, ...doc.data() }))
+                .filter(shop => shop.userId !== userId);
+        } catch (error) {
+            console.error('Error getting shops by zip code prefix:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Get shops by either ZIP code prefix or by coordinates within a radius
+     */
+    async getShopsNearby(zipPrefix, userCoords, userId) {
+        try {
+            let query = collection(this.db, 'shops');
+
+            if (zipPrefix) {
+                // Use the existing ZIP code prefix query
+                query = query.where('zipPrefix', '==', zipPrefix);
+            } else if (userCoords) {
+                // If no ZIP but we have coordinates, we'd use geolocation query
+                // Note: This would require Firestore GeoPoint and geohashing setup
+                // For simplicity, you might just return all shops and filter them client-side for now
+            }
+
+            const querySnapshot = await getDocs(query);
+            const shops = [];
+
+            querySnapshot.forEach((doc) => {
+                const shopData = doc.data();
+                // Don't include the user's own shop
+                if (shopData.ownerId !== userId) {
+                    shops.push({
+                        id: doc.id,
+                        ...shopData
+                    });
+                }
+            });
+
+            return shops;
+        } catch (error) {
+            console.error("Error getting shops:", error);
             throw error;
         }
     }
