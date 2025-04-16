@@ -9,6 +9,7 @@ export default function RootLayout() {
             <Stack>
                 <Stack.Screen name="Shops" options={{ headerShown: false}} />
                 <Stack.Screen name="AddShop" options={{ headerShown: false }} />
+                <Stack.Screen name="ShopDetails" options={{ headerShown: false }} />
             </Stack>
         </KeyboardProvider>
     );

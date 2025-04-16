@@ -151,7 +151,7 @@ const styles = StyleSheet.create({
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        backgroundColor: '#b7ffb0',
+        backgroundColor: "#b7ffb0",
     },
     headerImage: {
         width: '100%',
@@ -166,14 +166,19 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'space-between',
         width: '100%',
+        
+        
     },
     backButtonContainer: {
         backgroundColor: 'rgba(255, 255, 255, 0.7)',
         borderRadius: 20,
         padding: 8,
+        
     },
     shopInfoContainer: {
         marginBottom: 20,
+        backgroundColor: "#b7ffb0",
+        alignItems: 'center',
     },
     shopName: {
         fontSize: 28,
@@ -218,6 +223,7 @@ const styles = StyleSheet.create({
     },
     itemsContainer: {
         marginTop: 16,
+        paddingBottom: 200,
     },
     sectionTitle: {
         fontSize: 22,
