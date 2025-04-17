@@ -1,6 +1,6 @@
 import React, { createContext, useState, useContext, ReactNode } from 'react';
 
-type ItemData = {
+export type ItemData = {
     id: string;
     shopId: string;
     marketId: string;
