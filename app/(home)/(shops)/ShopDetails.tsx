@@ -7,19 +7,12 @@ import { useLocation } from '@/context/locationContext';
 import ParallaxScrollView from '@/components/ParallaxScrollView';
 import ItemCard from '@/components/ItemCard';
 import firebaseService from '@/handlers/firebaseService';
-
-interface ShopItem {
-    id: string;
-    name: string;
-    price: number;
-    description: string;
-    imageUrl?: string;
-}
+import { ItemData } from '@/context/itemContext';
 
 export default function ShopDetails() {
     const { selectedShop } = useShop();
     const { locationData, formatDistance } = useLocation();
-    const [items, setItems] = useState<ShopItem[]>([]);
+    const [items, setItems] = useState<ItemData[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
     const router = useRouter();
 
@@ -178,15 +171,9 @@ export default function ShopDetails() {
                 items.map((item) => (
                     <ItemCard
                       key={item.id}
-                      id={item.id}
-                      itemId={item.id}
-                      shopId={selectedShop.id}
+                      item={item}
                       shopName={selectedShop.name}
                       shopPhotoURL={selectedShop.backgroundImageUrl}
-                      name={item.name}
-                      price={item.price}
-                      description={item.description}
-                      imageUrl={item.imageUrl}
                     />
                 ))
                 ) : (
