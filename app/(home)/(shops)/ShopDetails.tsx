@@ -108,30 +108,47 @@ export default function ShopDetails() {
 
                 {selectedShop.type && (
                 <View style={styles.infoRow}>
-                    <Ionicons name="briefcase-outline" size={18} color="#555" />
+                    <View style={styles.iconContainer}>
+                        <Ionicons name="briefcase-outline" size={18} color="#555" />
+                    </View>
                     <Text style={styles.infoText}>{selectedShop.type}</Text>
                 </View>
                 )}
 
                 {selectedShop.days && selectedShop.days.length > 0 && (
                 <View style={styles.infoRow}>
-                    <Ionicons name="calendar-outline" size={18} color="#555" />
+                    <View style={styles.iconContainer}>
+                        <Ionicons name="calendar-outline" size={18} color="#555" />
+                    </View>
                     <Text style={styles.infoText}>Available: {selectedShop.days.join(', ')}</Text>
                 </View>
                 )}
 
                 {selectedShop.openTime && selectedShop.closeTime && (
                 <View style={styles.infoRow}>
-                    <Ionicons name="time-outline" size={18} color="#555" />
+                    <View style={styles.iconContainer}>
+                        <Ionicons name="time-outline" size={18} color="#555" />
+                    </View>
                     <Text style={styles.infoText}>Hours: {selectedShop.openTime} - {selectedShop.closeTime}</Text>
                 </View>
                 )}
 
                 <View style={styles.infoRow}>
-                <Ionicons name="location-outline" size={18} color="#555" />
-                <Text style={styles.infoText}>
-                    {selectedShop.location?.latitude.toFixed(6)}, {selectedShop.location?.longitude.toFixed(6)}
-                </Text>
+                    <View style={styles.iconContainer}>
+                        <Ionicons name="location-outline" size={18} color="#555" />
+                    </View>
+                    <Text style={styles.infoText}>
+                        {locationData.coords && selectedShop.location ? 
+                            formatDistance(calculateDistance(
+                                locationData.coords.latitude, 
+                                locationData.coords.longitude, 
+                                selectedShop.location.latitude, 
+                                selectedShop.location.longitude
+                            )) + ' away'
+                            : 
+                            'Distance unavailable'
+                        }
+                    </Text>
                 </View>
 
                 <View style={styles.deliveryInfoContainer}>
@@ -245,11 +262,19 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         marginBottom: 8,
+        width: '100%',
+    },
+    iconContainer: {
+        width: 24,
+        height: 24,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: 8,
     },
     infoText: {
-        marginLeft: 8,
         color: '#555',
         fontFamily: 'TextMeOne',
+        flex: 1,
     },
     deliveryInfoContainer: {
         flexDirection: 'row',
