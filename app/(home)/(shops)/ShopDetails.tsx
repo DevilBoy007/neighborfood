@@ -105,35 +105,34 @@ export default function ShopDetails() {
             <View style={styles.shopInfoContainer}>
                 <Text style={styles.shopName}>{selectedShop.name}</Text>
                 <Text style={styles.shopDescription}>{selectedShop.description}</Text>
-
-                {selectedShop.type && (
-                <View style={styles.infoRow}>
-                    <View style={styles.iconContainer}>
-                        <Ionicons name="briefcase-outline" size={18} color="#555" />
+                <View>
+                    {selectedShop.type && (
+                    <View style={styles.infoRow}>
+                        <View style={styles.iconContainer}>
+                            <Ionicons name="briefcase-outline" size={18} color="#555" />
+                        </View>
+                        <Text style={styles.infoText}>{selectedShop.type}</Text>
                     </View>
-                    <Text style={styles.infoText}>{selectedShop.type}</Text>
-                </View>
-                )}
+                    )}
 
-                {selectedShop.days && selectedShop.days.length > 0 && (
-                <View style={styles.infoRow}>
-                    <View style={styles.iconContainer}>
-                        <Ionicons name="calendar-outline" size={18} color="#555" />
+                    {selectedShop.days && selectedShop.days.length > 0 && (
+                    <View style={styles.infoRow}>
+                        <View style={styles.iconContainer}>
+                            <Ionicons name="calendar-outline" size={18} color="#555" />
+                        </View>
+                        <Text style={styles.infoText}>Available: {selectedShop.days.join(', ')}</Text>
                     </View>
-                    <Text style={styles.infoText}>Available: {selectedShop.days.join(', ')}</Text>
-                </View>
-                )}
+                    )}
 
-                {selectedShop.openTime && selectedShop.closeTime && (
-                <View style={styles.infoRow}>
-                    <View style={styles.iconContainer}>
-                        <Ionicons name="time-outline" size={18} color="#555" />
+                    {selectedShop.openTime && selectedShop.closeTime && (
+                    <View style={styles.infoRow}>
+                        <View style={styles.iconContainer}>
+                            <Ionicons name="time-outline" size={18} color="#555" />
+                        </View>
+                        <Text style={styles.infoText}>Hours: {selectedShop.openTime} - {selectedShop.closeTime}</Text>
                     </View>
-                    <Text style={styles.infoText}>Hours: {selectedShop.openTime} - {selectedShop.closeTime}</Text>
-                </View>
-                )}
-
-                <View style={styles.infoRow}>
+                    )}
+                    <View style={styles.infoRow}>
                     <View style={styles.iconContainer}>
                         <Ionicons name="location-outline" size={18} color="#555" />
                     </View>
@@ -150,6 +149,9 @@ export default function ShopDetails() {
                         }
                     </Text>
                 </View>
+                </View>
+
+                
 
                 <View style={styles.deliveryInfoContainer}>
                 {selectedShop.allowPickup && (
@@ -218,8 +220,6 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'space-between',
         width: '100%',
-
-        
     },
     backButtonContainer: {
         backgroundColor: 'rgba(255, 255, 255, 0.7)',
