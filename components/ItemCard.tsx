@@ -2,49 +2,38 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, Image, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useCart } from '@/context/cartContext';
+import { ItemData } from '@/context/itemContext';
 
-export interface ItemProps {
-    id: string;
-    itemId?: string;
-    shopId?: string;
+interface ItemCardProps {
+    item: ItemData;
     shopName?: string;
     shopPhotoURL?: string;
-    name: string;
-    price: number;
-    description?: string;
-    imageUrl?: string;
     onPress?: () => void;
     showCartControls?: boolean;
 }
 
 const ItemCard = ({ 
-    id, 
-    itemId = '', 
-    shopId = '', 
+    item,
     shopName = '', 
     shopPhotoURL = '', 
-    name, 
-    price, 
-    description, 
-    imageUrl, 
     onPress,
     showCartControls = true
-    }: ItemProps) => {
+    }: ItemCardProps) => {
     const [quantity, setQuantity] = useState(1);
     const { addToCart } = useCart();
 
     const handleAddToCart = () => {
-        if (!shopId) return;
+        if (!item.shopId) return;
         
         addToCart({
-        itemId: itemId || id,
-        shopId,
+        itemId: item.id,
+        shopId: item.shopId,
         shopName,
         shopPhotoURL,
-        name,
-        price,
+        name: item.name,
+        price: item.price,
         quantity,
-        photoURL: imageUrl
+        photoURL: item.imageUrl
         });
 
         // Reset quantity after adding to cart
@@ -56,9 +45,9 @@ const ItemCard = ({
 
     return (
         <View style={styles.itemCard}>
-        {imageUrl && (
+        {item.imageUrl && (
             <Image 
-            source={{ uri: imageUrl }} 
+            source={{ uri: item.imageUrl }} 
             style={styles.itemImage}
             />
         )}
@@ -68,10 +57,21 @@ const ItemCard = ({
             disabled={!onPress}
             style={styles.infoContainer}
             >
-            <Text style={styles.itemName}>{name}</Text>
-            <Text style={styles.itemPrice}>${price?.toFixed(2)}</Text>
-            {description && (
-                <Text style={styles.itemDescription}>{description}</Text>
+            <Text style={styles.itemName}>{item.name}</Text>
+            
+            <View style={styles.priceRow}>
+                <Text style={styles.itemPrice}>${item.price?.toFixed(2)}</Text>
+                {item.unit && (
+                <Text style={styles.itemUnit}>{item.unit === 'each' ? item.unit : `per ${item.unit}`}</Text>
+                )}
+            </View>
+            
+            {item.description && (
+                <Text style={styles.itemDescription}>{item.description}</Text>
+            )}
+            
+            {item.negotiable && (
+                <Text style={styles.itemNegotiable}>Price negotiable</Text>
             )}
             </TouchableOpacity>
             
@@ -131,16 +131,32 @@ const styles = StyleSheet.create({
         marginBottom: 4,
         fontFamily: 'TextMeOne',
     },
+    priceRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 8,
+    },
     itemPrice: {
         fontSize: 16,
         color: '#00bfff',
-        marginBottom: 8,
         fontWeight: '600',
+        marginRight: 4,
+    },
+    itemUnit: {
+        fontSize: 14,
+        color: '#666',
+        fontStyle: 'italic',
     },
     itemDescription: {
         fontSize: 14,
         color: '#666',
         fontFamily: 'TextMeOne',
+        marginBottom: 4,
+    },
+    itemNegotiable: {
+        fontSize: 12,
+        color: '#00bfff',
+        fontStyle: 'italic',
     },
     cartControls: {
         marginTop: 10,
