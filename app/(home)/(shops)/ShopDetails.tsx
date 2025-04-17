@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useShop } from '@/context/shopContext';
 import { useLocation } from '@/context/locationContext';
 import ParallaxScrollView from '@/components/ParallaxScrollView';
+import ItemCard from '@/components/ItemCard';
 import firebaseService from '@/handlers/firebaseService';
 
 interface ShopItem {
@@ -175,21 +176,18 @@ export default function ShopDetails() {
                 <ActivityIndicator size="large" color="#00bfff" />
                 ) : items.length > 0 ? (
                 items.map((item) => (
-                    <View key={item.id} style={styles.itemCard}>
-                    {item.imageUrl && (
-                        <Image 
-                        source={{ uri: item.imageUrl }} 
-                        style={styles.itemImage}
-                        />
-                    )}
-                    <View style={styles.itemInfo}>
-                        <Text style={styles.itemName}>{item.name}</Text>
-                        <Text style={styles.itemPrice}>${item.price?.toFixed(2)}</Text>
-                        {item.description && (
-                        <Text style={styles.itemDescription}>{item.description}</Text>
-                        )}
-                    </View>
-                    </View>
+                    <ItemCard
+                      key={item.id}
+                      id={item.id}
+                      itemId={item.id}
+                      shopId={selectedShop.id}
+                      shopName={selectedShop.name}
+                      shopPhotoURL={selectedShop.backgroundImageUrl}
+                      name={item.name}
+                      price={item.price}
+                      description={item.description}
+                      imageUrl={item.imageUrl}
+                    />
                 ))
                 ) : (
                 <Text style={styles.noItemsText}>No items available</Text>
@@ -305,44 +303,6 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
         marginBottom: 16,
         fontFamily: 'TitanOne',
-    },
-    itemCard: {
-        backgroundColor: 'white',
-        borderRadius: 8,
-        padding: 16,
-        marginBottom: 16,
-        flexDirection: 'row',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-        elevation: 2,
-    },
-    itemImage: {
-        width: 80,
-        height: 80,
-        borderRadius: 8,
-        marginRight: 16,
-    },
-    itemInfo: {
-        flex: 1,
-    },
-    itemName: {
-        fontSize: 18,
-        fontWeight: '600',
-        marginBottom: 4,
-        fontFamily: 'TextMeOne',
-    },
-    itemPrice: {
-        fontSize: 16,
-        color: '#00bfff',
-        marginBottom: 8,
-        fontWeight: '600',
-    },
-    itemDescription: {
-        fontSize: 14,
-        color: '#666',
-        fontFamily: 'TextMeOne',
     },
     backButton: {
         backgroundColor: '#00bfff',
