@@ -209,10 +209,11 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     shopName: {
-        fontSize: 28,
+        fontSize: Platform.OS === 'web'? 40 : 30,
         fontWeight: 'bold',
         marginBottom: 8,
         fontFamily: 'TitanOne',
+        color: '#fff',
     },
     shopDescription: {
         fontSize: 16,
