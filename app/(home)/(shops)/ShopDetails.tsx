@@ -117,13 +117,13 @@ export default function ShopDetails() {
                 <View style={styles.deliveryInfoContainer}>
                 {selectedShop.allowPickup && (
                     <View style={styles.deliveryOption}>
-                    <Ionicons name="bag-handle-outline" size={18} color="#555" />
+                    <Ionicons name="bag-handle-outline" size={18} color="#fff" />
                     <Text style={styles.deliveryText}>Pickup available</Text>
                     </View>
                 )}
                 {selectedShop.localDelivery && (
                     <View style={styles.deliveryOption}>
-                    <Ionicons name="bicycle-outline" size={18} color="#555" />
+                    <Ionicons name="bicycle-outline" size={18} color="#fff" />
                     <Text style={styles.deliveryText}>Local delivery</Text>
                     </View>
                 )}
@@ -191,11 +191,11 @@ const styles = StyleSheet.create({
     },
     stickyBackButton: {
         position: 'absolute',
-        top: 120,
-        left: 25,
+        top: 110,
+        left: 30,
         backgroundColor: 'rgba(255, 255, 255, 0.7)',
         borderRadius: 20,
-        padding: 10,
+        padding: 3,
         zIndex: 100,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
@@ -239,7 +239,7 @@ const styles = StyleSheet.create({
     deliveryOption: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#f0f0f0',
+        backgroundColor: '#000',
         borderRadius: 16,
         paddingVertical: 6,
         paddingHorizontal: 10,
@@ -249,6 +249,7 @@ const styles = StyleSheet.create({
     deliveryText: {
         marginLeft: 6,
         fontFamily: 'TextMeOne',
+        color: 'white'
     },
     itemsContainer: {
         marginTop: 16,
