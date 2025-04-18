@@ -40,8 +40,13 @@ const ItemCard = ({
         setQuantity(1);
     };
 
-    const incrementQuantity = () => setQuantity(prev => prev + 1);
-    const decrementQuantity = () => setQuantity(prev => prev > 1 ? prev - 1 : 1);
+    const incrementQuantity = () => setQuantity(prev => 
+        prev < item.quantity ? prev + 1 : item.quantity
+    );
+
+    const decrementQuantity = () => setQuantity(prev => 
+        prev > 1 ? prev - 1 : 1
+    );
 
     return (
         <View style={styles.itemCard}>
@@ -81,7 +86,7 @@ const ItemCard = ({
                 <TouchableOpacity onPress={decrementQuantity} style={styles.quantityButton}>
                     <Ionicons name="remove" size={16} color="#00bfff" />
                 </TouchableOpacity>
-                <Text style={styles.quantityText}>{quantity}</Text>
+                <Text style={styles.quantityText}>{Math.min(quantity, item.quantity)}</Text>
                 <TouchableOpacity onPress={incrementQuantity} style={styles.quantityButton}>
                     <Ionicons name="add" size={16} color="#00bfff" />
                 </TouchableOpacity>
