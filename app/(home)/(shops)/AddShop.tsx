@@ -124,6 +124,24 @@ export default function ShopRegistrationScreen() {
         return isValid;
     };
 
+    const mapDaysToFullNames = (selectedDays: string[]): string[] => {
+        if (Platform.OS === 'web') {
+            return selectedDays;
+        }
+
+        const dayMapping: Record<string, string> = {
+            'M': 'monday',
+            'T': 'tuesday',
+            'W': 'wednesday',
+            'Th': 'thursday',
+            'F': 'friday',
+            'Sa': 'saturday',
+            'Su': 'sunday'
+        };
+
+        return selectedDays.map(day => dayMapping[day] || day);
+    };
+
     const handleSubmit = async () => {
         if (validateForm()) {
             try {
@@ -136,12 +154,14 @@ export default function ShopRegistrationScreen() {
                 // Get a random image URL from the imageUrls array
                 const randomIndex = Math.floor(Math.random() * imageUrls.length);
                 const randomImageUrl = imageUrls[randomIndex];
+                
+                const normalizedDays = mapDaysToFullNames(selectedDays);
 
                 const shopData = {
                     name,
                     description,
                     type,
-                    days: selectedDays,
+                    days: normalizedDays,
                     seasons: selectedSeasons,
                     openTime,
                     closeTime,
