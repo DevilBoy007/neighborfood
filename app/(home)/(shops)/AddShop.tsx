@@ -174,9 +174,6 @@ export default function ShopRegistrationScreen() {
                     backgroundImageUrl: randomImageUrl
                 };
                 
-                // Connect to firebase
-                await firebaseService.connect();
-                
                 // Add shop to database
                 await firebaseService.createShopForUser(userData.uid, shopData)
                 .then(() => {
