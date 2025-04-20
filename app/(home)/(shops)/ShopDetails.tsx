@@ -8,11 +8,13 @@ import ItemCard from '@/components/ItemCard';
 import firebaseService from '@/handlers/firebaseService';
 
 import { useLocation } from '@/context/locationContext';
+import { useUser } from '@/context/userContext';
 import { useShop } from '@/context/shopContext';
 import { ItemData } from '@/context/itemContext';
 
 export default function ShopDetails() {
     const { selectedShop } = useShop();
+    const { userData } = useUser();
     const { locationData, formatDistance } = useLocation();
     const [items, setItems] = useState<ItemData[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
@@ -65,10 +67,9 @@ export default function ShopDetails() {
         );
     }
 
-    // Header image component for the ParallaxScrollView
     const HeaderImage = () => (
         <Image 
-        source={{ uri: selectedShop.backgroundImageUrl || 'https://via.placeholder.com/500' }}
+            source={{ uri: selectedShop.backgroundImageUrl || 'https://placehold.co/600x400' }}
         style={styles.headerImage}
         />
     );
