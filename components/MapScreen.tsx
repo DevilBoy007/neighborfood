@@ -6,7 +6,7 @@ import MapView, { PROVIDER_DEFAULT, PROVIDER_GOOGLE, Marker, Callout } from 'rea
 import icon from '@/assets/images/rabbit-icon.png'
 
 import { useLocation } from '@/context/locationContext';
-import { useShop } from '@/context/shopContext';
+import { useShop, ShopData } from '@/context/shopContext';
 
 interface MarkerData {
     id: string;
@@ -19,19 +19,8 @@ interface MarkerData {
     image: string;
 }
 
-interface Shop {
-    id: string;
-    name: string;
-    description: string;
-    location: {
-        latitude: number;
-        longitude: number;
-    };
-    backgroundImageUrl: string;
-}
-
 interface MapScreenProps {
-    shops?: Shop[];
+    shops?: ShopData[];
 }
 
 LogBox.ignoreLogs(['VectorKit']);

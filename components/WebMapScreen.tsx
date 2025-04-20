@@ -3,7 +3,7 @@ import { useRouter } from 'expo-router';
 import { APIProvider, Map, AdvancedMarker, Pin, InfoWindow } from '@vis.gl/react-google-maps'
 import { StyleSheet, Text, View, ActivityIndicator } from 'react-native';
 
-import { useShop } from '@/context/shopContext';
+import { useShop, ShopData } from '@/context/shopContext';
 import { useLocation } from '@/context/locationContext';
 
 interface MarkerData {
@@ -17,19 +17,8 @@ interface MarkerData {
     image?: string;
 }
 
-interface Shop {
-    id: string;
-    name: string;
-    description: string;
-    location: {
-        latitude: number;
-        longitude: number;
-    };
-    backgroundImageUrl?: string;
-}
-
 interface WebMapScreenProps {
-    shops?: Shop[];
+    shops?: ShopData[];
 }
 
 const MapScreenWeb = ({ shops = [] }: WebMapScreenProps) => {

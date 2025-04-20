@@ -1,4 +1,5 @@
 import React, { createContext, useState, useContext, ReactNode } from 'react';
+import { ItemData } from '@/context/itemContext';
 
 type ShopLocation = {
     marketId: string;
@@ -8,23 +9,7 @@ type ShopLocation = {
     };
 };
 
-type ItemData = {
-    id: string;
-    shopId: string;
-    marketId: string;
-    name: string;
-    description: string;
-    category: string[];
-    imageUrl: string;
-    price: number;
-    unit: string;
-    negotiable: boolean;
-    quantity: number;
-    available: boolean;
-    createdAt: { seconds: number; nanoseconds: number };
-};
-
-type ShopData = {
+export type ShopData = {
     id: string;
     name: string;
     description: string;
