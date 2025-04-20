@@ -128,7 +128,7 @@ const MapScreenWeb = ({ shops = [] }: WebMapScreenProps) => {
                         </AdvancedMarker>
                         {selectedMarkerId === marker.id && (
                             <InfoWindow
-                                headerContent={<img src={marker.image} style={{height: 75, width: 200, cursor: 'pointer'}} onClick={() => { handleCalloutPress(marker.id) }}/>}
+                                headerContent={<img src={marker.image} style={{height: 75, width: 150, cursor: 'pointer'}} onClick={() => { handleCalloutPress(marker.id) }}/>}
                                 position={marker.position}
                                 onCloseClick={() => setSelectedMarkerId(null)}
                             >
