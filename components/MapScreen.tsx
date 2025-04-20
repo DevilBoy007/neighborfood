@@ -7,6 +7,7 @@ import icon from '@/assets/images/rabbit-icon.png'
 
 import { useLocation } from '@/context/locationContext';
 import { useShop, ShopData } from '@/context/shopContext';
+import { Ionicons } from '@expo/vector-icons';
 
 interface MarkerData {
     id: string;
@@ -121,13 +122,25 @@ const MapScreen = ({ shops = [] }: MapScreenProps) => {
                                 onPress={() => { handleCalloutPress(marker.id);}}
                             >
                                 <View style={{ width: 150, height: 150 }}>
-                                    <Image
-                                        source={{ uri: marker.image }}
-                                        style={{ width: 100, height: 50, borderRadius: 10 }}
-                                        resizeMode="cover"
-                                    />
-                                    <Text style={ styles.calloutTitle }>{marker.title}</Text>
+                                    <View style={{ flex: 1, flexDirection: 'column' }}>
+                                        <View style={{ flexDirection: 'row' }}>
+                                            <Image
+                                                source={{ uri: marker.image }}
+                                                style={{ width: 100, height: 50, borderRadius: 10 }}
+                                                resizeMode="cover"
+                                            />
+                                            <Ionicons
+                                                name="chevron-forward-outline"
+                                                size={20}
+                                                color="#00bfff"
+                                                style={{ position: 'absolute', right: 10, top: 10 }}
+                                            />
+                                        </View>
+                                        <View style={{ marginTop: 8 }}>
+                                            <Text style={ styles.calloutTitle }>{marker.title}</Text>
+                                        </View>
                                     <Text style={ styles.calloutDescription }>{marker.description}</Text>
+                                    </View>
                                 </View>
                             </Callout>
                         </Marker>
@@ -170,6 +183,7 @@ const styles = StyleSheet.create({
     },
     calloutDescription: {
         fontStyle: 'italic',
+        fontSize: 12,
     },
 });
 
