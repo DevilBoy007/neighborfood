@@ -2,11 +2,13 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Platform, Image, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { useShop } from '@/context/shopContext';
-import { useLocation } from '@/context/locationContext';
+
 import ParallaxScrollView from '@/components/ParallaxScrollView';
 import ItemCard from '@/components/ItemCard';
 import firebaseService from '@/handlers/firebaseService';
+
+import { useLocation } from '@/context/locationContext';
+import { useShop } from '@/context/shopContext';
 import { ItemData } from '@/context/itemContext';
 
 export default function ShopDetails() {
