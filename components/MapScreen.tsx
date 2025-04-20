@@ -1,5 +1,6 @@
 import React from 'react';
 import { useState, useEffect } from 'react';
+import { useRouter } from 'expo-router';
 import { StyleSheet, View, Text, Image, Platform, LogBox, ActivityIndicator } from 'react-native';
 import MapView, { PROVIDER_DEFAULT, PROVIDER_GOOGLE, Marker, Callout } from 'react-native-maps';
 import icon from '@/assets/images/rabbit-icon.png'
@@ -36,6 +37,7 @@ interface MapScreenProps {
 LogBox.ignoreLogs(['VectorKit']);
 
 const MapScreen = ({ shops = [] }: MapScreenProps) => {
+    const router = useRouter();
     const { locationData, fetchCurrentLocation } = useLocation();
     const { selectedShop, setSelectedShop } = useShop();
     const [markers, setMarkers] = useState<MarkerData[]>([]);
@@ -67,6 +69,14 @@ const MapScreen = ({ shops = [] }: MapScreenProps) => {
 
     const handleMarkerPress = (markerId: string) => {
         setSelectedMarkerId(markerId === selectedMarkerId ? null : markerId);
+    };
+
+    const handleCalloutPress = (markerId: string) => {
+        const shop = shops.find(shop => shop.id === markerId);
+        if (shop) {
+            setSelectedShop(shop);
+            router.navigate('/ShopDetails');
+        }
     };
 
     if (locationData.loading) {
@@ -118,7 +128,9 @@ const MapScreen = ({ shops = [] }: MapScreenProps) => {
                             pinColor="#b7ffb0"
                             onPress={() => handleMarkerPress(marker.id)}
                         >
-                            <Callout>
+                            <Callout
+                                onPress={() => { handleCalloutPress(marker.id);}}
+                            >
                                 <View style={{ width: 150, height: 150 }}>
                                     <Image
                                         source={{ uri: marker.image }}
