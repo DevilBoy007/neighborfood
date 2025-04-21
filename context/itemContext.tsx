@@ -12,7 +12,6 @@ export type ItemData = {
     unit: string;
     negotiable: boolean;
     quantity: number;
-    available: boolean;
     createdAt: { seconds: number; nanoseconds: number };
 };
 
