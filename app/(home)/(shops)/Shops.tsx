@@ -51,15 +51,15 @@ export default function Shops() {
     }, [memoizedFetchShopsAndItems]);
 
     // Refresh data when the screen comes into focus
-    useFocusEffect(
-        React.useCallback(() => {
-            console.log('Shops screen in focus, refreshing data');
-            memoizedFetchShopsAndItems();
-            return () => {
-                // Optional cleanup if needed
-            };
-        }, [memoizedFetchShopsAndItems])
-    );
+    // useFocusEffect(
+    //     React.useCallback(() => {
+    //         console.log('Shops screen in focus, refreshing data');
+    //         memoizedFetchShopsAndItems();
+    //         return () => {
+    //             // Optional cleanup if needed
+    //         };
+    //     }, [memoizedFetchShopsAndItems])
+    // );
     
     const router = useRouter();
     return (
