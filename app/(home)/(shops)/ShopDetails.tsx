@@ -100,7 +100,20 @@ export default function ShopDetails() {
             </View>
 
             <View style={styles.shopInfoContainer}>
-                <Text style={styles.shopName}>{selectedShop.name}</Text>
+                <View style={styles.shopHeaderRow}>
+                    <Text style={styles.shopName}>{selectedShop.name}</Text>
+                    {selectedShop.userId === userData?.uid && (
+                        <TouchableOpacity
+                            style={styles.editShopIconButton}
+                            onPress={() => router.push({
+                                pathname: '/AddShop',
+                                params: { shopId: selectedShop.id }
+                            })}
+                        >
+                            <Ionicons name="pencil" size={20} color="#555" />
+                        </TouchableOpacity>
+                    )}
+                </View>
                 <Text style={styles.shopDescription}>{selectedShop.description}</Text>
                 <View>
                     {selectedShop.type && (
@@ -184,6 +197,18 @@ export default function ShopDetails() {
                 ) : (
                 <Text style={styles.noItemsText}>No items available</Text>
                 )}
+                {selectedShop.userId === userData?.uid && (
+                    <TouchableOpacity
+                        style={styles.addItemsButton}
+                        onPress={() => router.push({
+                            pathname: '/AddItem',
+                            params: { shopId: selectedShop.id }
+                        })}
+                    >
+                        <Ionicons name="add-circle-outline" size={24} color="#fff" style={styles.buttonIcon} />
+                        <Text style={styles.addItemsButtonText}>Add Items</Text>
+                    </TouchableOpacity>
+                )}
             </View>
             </ParallaxScrollView>
         </>
@@ -235,12 +260,24 @@ const styles = StyleSheet.create({
         backgroundColor: "#b7ffb0",
         alignItems: 'center',
     },
+    shopHeaderRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginBottom: 8,
+    },
     shopName: {
         fontSize: Platform.OS === 'web'? 40 : 30,
         fontWeight: 'bold',
         marginBottom: 8,
         fontFamily: 'TitanOne',
         color: '#fff',
+    },
+    editShopIconButton: {
+        backgroundColor: 'rgba(255, 255, 255, 0.7)',
+        borderRadius: 15,
+        padding: 8,
+        marginLeft: 10,
     },
     shopDescription: {
         fontSize: 16,
@@ -321,5 +358,22 @@ const styles = StyleSheet.create({
         textAlign: 'center',
         padding: 20,
         fontFamily: 'TextMeOne',
+    },
+    addItemsButton: {
+        backgroundColor: '#00bfff',
+        padding: 16,
+        borderRadius: 8,
+        marginTop: 16,
+        alignItems: 'center',
+        flexDirection: 'row',
+        justifyContent: 'center',
+    },
+    addItemsButtonText: {
+        fontSize: Platform.OS === 'web' ? 30 : 24,
+        color: '#fff',
+        fontFamily: 'TextMeOne',
+    },
+    buttonIcon: {
+        marginRight: 8,
     },
 });
