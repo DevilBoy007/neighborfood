@@ -13,7 +13,7 @@ import { useShop } from '@/context/shopContext';
 import { ItemData } from '@/context/itemContext';
 
 export default function ShopDetails() {
-    const { selectedShop } = useShop();
+    const { selectedShop, setSelectedShop } = useShop();
     const { userData } = useUser();
     const { locationData, formatDistance } = useLocation();
     const [items, setItems] = useState<ItemData[]>([]);
@@ -80,7 +80,9 @@ export default function ShopDetails() {
             {Platform.OS !== 'web' && (
                 <TouchableOpacity
                     style={styles.stickyBackButton}
-                    onPress={() => router.back()}
+                    onPress={() => {
+                        setSelectedShop(null);
+                        router.back()}}
                 >
                     <Ionicons name="chevron-back" size={24} color="black" />
                 </TouchableOpacity>
@@ -93,7 +95,10 @@ export default function ShopDetails() {
             <View style={styles.headerContainer}>
                 {/* Only show this back button on web */}
                 {Platform.OS === 'web' && (
-                    <TouchableOpacity style={styles.backButtonContainer} onPress={() => router.back()}>
+                    <TouchableOpacity style={styles.backButtonContainer} onPress={() => {
+                        setSelectedShop(null);
+                        router.back()
+                    }}>
                         <Ionicons name="chevron-back" size={24} color="black" />
                     </TouchableOpacity>
                 )}
