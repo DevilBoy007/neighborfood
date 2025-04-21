@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useRouter } from 'expo-router';
 import { View, Text, StyleSheet, Image, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useCart } from '@/context/cartContext';
@@ -10,6 +11,7 @@ interface ItemCardProps {
     shopPhotoURL?: string;
     onPress?: () => void;
     showCartControls?: boolean;
+    isShopOwner?: boolean;
 }
 
 const ItemCard = ({ 
@@ -17,10 +19,12 @@ const ItemCard = ({
     shopName = '', 
     shopPhotoURL = '', 
     onPress,
-    showCartControls = true
+    showCartControls = true,
+    isShopOwner = false,
     }: ItemCardProps) => {
     const [quantity, setQuantity] = useState(1);
     const { addToCart } = useCart();
+    const router = useRouter();
 
     const handleAddToCart = () => {
         if (!item.shopId) return;
@@ -99,6 +103,15 @@ const ItemCard = ({
                 <Text style={styles.addButtonText}>Add to Cart</Text>
                 </TouchableOpacity>
             </View>
+            )}
+            {isShopOwner && (
+                <TouchableOpacity
+                    style={styles.addButton}
+                    onPress={() => alert('pressed edit')/*router.navigate('EditItem', { item })*/}
+                >
+                    <Ionicons name="create-outline" size={16} color="white" />
+                    <Text style={styles.addButtonText}>Edit Item</Text>
+                </TouchableOpacity>
             )}
         </View>
         </View>

@@ -178,6 +178,7 @@ export default function ShopDetails() {
                         shopName={selectedShop.name}
                         shopPhotoURL={selectedShop.backgroundImageUrl}
                         showCartControls={selectedShop.userId !== userData?.uid}
+                        isShopOwner={selectedShop.userId === userData?.uid}
                     />
                 ))
                 ) : (
