@@ -69,7 +69,7 @@ export default function ShopDetails() {
 
     const HeaderImage = () => (
         <Image 
-            source={{ uri: selectedShop.backgroundImageUrl || 'https://placehold.co/600x400' }}
+            source={{ uri: selectedShop.backgroundImageUrl || `https://placehold.co/${Platform.OS === 'web'?800:600}x400/00bfff/fff.png` }}
         style={styles.headerImage}
         />
     );
