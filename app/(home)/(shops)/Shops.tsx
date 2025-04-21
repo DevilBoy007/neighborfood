@@ -9,12 +9,10 @@ import { useFocusEffect } from '@react-navigation/native';
 import ShopCard from '@/components/ShopCard';
 import firebaseService from '@/handlers/firebaseService';
 import { useUser } from '@/context/userContext';
-import { useShop } from '@/context/shopContext';
 
 export default function Shops() {
     const { userData } = useUser();
     const [shops, setShops] = useState([]);
-    const { setSelectedShop } = useShop();
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
