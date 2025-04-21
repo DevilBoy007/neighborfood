@@ -173,10 +173,11 @@ export default function ShopDetails() {
                 ) : items.length > 0 ? (
                 items.map((item) => (
                     <ItemCard
-                      key={item.id}
-                      item={item}
-                      shopName={selectedShop.name}
-                      shopPhotoURL={selectedShop.backgroundImageUrl}
+                        key={item.id}
+                        item={item}
+                        shopName={selectedShop.name}
+                        shopPhotoURL={selectedShop.backgroundImageUrl}
+                        showCartControls={selectedShop.userId !== userData?.uid}
                     />
                 ))
                 ) : (
