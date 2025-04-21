@@ -188,28 +188,35 @@ export default function ShopRegistrationScreen() {
                     location: new GeoPoint(userData.location.coords.latitude, userData.location.coords.longitude),
                     marketId: userData.location.zip || '',  // Associate shop with user's market
                     userId: userData.uid,  // Associate shop with current user
-                    createdAt: new Date(),
-                    backgroundImageUrl: randomImageUrl
                 };
                 
-                // Add shop to database
-                await firebaseService.createShopForUser(userData.uid, shopData)
-                .then(() => {
+                if (shopId && selectedShop) {
+                    // We're updating an existing shop
+                    await firebaseService.updateShopDetails(shopId.toString(), shopData);
+                    console.log('Shop updated successfully!');
+                } else {
+                    // We're creating a new shop
+                    // Add creation date and background image for new shops only
+                    shopData.createdAt = new Date();
+                    shopData.backgroundImageUrl = randomImageUrl;
+                    
+                    await firebaseService.createShopForUser(userData.uid, shopData);
                     console.log('Shop created successfully!');
-                    if (Platform.OS === 'web') {
-                        router.navigate('/success');
-                        setTimeout(() => {
-                            router.back();
-                        }, 2100);
-                    } else {
-                        router.navigate('/success');
-                        setTimeout(() => {
-                            router.back();
-                        }, 2000);
-                    }
-                });
+                }
+                
+                if (Platform.OS === 'web') {
+                    router.navigate('/success');
+                    setTimeout(() => {
+                        router.back();
+                    }, 2100);
+                } else {
+                    router.navigate('/success');
+                    setTimeout(() => {
+                        router.back();
+                    }, 2000);
+                }
             } catch (error) {
-                Alert.alert('Error', 'Failed to create shop. Please try again.');
+                Alert.alert('Error', shopId ? 'Failed to update shop. Please try again.' : 'Failed to create shop. Please try again.');
             }
         } else {
             if (Platform.OS === 'web') {

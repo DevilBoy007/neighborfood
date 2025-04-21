@@ -352,6 +352,25 @@ class FirebaseService {
         }
     }
 
+    async updateShopDetails(shopId: string, shopData: object): Promise<void> {
+        try {
+            if (!this.db) {
+                await this.connect();
+                if (!this.db) {
+                    throw new Error('Error connecting to Firestore');
+                }
+            }
+            
+            const shopDocRef = doc(this.db, 'shops', shopId);
+            
+            await updateDoc(shopDocRef, shopData);
+            console.log("Shop updated with ID: ", shopId);
+        } catch (error) {
+            console.error("Error updating shop: ", error);
+            throw error;
+        }
+    }
+
     async getShopsAndItemsForUser(userId: string): Promise<{ shops: any[]; items: any[] }> {
         try {
             if (!this.db) {
