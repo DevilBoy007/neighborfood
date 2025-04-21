@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     View,
     Text,
@@ -13,15 +13,21 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Picker } from '@react-native-picker/picker';
-import { useRouter } from 'expo-router';
-import { useUser } from '@/context/userContext';
-import firebaseService from '@/handlers/firebaseService';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { GeoPoint } from 'firebase/firestore';
+
+import firebaseService from '@/handlers/firebaseService';
+import { useUser } from '@/context/userContext';
+import { useShop } from '@/context/shopContext';
 
 const weekDays = Platform.OS === 'web' ? ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'] : ['M', 'T', 'W', 'Th', 'F', 'Sa', 'Su'];
 const seasons = ['spring', 'summer', 'fall', 'winter'];
 
 export default function ShopRegistrationScreen() {
+    const router = useRouter();
+    const { selectedShop } = useShop();
+    const { shopId } = useLocalSearchParams();
+    const { userData } = useUser();
     const [name, setName] = useState<string>('');
     const [description, setDescription] = useState<string>('');
     const [type, setType] = useState<string>('');
@@ -43,9 +49,21 @@ export default function ShopRegistrationScreen() {
         delivery: '',
     });
 
-    // Get the user data from context
-    const { userData } = useUser();
-    const router = useRouter();
+    useEffect(() => {
+        // If shopId matches selectedShop.id, we're editing that shop
+        if (shopId && selectedShop && shopId === selectedShop.id) {
+            // Populate form with selectedShop data
+            setName(selectedShop.name);
+            setDescription(selectedShop.description);
+            setType(selectedShop.type);
+            setSelectedDays(selectedShop.days);
+            setSelectedSeasons(selectedShop.seasons);
+            setOpenTime(selectedShop.openTime);
+            setCloseTime(selectedShop.closeTime);
+            setAllowPickup(selectedShop.allowPickup);
+            setLocalDelivery(selectedShop.localDelivery);
+        }
+    }, [shopId, selectedShop]);
 
     const toggleDay = (day: string) => {
         if (selectedDays.includes(day)) {
@@ -426,7 +444,7 @@ export default function ShopRegistrationScreen() {
             </KeyboardAvoidingView>
             <View style={[styles.buttonContainer, Platform.OS === 'ios' && styles.iosButtonContainer]}>
                 <TouchableOpacity style={styles.button} onPress={handleSubmit}>
-                    <Text style={styles.buttonText}>Create</Text>
+                    <Text style={styles.buttonText}>{shopId ? 'Save' : 'Create'}</Text>
                 </TouchableOpacity>
             </View>
         </SafeAreaView>
