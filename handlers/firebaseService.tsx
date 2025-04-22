@@ -1,5 +1,6 @@
 import { Platform } from 'react-native';
 import { initializeApp, getApp, FirebaseApp } from 'firebase/app';
+import { FirebaseStorage, getStorage, ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 import { Analytics, getAnalytics } from 'firebase/analytics';
 import {
     initializeAuth,
@@ -39,6 +40,7 @@ class FirebaseService {
     };
     private app: FirebaseApp | null;
     private auth: Auth | null;
+    private storage: FirebaseStorage | null;
     private analytics: Analytics | null;
     private db: Firestore | null;
 
@@ -52,6 +54,7 @@ class FirebaseService {
         };
 
         this.app = null;
+        this.storage = null;
         this.analytics = null;
         this.auth = null;
         this.db = null;
@@ -67,7 +70,7 @@ class FirebaseService {
     async connect() {
         try {
             // Check if Firebase is already initialized
-            if (this.app && this.auth && this.db) {
+            if (this.app && this.auth && this.db && this.storage) {
                 console.log('Firebase already connected');
                 return true;
             }
@@ -95,6 +98,16 @@ class FirebaseService {
                     } else {
                         throw authError;
                     }
+                }
+            }
+
+            if (!this.storage) {
+                try {
+                    this.storage = getStorage(this.app, 'gs://neighborfoods');
+                    console.log('Initialized Firebase storage');
+                } catch (storageError) {
+                    console.error('Error initializing Firebase storage:', storageError);
+                    this.storage = null;
                 }
             }
 
@@ -523,6 +536,45 @@ class FirebaseService {
         }
     }
 
+    async uploadImage(image: File) {
+    if (!this.storage) {
+        await this.connect();
+        if (!this.storage) {
+            throw new Error('Error connecting to Firebase Storage');
+        }
+    }
+    const storageRef = ref(this.storage, `img/${image.name}`);
+    const uploadTask = uploadBytesResumable(storageRef, image);
+
+    uploadTask.on('state_changed',
+        (snapshot) => {
+            // Observe state change events such as progress, pause, and resume:
+            // Get task progress, including the number of bytes uploaded and the total number of bytes to be uploaded
+            const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+            console.log('Upload is ' + progress + '% done');
+            switch (snapshot.state) {
+                case 'paused':
+                    console.log('Upload is paused');
+                    break;
+                case 'running':
+                    console.log('Upload is running');
+                    break;
+            }
+        },
+        (error) => {
+            // Handle unsuccessful uploads
+            console.error("Error uploading file", error);
+        },
+        () => {
+            // Handle successful uploads on complete
+            // For instance, get the download URL: https://firebasestorage.googleapis.com/...
+            getDownloadURL(uploadTask.snapshot.ref).then((downloadURL) => {
+                console.log('File available at', downloadURL);
+            });
+        }
+    );
+}
+
     disconnect() {
         try {
             this.app = null;
@@ -535,7 +587,6 @@ class FirebaseService {
             throw error;
         }
     }
-
 }
 
 
