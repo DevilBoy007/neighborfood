@@ -40,6 +40,12 @@
           "locationAlwaysAndWhenInUsePermission": "Allow $(PRODUCT_NAME) to use your location."
         }
       ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Permission needed. $(PRODUCT_NAME) wants access to your photos to let you share them with your community."
+        }
+      ],
       "expo-font"
     ],
     "experiments": {
