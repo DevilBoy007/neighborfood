@@ -139,6 +139,31 @@ export default function ShopDetails() {
                     </View>
                     )}
 
+                    {selectedShop.seasons && selectedShop.seasons.length > 0 && (
+                    <View style={styles.infoRow}>
+                        <View style={styles.iconContainer}>
+                            <Ionicons name="flower-outline" size={18} color="#555" />
+                        </View>
+                        <Text style={styles.infoText}>
+                            Seasons: {selectedShop.seasons.map((season, index) => (
+                                <Text key={season}>
+                                    <Ionicons 
+                                        name={
+                                            season === 'spring' ? 'rose-outline' :
+                                            season === 'summer' ? 'sunny-outline' :
+                                            season === 'fall' ? 'leaf-outline' :
+                                            'snow-outline'
+                                        }
+                                        size={14} 
+                                        color="#555"
+                                    />
+                                    {index < selectedShop.seasons.length - 1 ? ', ' : ''}
+                                </Text>
+                            ))}
+                        </Text>
+                    </View>
+                    )}
+
                     {selectedShop.openTime && selectedShop.closeTime && (
                     <View style={styles.infoRow}>
                         <View style={styles.iconContainer}>
