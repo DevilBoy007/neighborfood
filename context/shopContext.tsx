@@ -21,6 +21,7 @@ export type ShopData = {
     localDelivery: boolean;
     allowPickup: boolean;
     days: string[];
+    seasons: string[];
     openTime: string;
     closeTime: string;
     items?: ItemData[];
