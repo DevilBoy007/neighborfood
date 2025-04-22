@@ -536,44 +536,65 @@ class FirebaseService {
         }
     }
 
-    async uploadImage(image: File) {
-    if (!this.storage) {
-        await this.connect();
+    async uploadImage(
+        image: File,
+        progressCallback?: (progress: number) => void,
+        successCallback?: (downloadURL: string) => void,
+        errorCallback?: (error: any) => void
+    ) {
         if (!this.storage) {
-            throw new Error('Error connecting to Firebase Storage');
+            await this.connect();
+            if (!this.storage) {
+                const error = new Error('Error connecting to Firebase Storage');
+                if (errorCallback) errorCallback(error);
+                throw error;
+            }
+        }
+        
+        try {
+            // Create a unique filename if needed
+            const fileName = image.name || `image_${Date.now()}`;
+            const storageRef = ref(this.storage, `img/${fileName}`);
+            const uploadTask = uploadBytesResumable(storageRef, image);
+
+            uploadTask.on('state_changed',
+                (snapshot) => {
+                    // Handle progress updates
+                    const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                    console.log('Upload is ' + progress + '% done');
+                    if (progressCallback) progressCallback(progress);
+                    
+                    switch (snapshot.state) {
+                        case 'paused':
+                            console.log('Upload is paused');
+                            break;
+                        case 'running':
+                            console.log('Upload is running');
+                            break;
+                    }
+                },
+                (error) => {
+                    // Handle unsuccessful uploads
+                    console.error("Error uploading file", error);
+                    if (errorCallback) errorCallback(error);
+                },
+                () => {
+                    // Handle successful uploads on complete
+                    getDownloadURL(uploadTask.snapshot.ref).then((downloadURL) => {
+                        console.log('File available at', downloadURL);
+                        if (successCallback) successCallback(downloadURL);
+                        return downloadURL;
+                    });
+                }
+            );
+            
+            return uploadTask;
+        } catch (error) {
+            console.error("Error starting upload", error);
+            if (errorCallback) errorCallback(error);
+            throw error;
         }
     }
-    const storageRef = ref(this.storage, `img/${image.name}`);
-    const uploadTask = uploadBytesResumable(storageRef, image);
-
-    uploadTask.on('state_changed',
-        (snapshot) => {
-            // Observe state change events such as progress, pause, and resume:
-            // Get task progress, including the number of bytes uploaded and the total number of bytes to be uploaded
-            const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-            console.log('Upload is ' + progress + '% done');
-            switch (snapshot.state) {
-                case 'paused':
-                    console.log('Upload is paused');
-                    break;
-                case 'running':
-                    console.log('Upload is running');
-                    break;
-            }
-        },
-        (error) => {
-            // Handle unsuccessful uploads
-            console.error("Error uploading file", error);
-        },
-        () => {
-            // Handle successful uploads on complete
-            // For instance, get the download URL: https://firebasestorage.googleapis.com/...
-            getDownloadURL(uploadTask.snapshot.ref).then((downloadURL) => {
-                console.log('File available at', downloadURL);
-            });
-        }
-    );
-}
 
     disconnect() {
         try {

@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Platform, Image, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Platform, Image, ActivityIndicator, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
 
 import ParallaxScrollView from '@/components/ParallaxScrollView';
 import ItemCard from '@/components/ItemCard';
@@ -18,6 +19,8 @@ export default function ShopDetails() {
     const { locationData, formatDistance } = useLocation();
     const [items, setItems] = useState<ItemData[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
+    const [uploading, setUploading] = useState<boolean>(false);
+    const [uploadProgress, setUploadProgress] = useState<number>(0);
     const router = useRouter();
 
     // Calculate distance between two coordinates in kilometers
@@ -55,6 +58,83 @@ export default function ShopDetails() {
 
         fetchShopItems();
     }, [selectedShop]);
+    
+    const pickImage = async () => {
+        if (!selectedShop || selectedShop.userId !== userData?.uid) {
+            return;
+        }
+        
+        try {
+            // Launch image picker
+            const result = await ImagePicker.launchImageLibraryAsync({
+                mediaTypes: ["images"],
+                allowsEditing: true,
+                aspect: [16, 9],
+                quality: 0.8,
+            });
+            
+            if (!result.canceled && result.assets && result.assets[0]) {
+                await uploadImage(result.assets[0].uri);
+            }
+        } catch (error) {
+            console.error('Error picking image:', error);
+            Alert.alert('Error', 'Failed to select image');
+        }
+    };
+    
+    const uploadImage = async (uri: string) => {
+        if (!selectedShop) return;
+        
+        try {
+            setUploading(true);
+            setUploadProgress(0);
+            
+            // Get file name from URI
+            const filename = uri.split('/').pop() || `shop_${selectedShop.id}_${Date.now()}.jpg`;
+            
+            // For React Native, we need to prepare the file
+            const response = await fetch(uri);
+            const blob = await response.blob();
+            
+            // Create a File object from the blob
+            const file = new File([blob], filename, { type: blob.type });
+            
+            // Upload to Firebase Storage using our service
+            const uploadTask = await firebaseService.uploadImage(file, 
+                // Progress callback
+                (progress) => {
+                    setUploadProgress(progress);
+                },
+                // Success callback
+                async (downloadURL) => {
+                    // Update the shop with the new image URL
+                    await firebaseService.updateShopDetails(selectedShop.id, {
+                        backgroundImageUrl: downloadURL
+                    });
+                    
+                    // Update the selected shop in context
+                    setSelectedShop({
+                        ...selectedShop,
+                        backgroundImageUrl: downloadURL
+                    });
+                    
+                    setUploading(false);
+                    Alert.alert('Success', 'Shop image has been updated');
+                },
+                // Error callback
+                (error) => {
+                    console.error('Error uploading image:', error);
+                    setUploading(false);
+                    Alert.alert('Error', 'Failed to upload image');
+                }
+            );
+            
+        } catch (error) {
+            console.error('Error uploading image:', error);
+            setUploading(false);
+            Alert.alert('Error', 'Failed to upload image');
+        }
+    };
 
     if (!selectedShop) {
         return (
@@ -68,10 +148,29 @@ export default function ShopDetails() {
     }
 
     const HeaderImage = () => (
-        <Image 
-            source={{ uri: selectedShop.backgroundImageUrl || `https://placehold.co/${Platform.OS === 'web'?800:600}x400/00bfff/fff.png` }}
-        style={styles.headerImage}
-        />
+        <View style={styles.headerImageContainer}>
+            <Image 
+                source={{ uri: selectedShop.backgroundImageUrl || `https://placehold.co/${Platform.OS === 'web'?800:600}x400/00bfff/fff.png` }}
+                style={styles.headerImage}
+            />
+            
+            {selectedShop.userId === userData?.uid && (
+                <TouchableOpacity 
+                    style={styles.uploadImageButton}
+                    onPress={pickImage}
+                    disabled={uploading}
+                >
+                    {uploading ? (
+                        <View style={styles.uploadingContainer}>
+                            <ActivityIndicator size="small" color="#fff" />
+                            <Text style={styles.uploadingText}>{Math.round(uploadProgress)}%</Text>
+                        </View>
+                    ) : (
+                        <Ionicons name="image-outline" size={24} color="#fff" />
+                    )}
+                </TouchableOpacity>
+            )}
+        </View>
     );
 
     return (
@@ -252,10 +351,40 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         backgroundColor: "#b7ffb0",
     },
+    headerImageContainer: {
+        width: '100%', 
+        height: '100%',
+        position: 'relative',
+    },
     headerImage: {
         width: '100%',
         height: '100%',
         resizeMode: 'cover',
+    },
+    uploadImageButton: {
+        position: 'absolute',
+        bottom: 16,
+        right: 16,
+        backgroundColor: 'rgba(0,0,0,0.6)',
+        borderRadius: 30,
+        width: 60,
+        height: 60,
+        justifyContent: 'center',
+        alignItems: 'center',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.3,
+        shadowRadius: 3,
+        elevation: 5,
+    },
+    uploadingContainer: {
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    uploadingText: {
+        color: '#fff',
+        marginTop: 4,
+        fontSize: 12,
     },
     headerContainer: {
         position: Platform.OS === 'web' ? 'absolute' : 'relative',
