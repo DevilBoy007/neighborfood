@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useShop } from '@/context/shopContext';
+import { useShop, ShopData } from '@/context/shopContext';
 
 type ShopLocation = {
     marketId: string;
@@ -9,39 +9,6 @@ type ShopLocation = {
         latitude: number;
         longitude: number;
     };
-};
-
-type ItemData = {
-    id: string;
-    shopId: string;
-    marketId: string;
-    name: string;
-    description: string;
-    category: string[];
-    imageUrl: string;
-    price: number;
-    unit: string;
-    negotiable: boolean;
-    quantity: number;
-    available: boolean;
-    createdAt: { seconds: number; nanoseconds: number };
-};
-
-type ShopData = {
-    id: string;
-    name: string;
-    description: string;
-    backgroundImageUrl: string;
-    userId: string;
-    location: ShopLocation;
-    createdAt: { seconds: number; nanoseconds: number };
-    type: string;
-    localDelivery: boolean;
-    allowPickup: boolean;
-    days: string[];
-    openTime: string;
-    closeTime: string;
-    items?: ItemData[];
 };
 
 interface ShopCardProps {
