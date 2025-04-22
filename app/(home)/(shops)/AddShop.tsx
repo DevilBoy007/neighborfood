@@ -23,6 +23,27 @@ import { useShop } from '@/context/shopContext';
 const weekDays = Platform.OS === 'web' ? ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'] : ['M', 'T', 'W', 'Th', 'F', 'Sa', 'Su'];
 const seasons = ['spring', 'summer', 'fall', 'winter'];
 
+// Add day mapping for both directions
+const dayMappingFullToShort: Record<string, string> = {
+    'monday': 'M',
+    'tuesday': 'T',
+    'wednesday': 'W',
+    'thursday': 'Th',
+    'friday': 'F',
+    'saturday': 'Sa',
+    'sunday': 'Su'
+};
+
+const dayMappingShortToFull: Record<string, string> = {
+    'M': 'monday',
+    'T': 'tuesday',
+    'W': 'wednesday',
+    'Th': 'thursday',
+    'F': 'friday',
+    'Sa': 'saturday',
+    'Su': 'sunday'
+};
+
 export default function ShopRegistrationScreen() {
     const router = useRouter();
     const { selectedShop } = useShop();
@@ -56,7 +77,15 @@ export default function ShopRegistrationScreen() {
             setName(selectedShop.name);
             setDescription(selectedShop.description);
             setType(selectedShop.type);
-            setSelectedDays(selectedShop.days);
+            
+            // Convert full day names to abbreviated versions for mobile
+            if (Platform.OS !== 'web' && selectedShop.days) {
+                const mappedDays = selectedShop.days.map(day => dayMappingFullToShort[day] || day);
+                setSelectedDays(mappedDays);
+            } else {
+                setSelectedDays(selectedShop.days);
+            }
+            
             setSelectedSeasons(selectedShop.seasons);
             setOpenTime(selectedShop.openTime);
             setCloseTime(selectedShop.closeTime);
@@ -147,17 +176,7 @@ export default function ShopRegistrationScreen() {
             return selectedDays;
         }
 
-        const dayMapping: Record<string, string> = {
-            'M': 'monday',
-            'T': 'tuesday',
-            'W': 'wednesday',
-            'Th': 'thursday',
-            'F': 'friday',
-            'Sa': 'saturday',
-            'Su': 'sunday'
-        };
-
-        return selectedDays.map(day => dayMapping[day] || day);
+        return selectedDays.map(day => dayMappingShortToFull[day] || day);
     };
 
     const handleSubmit = async () => {
