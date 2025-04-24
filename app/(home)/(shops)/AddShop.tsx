@@ -47,7 +47,7 @@ const dayMappingShortToFull: Record<string, string> = {
 
 export default function ShopRegistrationScreen() {
     const router = useRouter();
-    const { selectedShop } = useShop();
+    const { selectedShop, setSelectedShop } = useShop();
     const { shopId } = useLocalSearchParams();
     const { userData } = useUser();
     const [name, setName] = useState<string>('');
@@ -217,6 +217,17 @@ export default function ShopRegistrationScreen() {
                 if (shopId && selectedShop) {
                     // We're updating an existing shop
                     await firebaseService.updateShopDetails(shopId.toString(), shopData);
+                    
+                    // Update the selectedShop in context to reflect changes immediately
+                    setSelectedShop({
+                        ...selectedShop,
+                        ...shopData,
+                        location: selectedShop.location, // Preserve the original location
+                        id: selectedShop.id, // Preserve the original ID
+                        backgroundImageUrl: selectedShop.backgroundImageUrl, // Preserve the image URL
+                        createdAt: selectedShop.createdAt // Preserve the creation date
+                    });
+                    
                     console.log('Shop updated successfully!');
                 } else {
                     // We're creating a new shop
