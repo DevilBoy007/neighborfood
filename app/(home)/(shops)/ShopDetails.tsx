@@ -89,17 +89,13 @@ export default function ShopDetails() {
             setUploading(true);
             setUploadProgress(0);
             
-            // Get file name from URI
-            const filename = uri.split('/').pop() || `shop_${selectedShop.id}_${Date.now()}.jpg`;
+            const filename = `shop_${selectedShop.id}_${Date.now()}.png`;
             
-            // For React Native, we need to prepare the file
             const response = await fetch(uri);
             const blob = await response.blob();
             
-            // Create a File object from the blob
             const file = new File([blob], filename, { type: blob.type });
             
-            // Upload to Firebase Storage using our service
             const uploadTask = await firebaseService.uploadImage(file, 
                 // Progress callback
                 (progress) => {
@@ -107,12 +103,10 @@ export default function ShopDetails() {
                 },
                 // Success callback
                 async (downloadURL) => {
-                    // Update the shop with the new image URL
                     await firebaseService.updateShopDetails(selectedShop.id, {
                         backgroundImageUrl: downloadURL
                     });
                     
-                    // Update the selected shop in context
                     setSelectedShop({
                         ...selectedShop,
                         backgroundImageUrl: downloadURL
@@ -121,7 +115,6 @@ export default function ShopDetails() {
                     setUploading(false);
                     Alert.alert('Success', 'Shop image has been updated');
                 },
-                // Error callback
                 (error) => {
                     console.error('Error uploading image:', error);
                     setUploading(false);
