@@ -1,20 +1,45 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import * as Location from 'expo-location';
+import { Platform, NativeModules } from 'react-native';
 
 type LocationData = {
     coords?: Location.LocationObjectCoords | null;
     zipCode?: string | null;
     loading: boolean;
     error?: string | null;
+    usesImperialSystem: boolean;
 };
 
 type LocationContextType = {
     locationData: LocationData;
     updateLocation: (location: Location.LocationObjectCoords) => void;
     fetchCurrentLocation: () => Promise<void>;
+    formatDistance: (distanceInKm: number) => string;
 };
 
 const LocationContext = createContext<LocationContextType | undefined>(undefined);
+
+// Get device locale for determining distance units
+const getDeviceLocale = (): string => {
+    if (Platform.OS === 'ios') {
+        return (
+            NativeModules.SettingsManager?.settings?.AppleLocale ||
+            NativeModules.SettingsManager?.settings?.AppleLanguages[0] ||
+            'en_US'
+        );
+    } else if (Platform.OS === 'android') {
+        return NativeModules.I18nManager?.localeIdentifier || 'en_US';
+    } else {
+        // Web or other platforms - try to get from navigator
+        return navigator.language || 'en_US';
+    }
+};
+
+// Check if user is likely to use miles (US, UK, etc.)
+const usesImperialSystem = (): boolean => {
+    const locale = getDeviceLocale().toLowerCase();
+    return locale.includes('us') || locale.includes('gb') || locale.includes('uk');
+};
 
 export const LocationProvider: React.FC<{children: React.ReactNode}> = ({ children }) => {
     const [locationData, setLocationData] = useState<LocationData>({
@@ -22,7 +47,30 @@ export const LocationProvider: React.FC<{children: React.ReactNode}> = ({ childr
         zipCode: null,
         loading: true,
         error: null,
+        usesImperialSystem: usesImperialSystem(),
     });
+
+    // Format distance based on user's locale preference
+    const formatDistance = (distanceInKm: number): string => {
+        if (locationData.usesImperialSystem) {
+            // Convert to miles
+            const miles = distanceInKm * 0.621371;
+            if (miles < 0.1) {
+                // Use feet for very short distances
+                const feet = miles * 5280;
+                return `${Math.round(feet)} ft`;
+            } else {
+                return `${miles.toFixed(1)} mi`;
+            }
+        } else {
+            // Keep as kilometers
+            if (distanceInKm < 1) {
+                return `${(distanceInKm * 1000).toFixed(0)} m`;
+            } else {
+                return `${distanceInKm.toFixed(1)} km`;
+            }
+        }
+    };
 
     const updateLocation = async (coords: Location.LocationObjectCoords) => {
         try {
@@ -39,6 +87,7 @@ export const LocationProvider: React.FC<{children: React.ReactNode}> = ({ childr
             zipCode,
             loading: false,
             error: null,
+            usesImperialSystem: usesImperialSystem(),
         });
         } catch (error) {
         setLocationData(prev => ({
@@ -60,7 +109,8 @@ export const LocationProvider: React.FC<{children: React.ReactNode}> = ({ childr
             coords: null,
             zipCode: null,
             loading: false,
-            error: 'Permission to access location was denied'
+            error: 'Permission to access location was denied',
+            usesImperialSystem: usesImperialSystem(),
             });
             return;
         }
@@ -75,7 +125,8 @@ export const LocationProvider: React.FC<{children: React.ReactNode}> = ({ childr
             coords: null,
             zipCode: null,
             loading: false,
-            error: 'Failed to get current location'
+            error: 'Failed to get current location',
+            usesImperialSystem: usesImperialSystem(),
         });
         }
     };
@@ -86,7 +137,12 @@ export const LocationProvider: React.FC<{children: React.ReactNode}> = ({ childr
     }, []);
 
     return (
-        <LocationContext.Provider value={{ locationData, updateLocation, fetchCurrentLocation }}>
+        <LocationContext.Provider value={{ 
+            locationData, 
+            updateLocation, 
+            fetchCurrentLocation,
+            formatDistance
+        }}>
         {children}
         </LocationContext.Provider>
     );

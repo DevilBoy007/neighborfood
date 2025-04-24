@@ -1,26 +1,21 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { SafeAreaView, ScrollView, View, Text, StyleSheet, Platform, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
+import { SafeAreaView, ScrollView, View, Text, StyleSheet, Platform, TouchableOpacity, RefreshControl } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import ShopCard from '@/components/ShopCard';
-import { useUser } from '@/context/userContext';
 import { useFocusEffect } from '@react-navigation/native';
 
+import ShopCard from '@/components/ShopCard';
 import firebaseService from '@/handlers/firebaseService';
-
+import { useUser } from '@/context/userContext';
 
 export default function Shops() {
     const { userData } = useUser();
     const [shops, setShops] = useState([]);
-    const [items, setItems] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
-    
-    // Group items by shop for easy access to item images
-    const [shopItemsMap, setShopItemsMap] = useState({});
-    
+
     async function fetchShopsAndItems() {
         if (!userData?.uid) {
             setLoading(false);
@@ -30,22 +25,15 @@ export default function Shops() {
         try {
             setLoading(true);
             const { shops, items } = await firebaseService.getShopsAndItemsForUser(userData.uid);
-            setShops(shops);
-            setItems(items);
-            console.log('Shops:', shops);
-            console.log('Items:', items);
-            // Create a map of shop IDs to arrays of item images
-            const itemsByShop = {};
-            items.forEach(item => {
-                if (!itemsByShop[item.shopId]) {
-                    itemsByShop[item.shopId] = [];
-                }
-                if (item.imageUrl) {
-                    itemsByShop[item.shopId].push(item.imageUrl);
-                }
+            const shopsWithItems = shops.map(shop => {
+                const shopItems = items.filter(item => item.shopId === shop.id);
+                return {
+                    ...shop,
+                    items: shopItems
+                };
             });
-            console.log('Items by shop:', itemsByShop);
-            setShopItemsMap(itemsByShop);
+            setShops(shopsWithItems);
+            console.log('Shops with items:', shopsWithItems);
         } catch (err) {
             console.error('Error fetching shops and items:', err);
             setError(err.message);
@@ -56,22 +44,22 @@ export default function Shops() {
 
     // Use React.useCallback to memoize the fetchShopsAndItems function
     const memoizedFetchShopsAndItems = React.useCallback(fetchShopsAndItems, [userData]);
-    
+
     // Initial data fetch
     useEffect(() => {
         memoizedFetchShopsAndItems();
     }, [memoizedFetchShopsAndItems]);
-    
+
     // Refresh data when the screen comes into focus
-    useFocusEffect(
-        React.useCallback(() => {
-            console.log('Shops screen in focus, refreshing data');
-            memoizedFetchShopsAndItems();
-            return () => {
-                // Optional cleanup if needed
-            };
-        }, [memoizedFetchShopsAndItems])
-    );
+    // useFocusEffect(
+    //     React.useCallback(() => {
+    //         console.log('Shops screen in focus, refreshing data');
+    //         memoizedFetchShopsAndItems();
+    //         return () => {
+    //             // Optional cleanup if needed
+    //         };
+    //     }, [memoizedFetchShopsAndItems])
+    // );
     
     const router = useRouter();
     return (
@@ -104,9 +92,9 @@ export default function Shops() {
                     <Text style={styles.noShopsText}>No shops available</Text>
                 ) : !loading && (
                     shops.map((shop) => (
-                        <ShopCard 
-                            name={shop.name} 
-                            itemImages={shopItemsMap[shop.id] || []} 
+                        <ShopCard
+                            name={shop.name}
+                            shop={shop}
                             key={shop.id}
                         />
                     ))

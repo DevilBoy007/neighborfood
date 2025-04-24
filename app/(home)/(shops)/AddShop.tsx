@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     View,
     Text,
@@ -13,15 +13,43 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Picker } from '@react-native-picker/picker';
-import { useRouter } from 'expo-router';
-import { useUser } from '@/context/userContext';
-import firebaseService from '@/handlers/firebaseService';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { GeoPoint } from 'firebase/firestore';
+import Toast from 'react-native-toast-message';
+
+import firebaseService from '@/handlers/firebaseService';
+import { useUser } from '@/context/userContext';
+import { useShop } from '@/context/shopContext';
 
 const weekDays = Platform.OS === 'web' ? ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'] : ['M', 'T', 'W', 'Th', 'F', 'Sa', 'Su'];
 const seasons = ['spring', 'summer', 'fall', 'winter'];
 
+// Add day mapping for both directions
+const dayMappingFullToShort: Record<string, string> = {
+    'monday': 'M',
+    'tuesday': 'T',
+    'wednesday': 'W',
+    'thursday': 'Th',
+    'friday': 'F',
+    'saturday': 'Sa',
+    'sunday': 'Su'
+};
+
+const dayMappingShortToFull: Record<string, string> = {
+    'M': 'monday',
+    'T': 'tuesday',
+    'W': 'wednesday',
+    'Th': 'thursday',
+    'F': 'friday',
+    'Sa': 'saturday',
+    'Su': 'sunday'
+};
+
 export default function ShopRegistrationScreen() {
+    const router = useRouter();
+    const { selectedShop, setSelectedShop } = useShop();
+    const { shopId } = useLocalSearchParams();
+    const { userData } = useUser();
     const [name, setName] = useState<string>('');
     const [description, setDescription] = useState<string>('');
     const [type, setType] = useState<string>('');
@@ -43,9 +71,29 @@ export default function ShopRegistrationScreen() {
         delivery: '',
     });
 
-    // Get the user data from context
-    const { userData } = useUser();
-    const router = useRouter();
+    useEffect(() => {
+        // If shopId matches selectedShop.id, we're editing that shop
+        if (shopId && selectedShop && shopId === selectedShop.id) {
+            // Populate form with selectedShop data
+            setName(selectedShop.name);
+            setDescription(selectedShop.description);
+            setType(selectedShop.type);
+            
+            // Convert full day names to abbreviated versions for mobile
+            if (Platform.OS !== 'web' && selectedShop.days) {
+                const mappedDays = selectedShop.days.map(day => dayMappingFullToShort[day] || day);
+                setSelectedDays(mappedDays);
+            } else {
+                setSelectedDays(selectedShop.days);
+            }
+            
+            setSelectedSeasons(selectedShop.seasons);
+            setOpenTime(selectedShop.openTime);
+            setCloseTime(selectedShop.closeTime);
+            setAllowPickup(selectedShop.allowPickup);
+            setLocalDelivery(selectedShop.localDelivery);
+        }
+    }, [shopId, selectedShop]);
 
     const toggleDay = (day: string) => {
         if (selectedDays.includes(day)) {
@@ -124,24 +172,38 @@ export default function ShopRegistrationScreen() {
         return isValid;
     };
 
+    const mapDaysToFullNames = (selectedDays: string[]): string[] => {
+        if (Platform.OS === 'web') {
+            return selectedDays;
+        }
+
+        return selectedDays.map(day => dayMappingShortToFull[day] || day);
+    };
+
     const handleSubmit = async () => {
         if (validateForm()) {
             try {
                 // Ensure user is authenticated before creating a shop
                 if (!userData || !userData.uid) {
-                    Alert.alert('Error', 'You must be logged in to create a shop');
+                    Toast.show({
+                        type: 'error',
+                        text1: 'Error',
+                        text2: 'You must be logged in to create a shop'
+                    });
                     return;
                 }
 
                 // Get a random image URL from the imageUrls array
                 const randomIndex = Math.floor(Math.random() * imageUrls.length);
                 const randomImageUrl = imageUrls[randomIndex];
+                
+                const normalizedDays = mapDaysToFullNames(selectedDays);
 
                 const shopData = {
                     name,
                     description,
                     type,
-                    days: selectedDays,
+                    days: normalizedDays,
                     seasons: selectedSeasons,
                     openTime,
                     closeTime,
@@ -150,31 +212,50 @@ export default function ShopRegistrationScreen() {
                     location: new GeoPoint(userData.location.coords.latitude, userData.location.coords.longitude),
                     marketId: userData.location.zip || '',  // Associate shop with user's market
                     userId: userData.uid,  // Associate shop with current user
-                    createdAt: new Date(),
-                    backgroundImageUrl: randomImageUrl
                 };
                 
-                // Connect to firebase
-                await firebaseService.connect();
-                
-                // Add shop to database
-                await firebaseService.createShopForUser(userData.uid, shopData)
-                .then(() => {
+                if (shopId && selectedShop) {
+                    // We're updating an existing shop
+                    await firebaseService.updateShopDetails(shopId.toString(), shopData);
+                    
+                    // Update the selectedShop in context to reflect changes immediately
+                    setSelectedShop({
+                        ...selectedShop,
+                        ...shopData,
+                        location: selectedShop.location, // Preserve the original location
+                        id: selectedShop.id, // Preserve the original ID
+                        backgroundImageUrl: selectedShop.backgroundImageUrl, // Preserve the image URL
+                        createdAt: selectedShop.createdAt // Preserve the creation date
+                    });
+                    
+                    console.log('Shop updated successfully!');
+                } else {
+                    // We're creating a new shop
+                    // Add creation date and background image for new shops only
+                    shopData.createdAt = new Date();
+                    shopData.backgroundImageUrl = randomImageUrl;
+                    
+                    await firebaseService.createShopForUser(userData.uid, shopData);
                     console.log('Shop created successfully!');
-                    if (Platform.OS === 'web') {
-                        router.navigate('/success');
-                        setTimeout(() => {
-                            router.back();
-                        }, 2100);
-                    } else {
-                        router.navigate('/success');
-                        setTimeout(() => {
-                            router.back();
-                        }, 2000);
-                    }
-                });
+                }
+                
+                if (Platform.OS === 'web') {
+                    router.navigate('/success');
+                    setTimeout(() => {
+                        router.back();
+                    }, 2100);
+                } else {
+                    router.navigate('/success');
+                    setTimeout(() => {
+                        router.back();
+                    }, 2000);
+                }
             } catch (error) {
-                Alert.alert('Error', 'Failed to create shop. Please try again.');
+                Toast.show({
+                    type: 'error',
+                    text1: 'Error',
+                    text2: shopId ? 'Failed to update shop. Please try again.' : 'Failed to create shop. Please try again.'
+                });
             }
         } else {
             if (Platform.OS === 'web') {
@@ -409,7 +490,7 @@ export default function ShopRegistrationScreen() {
             </KeyboardAvoidingView>
             <View style={[styles.buttonContainer, Platform.OS === 'ios' && styles.iosButtonContainer]}>
                 <TouchableOpacity style={styles.button} onPress={handleSubmit}>
-                    <Text style={styles.buttonText}>Create</Text>
+                    <Text style={styles.buttonText}>{shopId ? 'Save' : 'Create'}</Text>
                 </TouchableOpacity>
             </View>
         </SafeAreaView>

@@ -1,6 +1,9 @@
 import React, { useState, useEffect, Fragment } from 'react';
+import { useRouter } from 'expo-router';
 import { APIProvider, Map, AdvancedMarker, Pin, InfoWindow } from '@vis.gl/react-google-maps'
 import { StyleSheet, Text, View, ActivityIndicator } from 'react-native';
+
+import { useShop, ShopData } from '@/context/shopContext';
 import { useLocation } from '@/context/locationContext';
 
 interface MarkerData {
@@ -14,24 +17,14 @@ interface MarkerData {
     image?: string;
 }
 
-interface Shop {
-    id: string;
-    name: string;
-    description: string;
-    location: {
-        latitude: number;
-        longitude: number;
-    };
-    backgroundImageUrl?: string;
-}
-
 interface WebMapScreenProps {
-    shops?: Shop[];
+    shops?: ShopData[];
 }
 
 const MapScreenWeb = ({ shops = [] }: WebMapScreenProps) => {
-
+    const router = useRouter();
     const { locationData, fetchCurrentLocation } = useLocation();
+        const { selectedShop, setSelectedShop } = useShop();
     const [selectedMarkerId, setSelectedMarkerId] = useState<string | null>(null);
     const [markers, setMarkers] = useState<MarkerData[]>([]);
     const [mapKey, setMapKey] = useState(Date.now()); // Add key to force re-render
@@ -58,7 +51,7 @@ const MapScreenWeb = ({ shops = [] }: WebMapScreenProps) => {
             
             // Create shop markers
             const shopMarkers = shops.map(shop => ({
-                id: `shop-${shop.id}`,
+                id: shop.id,
                 position: {
                     lat: shop.location.latitude,
                     lng: shop.location.longitude
@@ -77,6 +70,14 @@ const MapScreenWeb = ({ shops = [] }: WebMapScreenProps) => {
 
     const handleMarkerClick = (markerId: string) => {
         setSelectedMarkerId(markerId === selectedMarkerId ? null : markerId);
+    };
+    
+    const handleCalloutPress = (markerId: string) => {
+        const shop = shops.find(shop => shop.id === markerId);
+        if (shop) {
+            setSelectedShop(shop);
+            router.navigate('/ShopDetails');
+        }
     };
 
     if (locationData.loading) {
@@ -127,11 +128,11 @@ const MapScreenWeb = ({ shops = [] }: WebMapScreenProps) => {
                         </AdvancedMarker>
                         {selectedMarkerId === marker.id && (
                             <InfoWindow
-                                headerContent={<img src={marker.image} style={{height: 75, width: 200}}/>}
+                                headerContent={<img src={marker.image} style={{height: 75, width: 150, cursor: 'pointer'}} onClick={() => { handleCalloutPress(marker.id) }}/>}
                                 position={marker.position}
                                 onCloseClick={() => setSelectedMarkerId(null)}
                             >
-                                <div>
+                                <div onClick={() => handleCalloutPress(marker.id)} style={{cursor: 'pointer'}}>
                                     <h3>{marker.title}</h3>
                                     <p><i>{marker.description}</i></p>
                                 </div>

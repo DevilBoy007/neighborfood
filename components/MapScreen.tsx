@@ -1,9 +1,13 @@
 import React from 'react';
 import { useState, useEffect } from 'react';
+import { useRouter } from 'expo-router';
 import { StyleSheet, View, Text, Image, Platform, LogBox, ActivityIndicator } from 'react-native';
 import MapView, { PROVIDER_DEFAULT, PROVIDER_GOOGLE, Marker, Callout } from 'react-native-maps';
-import { useLocation } from '@/context/locationContext';
 import icon from '@/assets/images/rabbit-icon.png'
+
+import { useLocation } from '@/context/locationContext';
+import { useShop, ShopData } from '@/context/shopContext';
+import { Ionicons } from '@expo/vector-icons';
 
 interface MarkerData {
     id: string;
@@ -16,25 +20,16 @@ interface MarkerData {
     image: string;
 }
 
-interface Shop {
-    id: string;
-    name: string;
-    description: string;
-    location: {
-        latitude: number;
-        longitude: number;
-    };
-    backgroundImageUrl: string;
-}
-
 interface MapScreenProps {
-    shops?: Shop[];
+    shops?: ShopData[];
 }
 
 LogBox.ignoreLogs(['VectorKit']);
 
 const MapScreen = ({ shops = [] }: MapScreenProps) => {
+    const router = useRouter();
     const { locationData, fetchCurrentLocation } = useLocation();
+    const { selectedShop, setSelectedShop } = useShop();
     const [markers, setMarkers] = useState<MarkerData[]>([]);
     const [selectedMarkerId, setSelectedMarkerId] = useState<string | null>(null);
     const [mapKey, setMapKey] = useState(Date.now()); // Add key to force re-render
@@ -46,7 +41,7 @@ const MapScreen = ({ shops = [] }: MapScreenProps) => {
     useEffect(() => {
         if (locationData.coords) {
             const shopMarkers = shops.map(shop => ({
-                id: `shop-${shop.id}`,
+                id: shop.id,
                 location: {
                     latitude: shop.location.latitude,
                     longitude: shop.location.longitude
@@ -64,6 +59,14 @@ const MapScreen = ({ shops = [] }: MapScreenProps) => {
 
     const handleMarkerPress = (markerId: string) => {
         setSelectedMarkerId(markerId === selectedMarkerId ? null : markerId);
+    };
+
+    const handleCalloutPress = (markerId: string) => {
+        const shop = shops.find(shop => shop.id === markerId);
+        if (shop) {
+            setSelectedShop(shop);
+            router.navigate('/ShopDetails');
+        }
     };
 
     if (locationData.loading) {
@@ -115,15 +118,29 @@ const MapScreen = ({ shops = [] }: MapScreenProps) => {
                             pinColor="#b7ffb0"
                             onPress={() => handleMarkerPress(marker.id)}
                         >
-                            <Callout>
+                            <Callout
+                                onPress={() => { handleCalloutPress(marker.id);}}
+                            >
                                 <View style={{ width: 150, height: 150 }}>
-                                    <Image
-                                        source={{ uri: marker.image }}
-                                        style={{ width: 100, height: 50, borderRadius: 10 }}
-                                        resizeMode="cover"
-                                    />
-                                    <Text style={ styles.calloutTitle }>{marker.title}</Text>
+                                    <View style={{ flex: 1, flexDirection: 'column' }}>
+                                        <View style={{ flexDirection: 'row' }}>
+                                            <Image
+                                                source={{ uri: marker.image }}
+                                                style={{ width: 100, height: 50, borderRadius: 10 }}
+                                                resizeMode="cover"
+                                            />
+                                            <Ionicons
+                                                name="chevron-forward-outline"
+                                                size={20}
+                                                color="#00bfff"
+                                                style={{ position: 'absolute', right: 10, top: 10 }}
+                                            />
+                                        </View>
+                                        <View style={{ marginTop: 8 }}>
+                                            <Text style={ styles.calloutTitle }>{marker.title}</Text>
+                                        </View>
                                     <Text style={ styles.calloutDescription }>{marker.description}</Text>
+                                    </View>
                                 </View>
                             </Callout>
                         </Marker>
@@ -166,6 +183,7 @@ const styles = StyleSheet.create({
     },
     calloutDescription: {
         fontStyle: 'italic',
+        fontSize: 12,
     },
 });
 

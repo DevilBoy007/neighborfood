@@ -1,5 +1,6 @@
 import { Platform } from 'react-native';
 import { initializeApp, getApp, FirebaseApp } from 'firebase/app';
+import { FirebaseStorage, getStorage, ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 import { Analytics, getAnalytics } from 'firebase/analytics';
 import {
     initializeAuth,
@@ -39,6 +40,7 @@ class FirebaseService {
     };
     private app: FirebaseApp | null;
     private auth: Auth | null;
+    private storage: FirebaseStorage | null;
     private analytics: Analytics | null;
     private db: Firestore | null;
 
@@ -52,6 +54,7 @@ class FirebaseService {
         };
 
         this.app = null;
+        this.storage = null;
         this.analytics = null;
         this.auth = null;
         this.db = null;
@@ -67,7 +70,7 @@ class FirebaseService {
     async connect() {
         try {
             // Check if Firebase is already initialized
-            if (this.app && this.auth && this.db) {
+            if (this.app && this.auth && this.db && this.storage) {
                 console.log('Firebase already connected');
                 return true;
             }
@@ -95,6 +98,16 @@ class FirebaseService {
                     } else {
                         throw authError;
                     }
+                }
+            }
+
+            if (!this.storage) {
+                try {
+                    this.storage = getStorage(this.app, 'gs://neighborfoods');
+                    console.log('Initialized Firebase storage');
+                } catch (storageError) {
+                    console.error('Error initializing Firebase storage:', storageError);
+                    this.storage = null;
                 }
             }
 
@@ -352,6 +365,42 @@ class FirebaseService {
         }
     }
 
+    async getUserById(userId: string) {
+        try {
+            if (!this.db) {
+                await this.connect();
+                if (!this.db) {
+                    throw new Error('Error connecting to Firestore');
+                }
+            }
+            
+            const userDoc = await this.getDocument('users', userId);
+            return userDoc;
+        } catch (error) {
+            console.error("Error fetching user by ID:", error);
+            throw error;
+        }
+    }
+
+    async updateShopDetails(shopId: string, shopData: object): Promise<void> {
+        try {
+            if (!this.db) {
+                await this.connect();
+                if (!this.db) {
+                    throw new Error('Error connecting to Firestore');
+                }
+            }
+            
+            const shopDocRef = doc(this.db, 'shops', shopId);
+            
+            await updateDoc(shopDocRef, shopData);
+            console.log("Shop updated with ID: ", shopId);
+        } catch (error) {
+            console.error("Error updating shop: ", error);
+            throw error;
+        }
+    }
+
     async getShopsAndItemsForUser(userId: string): Promise<{ shops: any[]; items: any[] }> {
         try {
             if (!this.db) {
@@ -504,6 +553,66 @@ class FirebaseService {
         }
     }
 
+    async uploadImage(
+        image: File,
+        progressCallback?: (progress: number) => void,
+        successCallback?: (downloadURL: string) => void,
+        errorCallback?: (error: any) => void
+    ) {
+        if (!this.storage) {
+            await this.connect();
+            if (!this.storage) {
+                const error = new Error('Error connecting to Firebase Storage');
+                if (errorCallback) errorCallback(error);
+                throw error;
+            }
+        }
+        
+        try {
+            // Create a unique filename if needed
+            const fileName = image.name || `image_${Date.now()}`;
+            const storageRef = ref(this.storage, `img/${fileName}`);
+            const uploadTask = uploadBytesResumable(storageRef, image);
+
+            uploadTask.on('state_changed',
+                (snapshot) => {
+                    // Handle progress updates
+                    const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                    console.log('Upload is ' + progress + '% done');
+                    if (progressCallback) progressCallback(progress);
+                    
+                    switch (snapshot.state) {
+                        case 'paused':
+                            console.log('Upload is paused');
+                            break;
+                        case 'running':
+                            console.log('Upload is running');
+                            break;
+                    }
+                },
+                (error) => {
+                    // Handle unsuccessful uploads
+                    console.error("Error uploading file", error);
+                    if (errorCallback) errorCallback(error);
+                },
+                () => {
+                    // Handle successful uploads on complete
+                    getDownloadURL(uploadTask.snapshot.ref).then((downloadURL) => {
+                        console.log('File available at', downloadURL);
+                        if (successCallback) successCallback(downloadURL);
+                        return downloadURL;
+                    });
+                }
+            );
+            
+            return uploadTask;
+        } catch (error) {
+            console.error("Error starting upload", error);
+            if (errorCallback) errorCallback(error);
+            throw error;
+        }
+    }
+
     disconnect() {
         try {
             this.app = null;
@@ -516,7 +625,6 @@ class FirebaseService {
             throw error;
         }
     }
-
 }
 
 
