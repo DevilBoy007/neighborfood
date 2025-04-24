@@ -15,6 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Picker } from '@react-native-picker/picker';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { GeoPoint } from 'firebase/firestore';
+import Toast from 'react-native-toast-message';
 
 import firebaseService from '@/handlers/firebaseService';
 import { useUser } from '@/context/userContext';
@@ -184,7 +185,11 @@ export default function ShopRegistrationScreen() {
             try {
                 // Ensure user is authenticated before creating a shop
                 if (!userData || !userData.uid) {
-                    Alert.alert('Error', 'You must be logged in to create a shop');
+                    Toast.show({
+                        type: 'error',
+                        text1: 'Error',
+                        text2: 'You must be logged in to create a shop'
+                    });
                     return;
                 }
 
@@ -235,7 +240,11 @@ export default function ShopRegistrationScreen() {
                     }, 2000);
                 }
             } catch (error) {
-                Alert.alert('Error', shopId ? 'Failed to update shop. Please try again.' : 'Failed to create shop. Please try again.');
+                Toast.show({
+                    type: 'error',
+                    text1: 'Error',
+                    text2: shopId ? 'Failed to update shop. Please try again.' : 'Failed to create shop. Please try again.'
+                });
             }
         } else {
             if (Platform.OS === 'web') {
