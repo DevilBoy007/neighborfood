@@ -365,6 +365,23 @@ class FirebaseService {
         }
     }
 
+    async getUserById(userId: string) {
+        try {
+            if (!this.db) {
+                await this.connect();
+                if (!this.db) {
+                    throw new Error('Error connecting to Firestore');
+                }
+            }
+            
+            const userDoc = await this.getDocument('users', userId);
+            return userDoc;
+        } catch (error) {
+            console.error("Error fetching user by ID:", error);
+            throw error;
+        }
+    }
+
     async updateShopDetails(shopId: string, shopData: object): Promise<void> {
         try {
             if (!this.db) {
