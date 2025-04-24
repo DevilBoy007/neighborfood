@@ -4,6 +4,7 @@ import { useFonts } from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
 import { GestureHandlerRootView } from "react-native-gesture-handler";
+import Toast from 'react-native-toast-message';
 import { UserProvider } from "@/context/userContext";
 import { LocationProvider, useLocation } from "@/context/locationContext";
 import { ShopProvider } from "@/context/shopContext";
@@ -53,6 +54,7 @@ export default function RootLayout() {
                                             }}
                                         />
                                     </Stack>
+                                    <Toast />
                                 </GestureHandlerRootView>
                             </KeyboardProvider>
                         </CartProvider>
