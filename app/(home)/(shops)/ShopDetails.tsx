@@ -120,7 +120,7 @@ export default function ShopDetails() {
                     Toast.show({
                         type: 'success',
                         text1: 'Success',
-                        text2: 'Shop image has been updated'
+                        text2: 'Shop image has been updated',
                     });
                 },
                 (error) => {
@@ -158,8 +158,16 @@ export default function ShopDetails() {
     const HeaderImage = () => (
         <View style={styles.headerImageContainer}>
             <Image 
-                source={{ uri: selectedShop.backgroundImageUrl || `https://placehold.co/${Platform.OS === 'web'?800:600}x400/00bfff/fff.png` }}
+                source={{ uri: selectedShop.backgroundImageUrl === '' ? `https://placehold.co/${Platform.OS === 'web' ? 800 : 600}x400/00bfff/fff.png` : selectedShop.backgroundImageUrl }}
                 style={styles.headerImage}
+                onError={() => {
+                    if (selectedShop.backgroundImageUrl.length > 0) {
+                        setSelectedShop({
+                            ...selectedShop,
+                            backgroundImageUrl: ''
+                        });
+                    }
+                }}
             />
             
             {selectedShop.userId === userData?.uid && (
