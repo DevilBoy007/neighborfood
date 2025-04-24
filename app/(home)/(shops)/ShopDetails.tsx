@@ -22,6 +22,7 @@ export default function ShopDetails() {
     const [loading, setLoading] = useState<boolean>(true);
     const [uploading, setUploading] = useState<boolean>(false);
     const [uploadProgress, setUploadProgress] = useState<number>(0);
+    const [shopOwner, setShopOwner] = useState<any>(null);
     const router = useRouter();
 
     // Calculate distance between two coordinates in kilometers
@@ -60,6 +61,23 @@ export default function ShopDetails() {
         fetchShopItems();
     }, [selectedShop]);
     
+    useEffect(() => {
+        async function fetchShopOwner() {
+            if (!selectedShop) return;
+
+            try {
+                const owner = await firebaseService.getUserById(selectedShop.userId);
+                if (owner) {
+                    setShopOwner(owner);
+                }
+            } catch (error) {
+                console.error("Error fetching shop owner:", error);
+            }
+        }
+
+        fetchShopOwner();
+    }, [selectedShop]);
+
     const pickImage = async () => {
         if (!selectedShop || selectedShop.userId !== userData?.uid) {
             return;
@@ -239,7 +257,14 @@ export default function ShopDetails() {
                         </TouchableOpacity>
                     )}
                 </View>
-                <Text style={styles.shopDescription}>{selectedShop.description}</Text>
+
+                <View style={styles.ownerRow}>
+                    <Ionicons name="person-outline" size={16} color="#555" />
+                    <Text style={styles.ownerText}>
+                        {selectedShop.userId == userData?.uid ? 'you' : shopOwner ? shopOwner.username : 'Loading...'}
+                    </Text>
+                </View>
+                    <Text style={styles.shopDescription}>{selectedShop.description}</Text>
                 <View>
                     {selectedShop.type && (
                     <View style={styles.infoRow}>
@@ -444,7 +469,19 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        marginBottom: 8,
+        marginBottom: 4,
+    },
+    ownerRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginBottom: 12,
+    },
+    ownerText: {
+        fontSize: 14,
+        color: '#555',
+        fontFamily: 'TextMeOne',
+        marginLeft: 4,
     },
     shopName: {
         fontSize: Platform.OS === 'web'? 40 : 30,
