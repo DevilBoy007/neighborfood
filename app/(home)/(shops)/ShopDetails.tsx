@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Platform, Image, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Platform, Image, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import Toast from 'react-native-toast-message';
 
 import ParallaxScrollView from '@/components/ParallaxScrollView';
 import ItemCard from '@/components/ItemCard';
@@ -77,7 +78,11 @@ export default function ShopDetails() {
             }
         } catch (error) {
             console.error('Error picking image:', error);
-            Alert.alert('Error', 'Failed to select image');
+            Toast.show({
+                type: 'error',
+                text1: 'Error',
+                text2: 'Failed to select image'
+            });
         }
     };
     
@@ -112,18 +117,30 @@ export default function ShopDetails() {
                     });
                     
                     setUploading(false);
-                    Alert.alert('Success', 'Shop image has been updated');
+                    Toast.show({
+                        type: 'success',
+                        text1: 'Success',
+                        text2: 'Shop image has been updated'
+                    });
                 },
                 (error) => {
                     console.error('Error uploading image:', error);
                     setUploading(false);
-                    Alert.alert('Error', 'Failed to upload image');
+                    Toast.show({
+                        type: 'error',
+                        text1: 'Error',
+                        text2: 'Failed to upload image'
+                    });
                 }
             );
         } catch (error) {
             console.error('Error uploading image:', error);
             setUploading(false);
-            Alert.alert('Error', 'Failed to upload image');
+            Toast.show({
+                type: 'error',
+                text1: 'Error',
+                text2: 'Failed to upload image'
+            });
         }
     };
 
