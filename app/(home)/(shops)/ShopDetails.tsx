@@ -65,7 +65,6 @@ export default function ShopDetails() {
         }
         
         try {
-            // Launch image picker
             const result = await ImagePicker.launchImageLibraryAsync({
                 mediaTypes: ["images"],
                 allowsEditing: true,
@@ -121,7 +120,6 @@ export default function ShopDetails() {
                     Alert.alert('Error', 'Failed to upload image');
                 }
             );
-            
         } catch (error) {
             console.error('Error uploading image:', error);
             setUploading(false);
