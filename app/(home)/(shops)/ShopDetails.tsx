@@ -213,7 +213,12 @@ export default function ShopDetails() {
 
             <View style={styles.shopInfoContainer}>
                 <View style={styles.shopHeaderRow}>
-                    <Text style={styles.shopName}>{selectedShop.name}</Text>
+                    <Text style={[
+                        styles.shopName, 
+                        selectedShop.name.length > 18 ? { fontSize: Platform.OS === 'web' ? 40 : 25 } : {}
+                    ]}>
+                        {selectedShop.name}
+                    </Text>
                     {selectedShop.userId === userData?.uid && (
                         <TouchableOpacity
                             style={styles.editShopIconButton}
