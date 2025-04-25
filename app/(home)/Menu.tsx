@@ -17,7 +17,7 @@ const MenuScreen = () => {
     const MenuButton = ({ icon, title, destination }: { icon: ImageSourcePropType | string, title: string, destination: string | null }) => {
         if (typeof icon !== 'string') {
             return (
-                <TouchableOpacity style={styles.menuButton} onPress={() => router.navigate(`/(home)/${destination}`)} >
+                <TouchableOpacity style={styles.menuButton} onPress={() => router.navigate(`${destination}`)} >
                     <Image source={icon} style={styles.icon} />
                     <Text style={styles.menuButtonText}>{title}</Text>
                 </TouchableOpacity>
@@ -25,7 +25,7 @@ const MenuScreen = () => {
         }
         else {
             return (
-                <TouchableOpacity style={styles.menuButton}>
+                <TouchableOpacity style={styles.menuButton} onPress={() => router.navigate(`${destination}`)}>
                     <Text style={styles.menuButtonIcon}>{icon}</Text>
                     <Text style={styles.menuButtonText}>{title}</Text>
                 </TouchableOpacity>
@@ -65,9 +65,9 @@ const MenuScreen = () => {
                     <MenuButton icon="+" title="add item" />
                     <MenuButton icon={shopIcon} title="manage shops" destination={"./(shops)/Shops"}/>
                     <MenuButton icon={dashboardIcon} title="dashboard" />
-                    <MenuButton icon={receiptIcon} title="order history" destination={"./(orders)/OrderHistory"}/>
-                    <MenuButton icon={contactUsIcon} title="contact us" destination={"./(contact)/ContactUs"}/>
-                    <MenuButton icon="!" title="report a problem" />
+                    <MenuButton icon={receiptIcon} title="order history" destination={"./(orders)/"}/>
+                    <MenuButton icon={contactUsIcon} title="contact us" destination={"./(contact)"}/>
+                    <MenuButton icon="!" title="report a problem" destination={"./(report)/Report"}/>
                 </View>
             </ScrollView>
         </View>
