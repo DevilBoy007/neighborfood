@@ -264,7 +264,7 @@ export default function AddItemScreen() {
                     name,
                     description,
                     shopId: [shopId], // Store as array to support multi-shop items in the future
-                    marketId: shop.marketId,
+                    marketId: shop.location.marketId,
                     userId: userData.uid,
                     category: selectedCategories,
                     imageUrl,
