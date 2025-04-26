@@ -263,8 +263,8 @@ export default function AddItemScreen() {
                 const itemData = {
                     name,
                     description,
-                    shopId: [shopId], // Store as array to support multi-shop items in the future
-                    marketId: shop.location.marketId,
+                    shopId: shopId, // Store as array to support multi-shop items in the future
+                    marketId: userData.location.zip,
                     userId: userData.uid,
                     category: selectedCategories,
                     imageUrl,
@@ -284,6 +284,7 @@ export default function AddItemScreen() {
                         ...selectedItem,
                         ...itemData,
                         id: selectedItem.id,
+                        marketId: userData.location.zip || '',
                         imageUrl: imageUrl || '', // Ensure imageUrl is never null
                         createdAt: selectedItem.createdAt
                     });
