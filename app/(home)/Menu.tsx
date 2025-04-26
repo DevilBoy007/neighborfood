@@ -25,7 +25,7 @@ const MenuScreen = () => {
         }
         else {
             return (
-                <TouchableOpacity style={styles.menuButton}>
+                <TouchableOpacity style={styles.menuButton} onPress={() => destination && router.navigate(`/(home)/${destination}`)}>
                     <Text style={styles.menuButtonIcon}>{icon}</Text>
                     <Text style={styles.menuButtonText}>{title}</Text>
                 </TouchableOpacity>
@@ -62,7 +62,7 @@ const MenuScreen = () => {
             </View>
             <ScrollView contentContainerStyle={styles.scrollContent}>
                 <View style={styles.menuGrid}>
-                    <MenuButton icon="+" title="add item" />
+                    <MenuButton icon="+" title="add item" destination="./(items)/AddItem"/>
                     <MenuButton icon={shopIcon} title="manage shops" destination={"./(shops)/Shops"}/>
                     <MenuButton icon={dashboardIcon} title="dashboard" />
                     <MenuButton icon={receiptIcon} title="order history" destination={"./(orders)/OrderHistory"}/>
