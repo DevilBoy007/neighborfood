@@ -2,7 +2,7 @@ import React, { createContext, useState, useContext, ReactNode } from 'react';
 
 export type ItemData = {
     id: string;
-    shopId: string;
+    shopId: string[];
     marketId: string;
     name: string;
     description: string;
