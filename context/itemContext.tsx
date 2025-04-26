@@ -4,6 +4,7 @@ export type ItemData = {
     id: string;
     shopId: string[];
     marketId: string;
+    userId: string;
     name: string;
     description: string;
     category: string[];
