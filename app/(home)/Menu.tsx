@@ -10,6 +10,7 @@ import dashboardIcon from '../../assets/images/dashboard.png';
 import tomatoImage from '../../assets/images/tomatoes.png';
 import dillImage from '../../assets/images/dill.jpeg';
 import bellPepperImage from '../../assets/images/bellPeppers.jpeg';
+import manageItemIcon from '@/assets/images/manageItemIcon.png';
 
 
 const MenuScreen = () => {
@@ -64,10 +65,10 @@ const MenuScreen = () => {
                 <View style={styles.menuGrid}>
                     <MenuButton icon="+" title="add item" destination="./(items)/AddItem"/>
                     <MenuButton icon={shopIcon} title="manage shops" destination={"./(shops)/Shops"}/>
-                    <MenuButton icon={dashboardIcon} title="dashboard" />
+                    <MenuButton icon={manageItemIcon} title="manage items" destination="./(items)/ManageItems" />
                     <MenuButton icon={receiptIcon} title="order history" destination={"./(orders)/OrderHistory"}/>
                     <MenuButton icon={contactUsIcon} title="contact us" destination={"./(contact)/ContactUs"}/>
-                    <MenuButton icon="!" title="report a problem" />
+                    <MenuButton icon={dashboardIcon} title="dashboard" />
                 </View>
             </ScrollView>
         </View>

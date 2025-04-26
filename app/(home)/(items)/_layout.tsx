@@ -8,6 +8,7 @@ export default function RootLayout() {
             <Stack.Screen options={{ headerShown: false }} />
             <Stack>
                 <Stack.Screen name="AddItem" options={{ headerShown: false}} />
+                <Stack.Screen name="ManageItems" options={{ headerShown: false}} />
             </Stack>
         </KeyboardProvider>
     );
