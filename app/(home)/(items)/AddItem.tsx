@@ -23,7 +23,7 @@ import { useUser } from '@/context/userContext';
 import { useItem } from '@/context/itemContext';
 import { useShop } from '@/context/shopContext';
 
-const categories = ['produce', 'dairy', 'meat', 'bakery', 'preserves', 'spices', 'prepared foods', 'other'];
+const categories = ['produce', 'dairy', 'meat', 'baked good', 'preserves', 'spices', 'prepared foods', 'other'];
 const units = ['each', 'lb', 'oz', 'bunch', 'pint', 'quart', 'gallon'];
 
 export default function AddItemScreen() {
