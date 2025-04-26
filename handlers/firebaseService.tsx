@@ -625,8 +625,89 @@ class FirebaseService {
             throw error;
         }
     }
-}
 
+    async createItemForShop(shopId: string, itemData: object): Promise<string> {
+        try {
+            if (!this.db) {
+                await this.connect();
+                if (!this.db) {
+                    throw new Error('Error connecting to Firestore');
+                }
+            }
+            
+            const itemsCollectionRef = collection(this.db, 'items');
+            
+            // Create the item document
+            const docRef = await addDoc(itemsCollectionRef, {
+                ...itemData,
+                shopId: [shopId], // Store as array for potential multi-shop items in the future
+                createdAt: new Date()
+            });
+            
+            console.log("Item created with ID: ", docRef.id);
+            return docRef.id;
+        } catch (error) {
+            console.error("Error creating item: ", error);
+            throw error;
+        }
+    }
+
+    async getItemById(itemId: string) {
+        try {
+            if (!this.db) {
+                await this.connect();
+                if (!this.db) {
+                    throw new Error('Error connecting to Firestore');
+                }
+            }
+            
+            const itemDoc = await this.getDocument('items', itemId);
+            return itemDoc;
+        } catch (error) {
+            console.error("Error fetching item by ID:", error);
+            throw error;
+        }
+    }
+
+    async getAllItemsForUser(userId: string): Promise<any[]> {
+        try {
+            if (!this.db) {
+                await this.connect();
+                if (!this.db) {
+                    throw new Error('Error connecting to Firestore');
+                }
+            }
+            const itemsSnapshot = await this.getDocumentsWhere('items', 'userId', '==', userId);
+            return itemsSnapshot;
+        } catch (error) {
+            console.error("Error fetching items for user:", error);
+            throw error;
+        }
+    }
+
+    async getShopsForUser(userId: string): Promise<any[]> {
+        try {
+            if (!this.db) {
+                await this.connect();
+                if (!this.db) {
+                    throw new Error('Error connecting to Firestore');
+                }
+            }
+            const shopsSnapshot = await this.getDocumentsWhere('shops', 'userId', '==', userId);
+            const shops: any[] = [];
+            
+            shopsSnapshot.forEach((shopDoc) => {
+                const { id, ...shopData } = shopDoc;
+                shops.push({ id, ...shopData });
+            });
+            
+            return shops;
+        } catch (error) {
+            console.error("Error fetching shops for user:", error);
+            throw error;
+        }
+    }
+}
 
 const firebaseService = FirebaseService.getInstance();
 export default firebaseService;
