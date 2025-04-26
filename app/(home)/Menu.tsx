@@ -10,7 +10,7 @@ import dashboardIcon from '../../assets/images/dashboard.png';
 import tomatoImage from '../../assets/images/tomatoes.png';
 import dillImage from '../../assets/images/dill.jpeg';
 import bellPepperImage from '../../assets/images/bellPeppers.jpeg';
-import manageItemIcon from '@/assets/images/manageItemIcon.png';
+import manageItemIcon from '@/assets/images/manageItemsIcon.png';
 
 
 const MenuScreen = () => {
