@@ -56,7 +56,6 @@ export default function AddItemScreen() {
     });
 
     useEffect(() => {
-        // Fetch shops for the user when component loads
         const loadShops = async () => {
             if (userData && userData.uid) {
                 try {
@@ -101,21 +100,8 @@ export default function AddItemScreen() {
     }, [itemId, selectedItem]);
 
     const pickImage = async () => {
-        // Ask for permission
-        const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
-        
-        if (permissionResult.granted === false) {
-            Toast.show({
-                type: 'error',
-                text1: 'Permission Required',
-                text2: 'You need to grant camera roll permissions to upload an image'
-            });
-            return;
-        }
-        
-        // Launch the image picker
         const result = await ImagePicker.launchImageLibraryAsync({
-            mediaTypes: ImagePicker.MediaTypeOptions.Images,
+            mediaTypes: ['images'],
             allowsEditing: true,
             aspect: [4, 3],
             quality: 0.8,
