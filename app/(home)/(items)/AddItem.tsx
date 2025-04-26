@@ -289,34 +289,74 @@ export default function AddItemScreen() {
                         createdAt: selectedItem.createdAt
                     });
                     
-                    Toast.show({
-                        type: 'success',
-                        text1: 'Success',
-                        text2: 'Item updated successfully!'
-                    });
+                    // Store success message for later
+                    const successMessage = 'Item updated successfully!';
+                    
+                    setIsLoadingItem(false);
+                    
+                    if (Platform.OS === 'web') {
+                        router.navigate('/success');
+                        setTimeout(() => {
+                            router.back();
+                            // Show toast after navigating back
+                            setTimeout(() => {
+                                Toast.show({
+                                    type: 'success',
+                                    text1: 'Success',
+                                    text2: successMessage
+                                });
+                            }, 300);
+                        }, 2100);
+                    } else {
+                        router.navigate('/success');
+                        setTimeout(() => {
+                            router.back();
+                            // Show toast after navigating back
+                            setTimeout(() => {
+                                Toast.show({
+                                    type: 'success',
+                                    text1: 'Success',
+                                    text2: successMessage
+                                });
+                            }, 300);
+                        }, 2000);
+                    }
                 } else {
                     // We're creating a new item
                     const newItemId = await firebaseService.addDocument('items', itemData, null);
                     
-                    Toast.show({
-                        type: 'success',
-                        text1: 'Success',
-                        text2: 'Item created successfully!'
-                    });
-                }
-                
-                setIsLoadingItem(false);
-                
-                if (Platform.OS === 'web') {
-                    router.navigate('/success');
-                    setTimeout(() => {
-                        router.back();
-                    }, 2100);
-                } else {
-                    router.navigate('/success');
-                    setTimeout(() => {
-                        router.back();
-                    }, 2000);
+                    // Store success message for later
+                    const successMessage = 'Item created successfully!';
+                    
+                    setIsLoadingItem(false);
+                    
+                    if (Platform.OS === 'web') {
+                        router.navigate('/success');
+                        setTimeout(() => {
+                            router.back();
+                            // Show toast after navigating back
+                            setTimeout(() => {
+                                Toast.show({
+                                    type: 'success',
+                                    text1: 'Success',
+                                    text2: successMessage
+                                });
+                            }, 300);
+                        }, 2100);
+                    } else {
+                        router.navigate('/success');
+                        setTimeout(() => {
+                            router.back();
+                            // Show toast after navigating back
+                            setTimeout(() => {
+                                Toast.show({
+                                    type: 'success',
+                                    text1: 'Success',
+                                    text2: successMessage
+                                });
+                            }, 300);
+                        }, 2000);
+                    }
                 }
             } catch (error) {
                 setIsLoadingItem(false);
