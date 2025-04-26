@@ -501,7 +501,7 @@ export default function AddItemScreen() {
                                             if (value) setErrors({...errors, unit: ''});
                                         }}
                                         style={styles.picker}
-                                        itemStyle={{ height: 100, fontFamily: 'TextMeOne' }}
+                                        itemStyle={{ height: 150, fontFamily: 'TextMeOne' }}
                                     >
                                         <Picker.Item color="#00bfff" label="unit" value="" />
                                         {units.map(u => (
@@ -684,7 +684,8 @@ const styles = StyleSheet.create({
     },
     picker: {
         color: '#333',
-        backgroundColor: '#fff',
+        backgroundColor: '#b7ffb0',
+        height: 125,
         marginBottom: 25,
     },
     categoriesContainer: {
