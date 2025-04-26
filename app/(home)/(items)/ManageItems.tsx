@@ -355,7 +355,7 @@ const styles = StyleSheet.create({
         padding: 16,
         borderRadius: 8,
         marginTop: 16,
-        marginBottom: 32,
+        marginBottom: 128,
         alignItems: 'center',
     },
     addItemButtonText: {
