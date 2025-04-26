@@ -284,6 +284,8 @@ export default function AddItemScreen() {
                         ...selectedItem,
                         ...itemData,
                         id: selectedItem.id,
+                        imageUrl: imageUrl || '', // Ensure imageUrl is never null
+                        createdAt: selectedItem.createdAt
                     });
                     
                     Toast.show({
