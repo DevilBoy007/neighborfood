@@ -459,7 +459,7 @@ export default function AddItemScreen() {
                     <View style={styles.priceContainer}>
                         <View style={[styles.priceInput, errors.price ? styles.inputError : null]}>
                             <TextInput
-                                style={[styles.input, { marginBottom: 0 }]}
+                                style={[styles.input, { marginBottom: 0, paddingLeft: 40 }]}
                                 placeholder="9.99"
                                 placeholderTextColor={'#999'}
                                 value={price}
@@ -613,6 +613,7 @@ const styles = StyleSheet.create({
         color: 'red',
         marginBottom: 10,
         fontSize: 14,
+        fontFamily: 'TextMeOne',
     },
     errorRow: {
         flexDirection: 'row',
@@ -707,9 +708,11 @@ const styles = StyleSheet.create({
     },
     categoryButtonText: {
         color: '#333',
+        fontFamily: 'TextMeOne',
     },
     selectedButtonText: {
         color: '#fff',
+        fontFamily: 'TextMeOne',
     },
     priceContainer: {
         flexDirection: 'row',
@@ -741,6 +744,7 @@ const styles = StyleSheet.create({
         fontSize: 16,
         marginRight: 10,
         flex: 1,
+        fontFamily: 'TextMeOne',
     },
     quantityInput: {
         width: '30%',
@@ -769,6 +773,7 @@ const styles = StyleSheet.create({
     checkboxLabel: {
         color: '#333',
         fontSize: 16,
+        fontFamily: 'TextMeOne',
     },
     imageUpload: {
         height: 200,
