@@ -126,7 +126,7 @@ export default function AddItemScreen() {
         }
     };
     
-    const uploadImageToFirebase = async (uri: string) => {
+    const uploadImageToFirebase = async (uri: string): Promise<string> => {
         setUploading(true);
         
         try {
@@ -135,7 +135,7 @@ export default function AddItemScreen() {
             
             const file = new File([blob], `item_${Date.now()}.jpg`, { type: blob.type });
             
-            return new Promise((resolve, reject) => {
+            return new Promise<string>((resolve, reject) => {
                 firebaseService.uploadImage(
                     file,
                     (progress) => {
