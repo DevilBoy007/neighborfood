@@ -335,10 +335,8 @@ export default function AddItemScreen() {
                         }, 2000);
                     }
                 } else {
-                    // We're creating a new item
                     const newItemId = await firebaseService.addDocument('items', itemData, null);
                     
-                    // Store success message for later
                     const successMessage = 'Item created successfully!';
                     
                     setIsLoadingItem(false);
@@ -347,7 +345,6 @@ export default function AddItemScreen() {
                         router.navigate('/success');
                         setTimeout(() => {
                             router.back();
-                            // Show toast after navigating back
                             setTimeout(() => {
                                 Toast.show({
                                     type: 'success',
@@ -360,7 +357,6 @@ export default function AddItemScreen() {
                         router.navigate('/success');
                         setTimeout(() => {
                             router.back();
-                            // Show toast after navigating back
                             setTimeout(() => {
                                 Toast.show({
                                     type: 'success',
