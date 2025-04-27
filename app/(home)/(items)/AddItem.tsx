@@ -44,6 +44,8 @@ export default function AddItemScreen() {
     const [image, setImage] = useState<string | null>(null);
     const [uploading, setUploading] = useState<boolean>(false);
     
+    const [mediaLibraryPermissionResponse, requestMediaLibraryPermission] = ImagePicker.useMediaLibraryPermissions();
+    
     const [errors, setErrors] = useState({
         name: '',
         description: '',
@@ -100,6 +102,17 @@ export default function AddItemScreen() {
     }, [itemId, selectedItem]);
 
     const pickImage = async () => {
+        if (mediaLibraryPermissionResponse?.status !== 'granted') {
+            await requestMediaLibraryPermission();
+        }
+        if (mediaLibraryPermissionResponse?.status !== 'granted') {
+            Toast.show({
+                type: 'error',
+                text1: 'Error',
+                text2: 'Permission to access media library is required to upload images.',
+            });
+            return;
+        }
         const result = await ImagePicker.launchImageLibraryAsync({
             mediaTypes: ['images'],
             allowsEditing: true,
