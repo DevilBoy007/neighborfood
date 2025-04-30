@@ -3,7 +3,7 @@ import { useRouter } from 'expo-router';
 import { View, Text, StyleSheet, Image, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useCart } from '@/context/cartContext';
-import { ItemData } from '@/context/itemContext';
+import { useItem, ItemData } from '@/context/itemContext';
 
 interface ItemCardProps {
     item: ItemData;
@@ -14,7 +14,7 @@ interface ItemCardProps {
     isShopOwner?: boolean;
 }
 
-const ItemCard = ({ 
+const ItemCard = ({
     item,
     shopName = '', 
     shopPhotoURL = '', 
@@ -24,6 +24,7 @@ const ItemCard = ({
     }: ItemCardProps) => {
     const [quantity, setQuantity] = useState(1);
     const { addToCart } = useCart();
+    const { setSelectedItem } = useItem();
     const router = useRouter();
 
     const handleAddToCart = () => {
@@ -107,7 +108,13 @@ const ItemCard = ({
             {isShopOwner && (
                 <TouchableOpacity
                     style={styles.addButton}
-                    onPress={() => alert('pressed edit')/*router.navigate('EditItem', { item })*/}
+                        onPress={() => {
+                            setSelectedItem(item);
+                            router.push({
+                                pathname: '/(home)/(items)/AddItem',
+                                params: { itemId: item.id }
+                            });
+}}
                 >
                     <Ionicons name="create-outline" size={16} color="white" />
                     <Text style={styles.addButtonText}>Edit Item</Text>
