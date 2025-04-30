@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useRouter } from 'expo-router';
-import { View, Text, StyleSheet, Image, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, Image, TouchableOpacity, Alert, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useCart } from '@/context/cartContext';
 import { useItem, ItemData } from '@/context/itemContext';
@@ -12,6 +12,10 @@ interface ItemCardProps {
     onPress?: () => void;
     showCartControls?: boolean;
     isShopOwner?: boolean;
+    onEditItem?: (item: ItemData) => void;
+    onDeleteItem?: (item: ItemData) => void;
+    deleteLabel?: string;
+    deleteConfirmMessage?: string;
 }
 
 const ItemCard = ({
@@ -21,6 +25,10 @@ const ItemCard = ({
     onPress,
     showCartControls = true,
     isShopOwner = false,
+    onEditItem,
+    onDeleteItem,
+    deleteLabel = "Delete",
+    deleteConfirmMessage = "Are you sure you want to delete this item?"
     }: ItemCardProps) => {
     const [quantity, setQuantity] = useState(1);
     const { addToCart } = useCart();
@@ -53,6 +61,97 @@ const ItemCard = ({
         prev > 1 ? prev - 1 : 1
     );
 
+    const handleEdit = () => {
+        if (onEditItem) {
+            onEditItem(item);
+        } else {
+            setSelectedItem(item);
+            router.push({
+                pathname: '/(home)/(items)/AddItem',
+                params: { itemId: item.id }
+            });
+        }
+    };
+
+    const handleDelete = () => {
+        // Show confirmation dialog
+        if (Platform.OS === 'web') {
+            if (confirm(deleteConfirmMessage)) {
+                onDeleteItem && onDeleteItem(item);
+            }
+        } else {
+            Alert.alert(
+                `${deleteLabel} Item`,
+                deleteConfirmMessage,
+                [
+                    {
+                        text: 'Cancel',
+                        style: 'cancel',
+                    },
+                    {
+                        text: deleteLabel,
+                        onPress: () => onDeleteItem && onDeleteItem(item),
+                        style: 'destructive',
+                    },
+                ]
+            );
+        }
+    };
+
+    const formatPrice = (price) => {
+        return `$${parseFloat(price).toFixed(2)}`;
+    };
+
+    const useManagerStyle = isShopOwner && onDeleteItem;
+
+    if (useManagerStyle) {
+        return (
+            <View style={styles.manageItemCard}>
+                <View style={styles.itemImageContainer}>
+                    {item.imageUrl ? (
+                        <Image source={{ uri: item.imageUrl }} style={styles.itemImage} />
+                    ) : (
+                        <View style={styles.noImage}>
+                            <Text style={styles.noImageText}>No Image</Text>
+                        </View>
+                    )}
+                </View>
+                <View style={styles.itemDetails}>
+                    <Text style={styles.itemName}>{item.name}</Text>
+                    <Text style={styles.itemShop}>
+                        {item.shopId && item.shopId.length > 0 
+                            ? `Shop: ${shopName}` 
+                            : 'No shop assigned'}
+                    </Text>
+                    <Text style={styles.itemPrice}>
+                        {formatPrice(item.price)} {item.unit === 'each' ? item.unit : `per ${item.unit}`}
+                    </Text>
+                    <Text style={styles.itemQuantity}>
+                        Quantity: {item.quantity || 0}
+                    </Text>
+                    {item.negotiable && (
+                        <Text style={styles.negotiableTag}>Negotiable</Text>
+                    )}
+                </View>
+                <View style={styles.itemActions}>
+                    <TouchableOpacity 
+                        style={styles.editButton} 
+                        onPress={handleEdit}
+                    >
+                        <Ionicons name="create-outline" size={24} color="white" />
+                    </TouchableOpacity>
+                    <TouchableOpacity 
+                        style={styles.deleteButton} 
+                        onPress={handleDelete}
+                    >
+                        <Ionicons name="trash-outline" size={24} color="white" />
+                    </TouchableOpacity>
+                </View>
+            </View>
+        );
+    }
+
+    // Original ItemCard style
     return (
         <View style={styles.itemCard}>
         {item.imageUrl && (
@@ -105,23 +204,8 @@ const ItemCard = ({
                 </TouchableOpacity>
             </View>
             )}
-            {isShopOwner && (
-                <TouchableOpacity
-                    style={styles.addButton}
-                        onPress={() => {
-                            setSelectedItem(item);
-                            router.push({
-                                pathname: '/(home)/(items)/AddItem',
-                                params: { itemId: item.id }
-                            });
-}}
-                >
-                    <Ionicons name="create-outline" size={16} color="white" />
-                    <Text style={styles.addButtonText}>Edit Item</Text>
-                </TouchableOpacity>
-            )}
         </View>
-        </View>
+    </View>
     );
 };
 
@@ -218,6 +302,81 @@ const styles = StyleSheet.create({
         color: 'white',
         fontWeight: '600',
         marginLeft: 6,
+    },
+    ownerControls: {
+        marginTop: 10,
+    },
+    deleteActionButton: {
+        backgroundColor: '#ff4d4d',
+        marginTop: 8,
+    },
+
+    manageItemCard: {
+        backgroundColor: 'white',
+        borderRadius: 10,
+        padding: 15,
+        marginBottom: 16,
+        flexDirection: 'row',
+        shadowColor: '#000',
+        shadowOffset: {
+            width: 0,
+            height: 2,
+        },
+        shadowOpacity: 0.23,
+        shadowRadius: 2.62,
+        elevation: 4,
+    },
+    itemImageContainer: {
+        width: 80,
+        height: 80,
+        borderRadius: 8,
+        overflow: 'hidden',
+        marginRight: 15,
+    },
+    noImage: {
+        width: '100%',
+        height: '100%',
+        backgroundColor: '#f0f0f0',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    noImageText: {
+        color: '#999',
+        fontSize: 12,
+    },
+    itemDetails: {
+        flex: 1,
+        justifyContent: 'center',
+    },
+    itemShop: {
+        fontSize: 14,
+        color: '#666',
+        marginBottom: 5,
+    },
+    itemQuantity: {
+        fontSize: 14,
+        color: '#666',
+    },
+    negotiableTag: {
+        fontSize: 12,
+        color: '#00bfff',
+        fontStyle: 'italic',
+        marginTop: 4,
+    },
+    itemActions: {
+        justifyContent: 'space-around',
+        alignItems: 'flex-end',
+    },
+    editButton: {
+        backgroundColor: '#00bfff',
+        padding: 8,
+        borderRadius: 5,
+        marginBottom: 8,
+    },
+    deleteButton: {
+        backgroundColor: '#ff4d4d',
+        padding: 8,
+        borderRadius: 5,
     },
 });
 

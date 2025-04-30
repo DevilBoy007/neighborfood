@@ -1,24 +1,26 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { SafeAreaView, ScrollView, View, Text, StyleSheet, Platform, TouchableOpacity, RefreshControl, Image, Alert } from 'react-native';
+import { SafeAreaView, ScrollView, View, Text, StyleSheet, Platform, TouchableOpacity, RefreshControl } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 
 import firebaseService from '@/handlers/firebaseService';
 import { useUser } from '@/context/userContext';
-import { useItem } from '@/context/itemContext';
+import { useItem, ItemData } from '@/context/itemContext';
 import { useShop } from '@/context/shopContext';
 import Toast from 'react-native-toast-message';
+import ItemCard from '@/components/ItemCard';
 
 export default function ManageItems() {
     const { userData } = useUser();
     const { setSelectedItem } = useItem();
     const { shops, setShops } = useShop();
-    const [items, setItems] = useState([]);
+    const [items, setItems] = useState<ItemData[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const router = useRouter();
 
     // Create a map of shop IDs to shop names for display
     const shopIdToNameMap = {};
@@ -35,7 +37,6 @@ export default function ManageItems() {
         try {
             setLoading(true);
             
-            // First ensure we have the shops data
             if (shops.length === 0) {
                 const userShops = await firebaseService.getShopsForUser(userData.uid);
                 setShops(userShops);
@@ -44,7 +45,6 @@ export default function ManageItems() {
                 });
             }
             
-            // Then fetch all items for the user
             const userItems = await firebaseService.getAllItemsForUser(userData.uid);
             setItems(userItems);
             console.log('User items:', userItems.length);
@@ -83,38 +83,13 @@ export default function ManageItems() {
         });
     };
 
-    const handleDeleteItem = (item) => {
-        // Show confirmation dialog
-        if (Platform.OS === 'web') {
-            if (confirm('Are you sure you want to delete this item?')) {
-                deleteItem(item.id);
-            }
-        } else {
-            Alert.alert(
-                'Delete Item',
-                'Are you sure you want to delete this item?',
-                [
-                    {
-                        text: 'Cancel',
-                        style: 'cancel',
-                    },
-                    {
-                        text: 'Delete',
-                        onPress: () => deleteItem(item.id),
-                        style: 'destructive',
-                    },
-                ]
-            );
-        }
-    };
-
-    const deleteItem = async (itemId) => {
+    const deleteItem = async (item) => {
         try {
             setLoading(true);
-            await firebaseService.deleteDocument('items', itemId);
+            await firebaseService.deleteDocument('items', item.id);
             
             // Update the local state to remove the deleted item
-            setItems(prevItems => prevItems.filter(item => item.id !== itemId));
+            setItems(prevItems => prevItems.filter(i => i.id !== item.id));
             
             Toast.show({
                 type: 'success',
@@ -132,12 +107,7 @@ export default function ManageItems() {
             setLoading(false);
         }
     };
-
-    const formatPrice = (price) => {
-        return `$${parseFloat(price).toFixed(2)}`;
-    };
     
-    const router = useRouter();
     return (
         <SafeAreaView style={styles.container}>
             <View style={styles.header}>
@@ -168,48 +138,15 @@ export default function ManageItems() {
                     <Text style={styles.noItemsText}>No items available</Text>
                 ) : !loading && (
                     items.map((item) => (
-                        <View key={item.id} style={styles.itemCard}>
-                            <View style={styles.itemImageContainer}>
-                                {item.imageUrl ? (
-                                    <Image source={{ uri: item.imageUrl }} style={styles.itemImage} />
-                                ) : (
-                                    <View style={styles.noImage}>
-                                        <Text style={styles.noImageText}>No Image</Text>
-                                    </View>
-                                )}
-                            </View>
-                            <View style={styles.itemDetails}>
-                                <Text style={styles.itemName}>{item.name}</Text>
-                                <Text style={styles.itemShop}>
-                                    {item.shopId && item.shopId.length > 0 && shopIdToNameMap[item.shopId[0]] 
-                                        ? `Shop: ${shopIdToNameMap[item.shopId[0]]}` 
-                                        : 'No shop assigned'}
-                                </Text>
-                                <Text style={styles.itemPrice}>
-                                    {formatPrice(item.price)} per {item.unit}
-                                </Text>
-                                <Text style={styles.itemQuantity}>
-                                    Quantity: {item.quantity || 0}
-                                </Text>
-                                {item.negotiable && (
-                                    <Text style={styles.negotiableTag}>Negotiable</Text>
-                                )}
-                            </View>
-                            <View style={styles.itemActions}>
-                                <TouchableOpacity 
-                                    style={styles.editButton} 
-                                    onPress={() => handleEditItem(item)}
-                                >
-                                    <Ionicons name="create-outline" size={24} color="white" />
-                                </TouchableOpacity>
-                                <TouchableOpacity 
-                                    style={styles.deleteButton} 
-                                    onPress={() => handleDeleteItem(item)}
-                                >
-                                    <Ionicons name="trash-outline" size={24} color="white" />
-                                </TouchableOpacity>
-                            </View>
-                        </View>
+                        <ItemCard
+                            key={item.id}
+                            item={item}
+                            shopName={shopIdToNameMap[item.shopId]}
+                            isShopOwner={true}
+                            onEditItem={handleEditItem}
+                            onDeleteItem={deleteItem}
+                            showCartControls={false}
+                        />
                     ))
                 )}
                 <TouchableOpacity
@@ -268,88 +205,6 @@ const styles = StyleSheet.create({
     scrollView: {
         flex: 1,
         padding: 16,
-    },
-    itemCard: {
-        backgroundColor: 'white',
-        borderRadius: 10,
-        padding: 15,
-        marginBottom: 16,
-        flexDirection: 'row',
-        shadowColor: '#000',
-        shadowOffset: {
-            width: 0,
-            height: 2,
-        },
-        shadowOpacity: 0.23,
-        shadowRadius: 2.62,
-        elevation: 4,
-    },
-    itemImageContainer: {
-        width: 80,
-        height: 80,
-        borderRadius: 8,
-        overflow: 'hidden',
-        marginRight: 15,
-    },
-    itemImage: {
-        width: '100%',
-        height: '100%',
-        resizeMode: 'cover',
-    },
-    noImage: {
-        width: '100%',
-        height: '100%',
-        backgroundColor: '#f0f0f0',
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    noImageText: {
-        color: '#999',
-        fontSize: 12,
-    },
-    itemDetails: {
-        flex: 1,
-        justifyContent: 'center',
-    },
-    itemName: {
-        fontSize: 18,
-        fontWeight: 'bold',
-        marginBottom: 5,
-    },
-    itemShop: {
-        fontSize: 14,
-        color: '#666',
-        marginBottom: 5,
-    },
-    itemPrice: {
-        fontSize: 16,
-        color: '#333',
-        marginBottom: 2,
-    },
-    itemQuantity: {
-        fontSize: 14,
-        color: '#666',
-    },
-    negotiableTag: {
-        fontSize: 12,
-        color: '#00bfff',
-        fontStyle: 'italic',
-        marginTop: 4,
-    },
-    itemActions: {
-        justifyContent: 'space-around',
-        alignItems: 'flex-end',
-    },
-    editButton: {
-        backgroundColor: '#00bfff',
-        padding: 8,
-        borderRadius: 5,
-        marginBottom: 8,
-    },
-    deleteButton: {
-        backgroundColor: '#ff4d4d',
-        padding: 8,
-        borderRadius: 5,
     },
     addItemButton: {
         backgroundColor: '#00bfff',
