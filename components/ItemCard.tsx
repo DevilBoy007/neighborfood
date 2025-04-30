@@ -118,11 +118,16 @@ const ItemCard = ({
                 </View>
                 <View style={styles.itemDetails}>
                     <Text style={styles.itemName}>{item.name}</Text>
-                    <Text style={styles.itemShop}>
+                    {deleteLabel ==='Delete' && <Text style={styles.itemShop}>
                         {item.shopId && item.shopId.length > 0 
                             ? shopName
                             : 'No shop assigned'}
                     </Text>
+                    }
+                    {deleteLabel === 'Remove' && <Text style={styles.itemDescription}>
+                        {item.description || 'No description available'}
+                    </Text>
+                    }
                     <Text style={styles.itemPrice}>
                         {formatPrice(item.price)} {item.unit === 'each' ? item.unit : `per ${item.unit}`}
                     </Text>
