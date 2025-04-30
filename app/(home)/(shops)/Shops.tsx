@@ -103,6 +103,7 @@ export default function Shops() {
                     style={ styles.addShopButton }
                     onPress={() => router.push('/AddShop')}
                 >
+                    <Ionicons name="add-circle-outline" size={24} color="#fff" style={styles.buttonIcon} />
                     <Text style={ styles.addShopButtonText }>Add Shop</Text>
                 </TouchableOpacity>
             </ScrollView>
@@ -162,11 +163,17 @@ const styles = StyleSheet.create({
         borderRadius: 8,
         marginTop: 16,
         alignItems: 'center',
+        flexDirection: 'row',
+        justifyContent: 'center',
     },
     addShopButtonText: {
         fontSize: 24,
         color: '#fff',
         fontFamily: 'TextMeOne',
+        
+    },
+    buttonIcon: {
+        marginRight: 8,
     },
     loader: {
         marginTop: 20,

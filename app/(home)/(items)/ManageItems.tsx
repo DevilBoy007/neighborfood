@@ -216,6 +216,7 @@ export default function ManageItems() {
                     style={styles.addItemButton}
                     onPress={() => router.push('/(home)/(items)/AddItem')}
                 >
+                    <Ionicons name="add-circle-outline" size={24} color="#fff" style={styles.buttonIcon} />
                     <Text style={styles.addItemButtonText}>Add Item</Text>
                 </TouchableOpacity>
             </ScrollView>
@@ -357,11 +358,16 @@ const styles = StyleSheet.create({
         marginTop: 16,
         marginBottom: 128,
         alignItems: 'center',
+        flexDirection: 'row',
+        justifyContent: 'center',
     },
     addItemButtonText: {
         fontSize: 24,
         color: '#fff',
         fontFamily: 'TextMeOne',
+    },
+    buttonIcon: {
+        marginRight: 8,
     },
     errorText: {
         color: 'red',
