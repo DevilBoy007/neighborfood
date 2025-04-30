@@ -120,7 +120,7 @@ const ItemCard = ({
                     <Text style={styles.itemName}>{item.name}</Text>
                     <Text style={styles.itemShop}>
                         {item.shopId && item.shopId.length > 0 
-                            ? `Shop: ${shopName}` 
+                            ? shopName
                             : 'No shop assigned'}
                     </Text>
                     <Text style={styles.itemPrice}>
@@ -130,7 +130,7 @@ const ItemCard = ({
                         Quantity: {item.quantity || 0}
                     </Text>
                     {item.negotiable && (
-                        <Text style={styles.negotiableTag}>Negotiable</Text>
+                        <Text style={styles.negotiableTag}>Price negotiable</Text>
                     )}
                 </View>
                 <View style={styles.itemActions}>
@@ -236,9 +236,8 @@ const styles = StyleSheet.create({
     },
     itemName: {
         fontSize: 18,
-        fontWeight: '600',
         marginBottom: 4,
-        fontFamily: 'TextMeOne',
+        fontFamily: 'TitanOne',
     },
     priceRow: {
         flexDirection: 'row',
@@ -250,6 +249,7 @@ const styles = StyleSheet.create({
         color: '#00bfff',
         fontWeight: '600',
         marginRight: 4,
+        fontFamily: 'TextMeOne',
     },
     itemUnit: {
         fontSize: 14,
@@ -302,6 +302,7 @@ const styles = StyleSheet.create({
         color: 'white',
         fontWeight: '600',
         marginLeft: 6,
+        fontFamily: 'TextMeOne',
     },
     ownerControls: {
         marginTop: 10,
@@ -310,7 +311,7 @@ const styles = StyleSheet.create({
         backgroundColor: '#ff4d4d',
         marginTop: 8,
     },
-
+// manage item card
     manageItemCard: {
         backgroundColor: 'white',
         borderRadius: 10,
@@ -352,10 +353,12 @@ const styles = StyleSheet.create({
         fontSize: 14,
         color: '#666',
         marginBottom: 5,
+        fontFamily: 'TextMeOne',
     },
     itemQuantity: {
         fontSize: 14,
         color: '#666',
+        fontFamily: 'TextMeOne',
     },
     negotiableTag: {
         fontSize: 12,
