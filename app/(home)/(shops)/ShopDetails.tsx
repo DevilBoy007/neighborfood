@@ -269,7 +269,7 @@ export default function ShopDetails() {
                 <View style={styles.shopHeaderRow}>
                     <Text style={[
                         styles.shopName, 
-                        selectedShop.name.length > 18 ? { fontSize: Platform.OS === 'web' ? 40 : 25 } : {}
+                        selectedShop.name.length > 17 ? { fontSize: Platform.OS === 'web' ? 40 : 25 } : {}
                     ]}>
                         {selectedShop.name}
                     </Text>
