@@ -162,6 +162,34 @@ export default function ShopDetails() {
         }
     };
 
+    const handleRemoveItemFromShop = async (item) => {
+        try {
+            // In this case, we only remove the shop ID from the item's shopId array
+            const updatedShopIds = item.shopId.filter(id => id !== selectedShop.id);
+            
+            // Update the item with the new shopId array
+            await firebaseService.updateDocument('items', item.id, {
+                shopId: updatedShopIds
+            });
+            
+            // Remove the item from the local state
+            setItems(prevItems => prevItems.filter(i => i.id !== item.id));
+            
+            Toast.show({
+                type: 'success',
+                text1: 'Success',
+                text2: 'Item removed from shop'
+            });
+        } catch (error) {
+            console.error('Error removing item from shop:', error);
+            Toast.show({
+                type: 'error',
+                text1: 'Error',
+                text2: 'Failed to remove item'
+            });
+        }
+    };
+
     if (!selectedShop) {
         return (
         <View style={styles.container}>
@@ -241,7 +269,7 @@ export default function ShopDetails() {
                 <View style={styles.shopHeaderRow}>
                     <Text style={[
                         styles.shopName, 
-                        selectedShop.name.length > 18 ? { fontSize: Platform.OS === 'web' ? 40 : 25 } : {}
+                        selectedShop.name.length > 17 ? { fontSize: Platform.OS === 'web' ? 40 : 25 } : {}
                     ]}>
                         {selectedShop.name}
                     </Text>
@@ -367,6 +395,9 @@ export default function ShopDetails() {
                         shopPhotoURL={selectedShop.backgroundImageUrl}
                         showCartControls={selectedShop.userId !== userData?.uid}
                         isShopOwner={selectedShop.userId === userData?.uid}
+                        onDeleteItem={selectedShop.userId === userData?.uid ? handleRemoveItemFromShop : undefined}
+                        deleteLabel="Remove"
+                        deleteConfirmMessage="Are you sure you want to remove this item from your shop? This won't delete the item permanently."
                     />
                 ))
                 ) : (

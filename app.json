@@ -41,10 +41,11 @@
         }
       ],
       [
-        "expo-image-picker",
+        "expo-media-library",
         {
-          "photosPermission": "Permission needed. $(PRODUCT_NAME) wants access to your photos to let you share them with your community.",
-          "cameraPermission": "Permission needed. $(PRODUCT_NAME) wants to use your camera to let you share photos with your community.",
+          "photosPermission": "Allow $(PRODUCT_NAME) to access your photos.",
+          "savePhotosPermission": "Allow $(PRODUCT_NAME) to save photos.",
+          "isAccessMediaLocationEnabled": true
         }
       ],
       "expo-font"

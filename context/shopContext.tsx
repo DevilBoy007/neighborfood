@@ -29,9 +29,12 @@ export type ShopData = {
 
 type ShopContextType = {
     selectedShop: ShopData | null;
+    shops: ShopData[];
     isLoadingShop: boolean;
     setSelectedShop: (shop: ShopData | null) => void;
     clearSelectedShop: () => void;
+    setShops: (shops: ShopData[]) => void;
+    setIsLoadingShop: (isLoading: boolean) => void;
 };
 
 const ShopContext = createContext<ShopContextType | undefined>(undefined);
@@ -50,6 +53,7 @@ type ShopProviderProps = {
 
 export const ShopProvider = ({ children }: ShopProviderProps) => {
     const [selectedShop, setSelectedShopState] = useState<ShopData | null>(null);
+    const [shops, setShopsState] = useState<ShopData[]>([]);
     const [isLoadingShop, setIsLoadingShop] = useState(false);
 
     const setSelectedShop = (shop: ShopData | null) => {
@@ -60,12 +64,19 @@ export const ShopProvider = ({ children }: ShopProviderProps) => {
         setSelectedShopState(null);
     };
 
+    const setShops = (newShops: ShopData[]) => {
+        setShopsState(newShops);
+    };
+
     return (
         <ShopContext.Provider value={{
             selectedShop,
+            shops,
             isLoadingShop,
             setSelectedShop,
-            clearSelectedShop
+            clearSelectedShop,
+            setShops,
+            setIsLoadingShop
         }}>
         {children}
         </ShopContext.Provider>

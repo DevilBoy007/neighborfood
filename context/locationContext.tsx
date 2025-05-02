@@ -2,6 +2,28 @@ import React, { createContext, useState, useContext, useEffect } from 'react';
 import * as Location from 'expo-location';
 import { Platform, NativeModules } from 'react-native';
 
+// Define the Google Maps Geocoder type for web
+declare global {
+  interface Window {
+    google?: {
+      maps: {
+        Geocoder: new () => {
+          geocode(request: { location: { lat: number, lng: number } }): Promise<{
+            results: Array<{
+              address_components: Array<{
+                short_name: string;
+                long_name: string;
+                types: string[];
+              }>;
+              formatted_address: string;
+            }>;
+          }>;
+        };
+      };
+    };
+  }
+}
+
 type LocationData = {
     coords?: Location.LocationObjectCoords | null;
     zipCode?: string | null;
@@ -41,6 +63,37 @@ const usesImperialSystem = (): boolean => {
     return locale.includes('us') || locale.includes('gb') || locale.includes('uk');
 };
 
+// Updated web reverse geocoding function using Google Maps Geocoder
+const webReverseGeocode = async (latitude: number, longitude: number): Promise<string | null> => {
+  try {
+    // Check if the Google Maps API is loaded
+    if (Platform.OS === 'web' && window.google && window.google.maps) {
+      const geocoder = new window.google.maps.Geocoder();
+      
+      const response = await geocoder.geocode({
+        location: { lat: latitude, lng: longitude }
+      });
+      
+      if (response.results && response.results.length > 0) {
+        // Extract postal code from address components
+        for (const result of response.results) {
+          for (const component of result.address_components) {
+            if (component.types.includes('postal_code')) {
+              return component.short_name;
+            }
+          }
+        }
+      }
+    } else {
+      console.warn('Google Maps API not loaded on web platform');
+    }
+    return null;
+  } catch (error) {
+    console.error('Error in web reverse geocoding:', error);
+    return null;
+  }
+};
+
 export const LocationProvider: React.FC<{children: React.ReactNode}> = ({ children }) => {
     const [locationData, setLocationData] = useState<LocationData>({
         coords: null,
@@ -74,28 +127,35 @@ export const LocationProvider: React.FC<{children: React.ReactNode}> = ({ childr
 
     const updateLocation = async (coords: Location.LocationObjectCoords) => {
         try {
-        // Get ZIP code from coordinates
-        const reverseGeocode = await Location.reverseGeocodeAsync({
-            latitude: coords.latitude,
-            longitude: coords.longitude,
-        });
-        
-        const zipCode = reverseGeocode[0]?.postalCode || null;
-        
-        setLocationData({
-            coords,
-            zipCode,
-            loading: false,
-            error: null,
-            usesImperialSystem: usesImperialSystem(),
-        });
+          let zipCode = null;
+
+          // Handle reverse geocoding differently based on platform
+          if (Platform.OS === 'web') {
+            // Use our updated web implementation with Google Maps Geocoder
+            zipCode = await webReverseGeocode(coords.latitude, coords.longitude);
+          } else {
+            // Use Expo Location for native platforms
+            const reverseGeocode = await Location.reverseGeocodeAsync({
+                latitude: coords.latitude,
+                longitude: coords.longitude,
+            });
+            zipCode = reverseGeocode[0]?.postalCode || null;
+          }
+          
+          setLocationData({
+              coords,
+              zipCode,
+              loading: false,
+              error: null,
+              usesImperialSystem: usesImperialSystem(),
+          });
         } catch (error) {
-        setLocationData(prev => ({
-            ...prev,
-            coords,
-            loading: false,
-            error: 'Failed to get address from coordinates'
-        }));
+          setLocationData(prev => ({
+              ...prev,
+              coords,
+              loading: false,
+              error: 'Failed to get address from coordinates'
+          }));
         }
     };
 
@@ -133,7 +193,10 @@ export const LocationProvider: React.FC<{children: React.ReactNode}> = ({ childr
 
     // Initial location fetch
     useEffect(() => {
-        fetchCurrentLocation();
+        const getLocation = async () => {
+            await fetchCurrentLocation();
+        };
+        getLocation();
     }, []);
 
     return (

@@ -4,6 +4,7 @@ export type ItemData = {
     id: string;
     shopId: string;
     marketId: string;
+    userId: string;
     name: string;
     description: string;
     category: string[];
@@ -20,6 +21,7 @@ type ItemContextType = {
     isLoadingItem: boolean;
     setSelectedItem: (item: ItemData | null) => void;
     clearSelectedItem: () => void;
+    setIsLoadingItem: (isLoading: boolean) => void;
 };
 
 const ItemContext = createContext<ItemContextType | undefined>(undefined);
@@ -53,7 +55,8 @@ export const ItemProvider = ({ children }: ItemProviderProps) => {
             selectedItem,
             isLoadingItem,
             setSelectedItem,
-            clearSelectedItem
+            clearSelectedItem,
+            setIsLoadingItem
         }}>
         {children}
         </ItemContext.Provider>
