@@ -104,94 +104,81 @@ const ItemCard = ({
 
     const useManagerStyle = isShopOwner && onDeleteItem;
 
-    if (useManagerStyle) {
-        return (
-            <View style={styles.manageItemCard}>
-                <View style={styles.itemImageContainer}>
-                    {item.imageUrl ? (
-                        <Image source={{ uri: item.imageUrl }} style={styles.itemImage} />
-                    ) : (
-                        <View style={styles.noImage}>
-                            <Text style={styles.noImageText}>No Image</Text>
-                        </View>
-                    )}
+    // Render item image - shared between both card types
+    const renderItemImage = () => (
+        <View style={useManagerStyle ? styles.itemImageContainer : null}>
+            {item.imageUrl ? (
+                <Image source={{ uri: item.imageUrl }} style={styles.itemImage} />
+            ) : (
+                <View style={styles.noImage}>
+                    <Text style={styles.noImageText}>No Image</Text>
                 </View>
-                <View style={styles.itemDetails}>
-                    <Text style={styles.itemName}>{item.name}</Text>
-                    {deleteLabel ==='Delete' && <Text style={styles.itemShop}>
-                        {item.shopId && item.shopId.length > 0 
-                            ? shopName
-                            : 'No shop assigned'}
-                    </Text>
-                    }
-                    {deleteLabel === 'Remove' && <Text style={styles.itemDescription}>
-                        {item.description || 'No description available'}
-                    </Text>
-                    }
-                    <Text style={styles.itemPrice}>
-                        {formatPrice(item.price)} {item.unit === 'each' ? item.unit : `per ${item.unit}`}
-                    </Text>
-                    <Text style={styles.itemQuantity}>
-                        Quantity: {item.quantity || 0}
-                    </Text>
-                    {item.negotiable && (
-                        <Text style={styles.negotiableTag}>Price negotiable</Text>
-                    )}
-                </View>
-                <View style={styles.itemActions}>
-                    <TouchableOpacity 
-                        style={styles.editButton} 
-                        onPress={handleEdit}
-                    >
-                        <Ionicons name="create-outline" size={24} color="white" />
-                    </TouchableOpacity>
-                    <TouchableOpacity 
-                        style={styles.deleteButton} 
-                        onPress={handleDelete}
-                    >
-                        <Ionicons name="trash-outline" size={24} color="white" />
-                    </TouchableOpacity>
-                </View>
-            </View>
-        );
-    }
+            )}
+        </View>
+    );
 
-    // Original ItemCard style
-    return (
-        <View style={styles.itemCard}>
-        {item.imageUrl && (
-            <Image 
-            source={{ uri: item.imageUrl }} 
-            style={styles.itemImage}
-            />
-        )}
-        <View style={styles.itemInfo}>
-            <TouchableOpacity 
-            onPress={onPress}
-            disabled={!onPress}
-            style={styles.infoContainer}
-            >
+    // Render item details - shared between both card types
+    const renderItemDetails = () => (
+        <View style={useManagerStyle ? styles.itemDetails : styles.itemInfo}>
+            {!useManagerStyle && (
+                <TouchableOpacity 
+                    onPress={onPress}
+                    disabled={!onPress}
+                    style={styles.infoContainer}
+                >
+                    {renderItemContent()}
+                </TouchableOpacity>
+            )}
+            
+            {useManagerStyle && renderItemContent()}
+            
+            {showCartControls && !useManagerStyle && renderCartControls()}
+        </View>
+    );
+
+    // Render common item content
+    const renderItemContent = () => (
+        <>
             <Text style={styles.itemName}>{item.name}</Text>
             
-            <View style={styles.priceRow}>
-                <Text style={styles.itemPrice}>${item.price?.toFixed(2)}</Text>
-                {item.unit && (
-                <Text style={styles.itemUnit}>{item.unit === 'each' ? item.unit : `per ${item.unit}`}</Text>
-                )}
+            {useManagerStyle && deleteLabel === 'Delete' && (
+                <Text style={styles.itemShop}>
+                    {item.shopId && item.shopId.length > 0 
+                        ? shopName
+                        : 'No shop assigned'}
+                </Text>
+            )}
+
+            {(useManagerStyle && deleteLabel === 'Remove' || !useManagerStyle) && (
+                <Text style={styles.itemDescription}>
+                    {item.description || (!useManagerStyle ? '' : 'No description available')}
+                </Text>
+            )}
+            
+            <View style={useManagerStyle ? null : styles.priceRow}>
+                <Text style={styles.itemPrice}>
+                    {formatPrice(item.price)} {item.unit === 'each' ? item.unit : `per ${item.unit}`}
+                </Text>
             </View>
             
-            {item.description && (
-                <Text style={styles.itemDescription}>{item.description}</Text>
+            {useManagerStyle && (
+                <Text style={styles.itemQuantity}>
+                    Quantity: {item.quantity || 0}
+                </Text>
             )}
             
             {item.negotiable && (
-                <Text style={styles.itemNegotiable}>Price negotiable</Text>
+                <Text style={useManagerStyle ? styles.negotiableTag : styles.itemNegotiable}>
+                    Price negotiable
+                </Text>
             )}
-            </TouchableOpacity>
-            
-            {showCartControls && (
-            <View style={styles.cartControls}>
-                <View style={styles.quantityContainer}>
+        </>
+    );
+
+    // Render cart controls
+    const renderCartControls = () => (
+        <View style={styles.cartControls}>
+            <View style={styles.quantityContainer}>
                 <TouchableOpacity onPress={decrementQuantity} style={styles.quantityButton}>
                     <Ionicons name="remove" size={16} color="#00bfff" />
                 </TouchableOpacity>
@@ -199,22 +186,46 @@ const ItemCard = ({
                 <TouchableOpacity onPress={incrementQuantity} style={styles.quantityButton}>
                     <Ionicons name="add" size={16} color="#00bfff" />
                 </TouchableOpacity>
-                </View>
-                <TouchableOpacity 
+            </View>
+            <TouchableOpacity 
                 style={styles.addButton}
                 onPress={handleAddToCart}
-                >
+            >
                 <Ionicons name="cart" size={16} color="white" />
                 <Text style={styles.addButtonText}>Add to Cart</Text>
-                </TouchableOpacity>
-            </View>
-            )}
+            </TouchableOpacity>
         </View>
-    </View>
+    );
+
+    // Render item management actions
+    const renderItemActions = () => (
+        <View style={styles.itemActions}>
+            <TouchableOpacity 
+                style={styles.editButton} 
+                onPress={handleEdit}
+            >
+                <Ionicons name="create-outline" size={24} color="white" />
+            </TouchableOpacity>
+            <TouchableOpacity 
+                style={styles.deleteButton} 
+                onPress={handleDelete}
+            >
+                <Ionicons name="trash-outline" size={24} color="white" />
+            </TouchableOpacity>
+        </View>
+    );
+
+    return (
+        <View style={useManagerStyle ? styles.manageItemCard : styles.itemCard}>
+            {renderItemImage()}
+            {renderItemDetails()}
+            {useManagerStyle && renderItemActions()}
+        </View>
     );
 };
 
 const styles = StyleSheet.create({
+    // Base card styles
     itemCard: {
         backgroundColor: 'white',
         borderRadius: 8,
@@ -227,14 +238,55 @@ const styles = StyleSheet.create({
         shadowRadius: 4,
         elevation: 2,
     },
+    manageItemCard: {
+        backgroundColor: 'white',
+        borderRadius: 10,
+        padding: 15,
+        marginBottom: 16,
+        flexDirection: 'row',
+        shadowColor: '#000',
+        shadowOffset: {
+            width: 0,
+            height: 2,
+        },
+        shadowOpacity: 0.23,
+        shadowRadius: 2.62,
+        elevation: 4,
+    },
+    
+    // Image styles
     itemImage: {
         width: 80,
         height: 80,
         borderRadius: 8,
         marginRight: 16,
     },
+    itemImageContainer: {
+        width: 80,
+        height: 80,
+        borderRadius: 8,
+        overflow: 'hidden',
+        marginRight: 15,
+    },
+    noImage: {
+        width: '100%',
+        height: '100%',
+        backgroundColor: '#f0f0f0',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    noImageText: {
+        color: '#999',
+        fontSize: 12,
+    },
+    
+    // Content styles
     itemInfo: {
         flex: 1,
+    },
+    itemDetails: {
+        flex: 1,
+        justifyContent: 'center',
     },
     infoContainer: {
         flex: 1,
@@ -267,11 +319,30 @@ const styles = StyleSheet.create({
         fontFamily: 'TextMeOne',
         marginBottom: 4,
     },
+    itemShop: {
+        fontSize: 14,
+        color: '#666',
+        marginBottom: 5,
+        fontFamily: 'TextMeOne',
+    },
+    itemQuantity: {
+        fontSize: 14,
+        color: '#666',
+        fontFamily: 'TextMeOne',
+    },
     itemNegotiable: {
         fontSize: 12,
         color: '#00bfff',
         fontStyle: 'italic',
     },
+    negotiableTag: {
+        fontSize: 12,
+        color: '#00bfff',
+        fontStyle: 'italic',
+        marginTop: 4,
+    },
+    
+    // Cart control styles
     cartControls: {
         marginTop: 10,
     },
@@ -309,68 +380,8 @@ const styles = StyleSheet.create({
         marginLeft: 6,
         fontFamily: 'TextMeOne',
     },
-    ownerControls: {
-        marginTop: 10,
-    },
-    deleteActionButton: {
-        backgroundColor: '#ff4d4d',
-        marginTop: 8,
-    },
-// manage item card
-    manageItemCard: {
-        backgroundColor: 'white',
-        borderRadius: 10,
-        padding: 15,
-        marginBottom: 16,
-        flexDirection: 'row',
-        shadowColor: '#000',
-        shadowOffset: {
-            width: 0,
-            height: 2,
-        },
-        shadowOpacity: 0.23,
-        shadowRadius: 2.62,
-        elevation: 4,
-    },
-    itemImageContainer: {
-        width: 80,
-        height: 80,
-        borderRadius: 8,
-        overflow: 'hidden',
-        marginRight: 15,
-    },
-    noImage: {
-        width: '100%',
-        height: '100%',
-        backgroundColor: '#f0f0f0',
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    noImageText: {
-        color: '#999',
-        fontSize: 12,
-    },
-    itemDetails: {
-        flex: 1,
-        justifyContent: 'center',
-    },
-    itemShop: {
-        fontSize: 14,
-        color: '#666',
-        marginBottom: 5,
-        fontFamily: 'TextMeOne',
-    },
-    itemQuantity: {
-        fontSize: 14,
-        color: '#666',
-        fontFamily: 'TextMeOne',
-    },
-    negotiableTag: {
-        fontSize: 12,
-        color: '#00bfff',
-        fontStyle: 'italic',
-        marginTop: 4,
-    },
+    
+    // Action button styles
     itemActions: {
         justifyContent: 'space-around',
         alignItems: 'flex-end',
@@ -385,6 +396,13 @@ const styles = StyleSheet.create({
         backgroundColor: '#ff4d4d',
         padding: 8,
         borderRadius: 5,
+    },
+    ownerControls: {
+        marginTop: 10,
+    },
+    deleteActionButton: {
+        backgroundColor: '#ff4d4d',
+        marginTop: 8,
     },
 });
 
