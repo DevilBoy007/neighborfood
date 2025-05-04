@@ -1,6 +1,6 @@
 import React from 'react';
 import { StyleSheet, View, Text, TouchableOpacity, Platform } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, usePathname } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useCart } from '../context/cartContext';
 
@@ -10,12 +10,13 @@ interface CartFABProps {
 
 const CartFAB: React.FC<CartFABProps> = ({ bottom = 20 }) => {
     const router = useRouter();
+    const pathname = usePathname();
     const { getItemCount } = useCart();
     
     const itemCount = getItemCount();
     
-    // Don't render if there are no items in the cart
-    if (itemCount <= 0) {
+    // Don't render if there are no items in the cart or if we're on the Cart screen
+    if (itemCount <= 0 || pathname.includes('Cart')) {
         return null;
     }
     
