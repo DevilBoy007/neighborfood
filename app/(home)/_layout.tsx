@@ -11,6 +11,8 @@ import tileIcon from '../../assets/images/tiles.png';
 import profileIcon from '../../assets/images/user.png';
 import { User } from 'firebase/auth';
 
+import CartFAB from '@/components/CartFAB';
+
 export default function RootLayout() {
   const router = useRouter();
   const storage = Platform.OS === 'web' ? localStorage : AsyncStorage;
@@ -104,6 +106,7 @@ export default function RootLayout() {
             <Image style={[styles.iconButton, styles.icon]} source={tileIcon} />
           </TouchableOpacity>
         </View>}
+        <CartFAB bottom={Platform.OS === 'web' ? 20 : 100} />
     </>
   );
 }
