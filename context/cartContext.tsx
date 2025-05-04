@@ -9,7 +9,6 @@ type CartItem = {
   quantity: number;
   photoURL?: string;
   negotiable?: boolean;
-  specialInstructions?: string;
 };
 
 type ShopCart = {
@@ -26,7 +25,6 @@ type CartContextType = {
   addToCart: (item: Omit<CartItem, 'id'> & { shopId: string; shopName: string; shopPhotoURL?: string }) => void;
   removeFromCart: (shopId: string, itemId: string) => void;
   updateItemQuantity: (shopId: string, itemId: string, quantity: number) => void;
-  updateSpecialInstructions: (shopId: string, itemId: string, instructions: string) => void;
   clearCart: () => void;
   clearShopCart: (shopId: string) => void;
   calculateTotalSubtotal: () => number;
@@ -126,8 +124,7 @@ export const CartProvider = ({ children }: CartProviderProps) => {
         const updatedItems = [...shopCart.items];
         updatedItems[existingItemIndex] = {
           ...updatedItems[existingItemIndex],
-          quantity: updatedItems[existingItemIndex].quantity + itemData.quantity,
-          specialInstructions: itemData.specialInstructions || updatedItems[existingItemIndex].specialInstructions
+          quantity: updatedItems[existingItemIndex].quantity + itemData.quantity
         };
         
         updatedShopCarts[shopCartIndex] = {
@@ -207,29 +204,6 @@ export const CartProvider = ({ children }: CartProviderProps) => {
     });
   };
 
-  const updateSpecialInstructions = (shopId: string, itemId: string, instructions: string) => {
-    setShopCarts(prevShopCarts => {
-      const shopCartIndex = prevShopCarts.findIndex(cart => cart.shopId === shopId);
-      
-      // If shop cart doesn't exist, do nothing
-      if (shopCartIndex === -1) return prevShopCarts;
-      
-      const updatedShopCarts = [...prevShopCarts];
-      const shopCart = updatedShopCarts[shopCartIndex];
-      
-      const updatedItems = shopCart.items.map(item => 
-        item.id === itemId ? { ...item, specialInstructions: instructions } : item
-      );
-      
-      updatedShopCarts[shopCartIndex] = {
-        ...shopCart,
-        items: updatedItems
-      };
-      
-      return updatedShopCarts;
-    });
-  };
-
   const clearCart = () => {
     setShopCarts([]);
   };
@@ -258,7 +232,6 @@ export const CartProvider = ({ children }: CartProviderProps) => {
       addToCart,
       removeFromCart,
       updateItemQuantity,
-      updateSpecialInstructions,
       clearCart,
       clearShopCart,
       calculateTotalSubtotal,
