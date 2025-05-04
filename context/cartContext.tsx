@@ -3,12 +3,12 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 
 type CartItem = {
-  id: string;
   itemId: string;
   name: string;
   price: number;
   quantity: number;
   photoURL?: string;
+  negotiable?: boolean;
   specialInstructions?: string;
 };
 
@@ -94,9 +94,6 @@ export const CartProvider = ({ children }: CartProviderProps) => {
 
   const addToCart = (item: Omit<CartItem, 'id'> & { shopId: string; shopName: string; shopPhotoURL?: string }) => {
     const { shopId, shopName, shopPhotoURL, ...itemData } = item;
-
-    // Generate a unique ID for the cart item
-    const cartItemId = `${itemData.itemId}_${Date.now()}`;
     
     setShopCarts(prevShopCarts => {
       // Find if we already have a cart for this shop
@@ -108,7 +105,7 @@ export const CartProvider = ({ children }: CartProviderProps) => {
           shopId,
           shopName,
           shopPhotoURL,
-          items: [{ id: cartItemId, ...itemData }],
+          items: [itemData],
           subtotal: itemData.price * itemData.quantity
         };
         
@@ -140,7 +137,7 @@ export const CartProvider = ({ children }: CartProviderProps) => {
         };
       } else {
         // Add the new item
-        const updatedItems = [...shopCart.items, { id: cartItemId, ...itemData }];
+        const updatedItems = [...shopCart.items, itemData];
         
         updatedShopCarts[shopCartIndex] = {
           ...shopCart,
@@ -163,7 +160,7 @@ export const CartProvider = ({ children }: CartProviderProps) => {
       const updatedShopCarts = [...prevShopCarts];
       const shopCart = updatedShopCarts[shopCartIndex];
       
-      const updatedItems = shopCart.items.filter(item => item.id !== itemId);
+      const updatedItems = shopCart.items.filter(item => item.itemId !== itemId);
       
       // If there are no items left in this shop's cart, remove the shop cart
       if (updatedItems.length === 0) {
@@ -197,7 +194,7 @@ export const CartProvider = ({ children }: CartProviderProps) => {
       const shopCart = updatedShopCarts[shopCartIndex];
       
       const updatedItems = shopCart.items.map(item => 
-        item.id === itemId ? { ...item, quantity } : item
+        item.itemId === itemId ? { ...item, quantity } : item
       );
       
       updatedShopCarts[shopCartIndex] = {
