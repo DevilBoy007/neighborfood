@@ -60,7 +60,7 @@ const styles = StyleSheet.create({
         })
     },
     fab: {
-        backgroundColor: '#FF6B6B', // A nice reddish color for cart
+        backgroundColor: '#00bfff',
         borderRadius: 30,
         flexDirection: 'row',
         alignItems: 'center',
