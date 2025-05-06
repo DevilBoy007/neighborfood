@@ -295,8 +295,8 @@ const styles = StyleSheet.create({
     quantityButton: {
         backgroundColor: '#f0f0f0',
         borderRadius: 15,
-        width: 30,
-        height: 30,
+        width: 20,
+        height: 20,
         alignItems: 'center',
         justifyContent: 'center',
     },
