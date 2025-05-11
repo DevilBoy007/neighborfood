@@ -259,6 +259,7 @@ const styles = StyleSheet.create({
         fontSize: 18,
         fontFamily: 'TextMeOne',
         fontWeight: 'bold',
+        color: '#00bfff',
     },
     clearShopButton: {
         padding: 4,
