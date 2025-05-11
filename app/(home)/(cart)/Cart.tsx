@@ -244,6 +244,7 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.1,
         shadowRadius: 4,
         elevation: 3,
+        marginBottom: 100,
     },
     shopSection: {
         marginBottom: 24,
@@ -291,6 +292,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'space-between',
         flex: 1,
+        marginRight: 15,
     },
     quantityButton: {
         backgroundColor: '#f0f0f0',
