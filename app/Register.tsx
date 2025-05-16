@@ -7,21 +7,53 @@ import {
     StyleSheet,
     ScrollView,
     KeyboardAvoidingView,
-    Button,
     Platform
 } from 'react-native';
-import { KeyboardToolbar } from 'react-native-keyboard-controller';
 import { useRouter } from 'expo-router';
-import 'react-native-get-random-values';
-import { updateProfile, User } from 'firebase/auth'
+import { updateProfile, User } from 'firebase/auth';
 import { EventRegister } from 'react-native-event-listeners';
-import { GooglePlaceData, GooglePlaceDetail, GooglePlacesAutocomplete } from 'react-native-google-places-autocomplete';
 import * as Location from 'expo-location';
 import firebaseService from '@/handlers/firebaseService';
-import DatePicker from 'react-native-date-picker';
 import { useUser } from '@/context/userContext';
 import { GeoPoint } from 'firebase/firestore';
 
+// Conditionally import problematic native-only modules
+const KeyboardControllerImport = Platform.OS !== 'web' ? 
+  require('react-native-keyboard-controller') : 
+  { KeyboardToolbar: React.Fragment };
+
+const KeyboardToolbar = KeyboardControllerImport.KeyboardToolbar;
+
+// Only import react-native-get-random-values on native platforms
+if (Platform.OS !== 'web') {
+  require('react-native-get-random-values');
+}
+
+// Conditionally import native-only components
+let GooglePlacesAutocomplete;
+if (Platform.OS !== 'web') {
+  const GooglePlacesImport = require('react-native-google-places-autocomplete');
+  GooglePlacesAutocomplete = GooglePlacesImport.GooglePlacesAutocomplete;
+} else {
+  // Create a stub component for web
+  GooglePlacesAutocomplete = (props) => (
+    <TextInput
+      style={styles.input}
+      placeholder={props.placeholder || "Enter location"}
+      value={props.text}
+      onChange={(e) => props.onChangeText && props.onChangeText(e.target.value)}
+    />
+  );
+}
+
+// Conditionally import DatePicker
+let DatePicker;
+if (Platform.OS !== 'web') {
+  DatePicker = require('react-native-date-picker').default;
+} else {
+  // Web doesn't need the native DatePicker component
+  DatePicker = () => null;
+}
 
 const RegisterScreen = () => {
     const router = useRouter();
@@ -138,7 +170,7 @@ const RegisterScreen = () => {
         }));
     };
 
-    const handleLocationSelect = (data: GooglePlaceData, details: GooglePlaceDetail = null) => {
+    const handleLocationSelect = (data: any, details: any = null) => {
         if (details) {
             const addressComponents = details.address_components;
             const cityComponent = addressComponents.find(component =>
@@ -290,25 +322,30 @@ const RegisterScreen = () => {
             );
         }
 
-        return (
-            <View style={[styles.input, styles.flex1, styles.thin]}>
-                <Button
-                    onPress={() => setShowDatePicker(true)}
-                    title={formData.dob ? formData.dob : "d.o.b."}
-                    color={formData.dob ? '#00bfff' : '#999'}
-                />
-                {showDatePicker && (
-                    <DatePicker
-                        modal
-                        open={showDatePicker}
-                        date={formData.dob ? new Date(formData.dob) : new Date()}
-                        mode="date"
-                        onConfirm={handleDateChange}
-                        onCancel={() => setShowDatePicker(false)}
+        // If using DatePicker from react-native-date-picker, ensure it's only rendered on native platforms
+        if (Platform.OS !== 'web' && DatePicker) {
+            return (
+                <View style={[styles.input, styles.flex1, styles.thin]}>
+                    <Button
+                        onPress={() => setShowDatePicker(true)}
+                        title={formData.dob ? formData.dob : "d.o.b."}
+                        color={formData.dob ? '#00bfff' : '#999'}
                     />
-                )}
-            </View>
-        );
+                    {showDatePicker && (
+                        <DatePicker
+                            modal
+                            open={showDatePicker}
+                            date={formData.dob ? new Date(formData.dob) : new Date()}
+                            mode="date"
+                            onConfirm={handleDateChange}
+                            onCancel={() => setShowDatePicker(false)}
+                        />
+                    )}
+                </View>
+            );
+        }
+        
+        return null;
     };
 
     return (
@@ -460,7 +497,7 @@ const RegisterScreen = () => {
                     </TouchableOpacity>
                 </View>
             </KeyboardAvoidingView>
-            <KeyboardToolbar/>
+            {Platform.OS !== 'web' ? <KeyboardToolbar /> : null}
         </View>
     );
 };

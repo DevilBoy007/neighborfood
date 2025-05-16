@@ -4,6 +4,7 @@ import { FirebaseStorage, getStorage, ref, uploadBytesResumable, getDownloadURL 
 import { Analytics, getAnalytics } from 'firebase/analytics';
 import {
     initializeAuth,
+    getAuth,
     browserLocalPersistence,
     getReactNativePersistence,
     createUserWithEmailAndPassword,
@@ -92,7 +93,6 @@ class FirebaseService {
                     });
                 } catch (authError) {
                     if (authError.code === 'auth/already-initialized') {
-                        const { getAuth } = await import('firebase/auth');
                         this.auth = getAuth(this.app);
                         console.log('Retrieved existing auth instance');
                     } else {
