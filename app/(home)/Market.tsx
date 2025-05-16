@@ -2,12 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, FlatList, StyleSheet, Platform, ActivityIndicator, RefreshControl } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
-import MapScreen from '@/components/MapScreen';
-import WebMapScreen from '@/components/WebMapScreen';
 import ShopCard from '@/components/ShopCard';
 import { useUser } from '@/context/userContext';
 import { useLocation } from '@/context/locationContext';
 import firebaseService from '@/handlers/firebaseService';
+
+const MapScreen = Platform.OS === 'web'
+    ? require('@/components/WebMapScreen').default
+    : require('@/components/MapScreen').default;
 
 const MarketScreen = () => {
     const [isMapView, setIsMapView] = useState(true);
@@ -93,9 +95,7 @@ const MarketScreen = () => {
         }
         
         if (isMapView) {
-            return Platform.OS === 'web' 
-                ? <WebMapScreen shops={shops} /> 
-                : <MapScreen shops={shops} />;
+            return <MapScreen shops={shops} />;
         }
         
         if (shops.length === 0) {
