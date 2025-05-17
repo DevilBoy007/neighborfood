@@ -26,7 +26,6 @@ import { GeoPoint } from 'firebase/firestore';
 const RegisterScreen = () => {
     const router = useRouter();
     const { setUserData } = useUser();
-    const [user, setUser] = useState<User | null>(null);
     const [formData, setFormData] = useState({
         firstName: '',
         lastName: '',
@@ -214,7 +213,6 @@ const RegisterScreen = () => {
             
             const { email, password, phone, firstName, lastName, dob, location, username } = formData;
             const user = await firebaseService.registerUser(email, password, username);
-            setUser(user);
             await updateProfile(user, {
                 displayName: username, 
                 photoURL: "https://firebasestorage.googleapis.com/v0/b/neighborfoods/o/cloud.gif?alt=media&token=81350c47-c9e3-4c75-8d9d-d0b9ff6e50f0",
