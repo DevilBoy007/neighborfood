@@ -7,6 +7,7 @@ import {
     StyleSheet,
     ScrollView,
     KeyboardAvoidingView,
+    Button,
     Platform
 } from 'react-native';
 import { useRouter } from 'expo-router';
@@ -54,7 +55,6 @@ if (Platform.OS !== 'web') {
   // Web doesn't need the native DatePicker component
   DatePicker = () => null;
 }
-
 const RegisterScreen = () => {
     const router = useRouter();
     const { setUserData } = useUser();
@@ -427,6 +427,7 @@ const RegisterScreen = () => {
                                 url: 'https://cors-anywhere.herokuapp.com/https://maps.googleapis.com/maps/api',
                             }}
                             disableScroll={true}
+                            predefinedPlaces={[]}
                         />
 
                         {/* Display selected location details */}
