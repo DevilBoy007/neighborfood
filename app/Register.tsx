@@ -374,7 +374,7 @@ const RegisterScreen = () => {
                             }}
                             onPress={(data: GooglePlaceData, detail: GooglePlaceDetail | null) => handleLocationSelect(data, detail || undefined)}
                             query={{
-                                key: 'AIzaSyCci8Td3waW6ToYzua9q6fxiNDetGa1sBI',
+                                key: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY,
                                 language: 'en',
                             }}
                             styles={{
