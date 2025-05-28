@@ -15,7 +15,6 @@ import { useRouter } from 'expo-router';
 import { updateProfile, User } from 'firebase/auth';
 import { EventRegister } from 'react-native-event-listeners';
 import * as Location from 'expo-location';
-import * as ExpoGooglePlaces from 'expo-google-places';
 import firebaseService from '@/handlers/firebaseService';
 import { useUser } from '@/context/userContext';
 import { GeoPoint } from 'firebase/firestore';
