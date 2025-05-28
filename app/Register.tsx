@@ -17,6 +17,7 @@ import * as Location from 'expo-location';
 import firebaseService from '@/handlers/firebaseService';
 import { useUser } from '@/context/userContext';
 import { GeoPoint } from 'firebase/firestore';
+import {  GooglePlaceData, GooglePlaceDetail } from 'react-native-google-places-autocomplete';
 
 // Conditionally import problematic native-only modules
 const KeyboardControllerImport = Platform.OS !== 'web' ? 
@@ -412,7 +413,7 @@ const RegisterScreen = () => {
                             }}
                             onPress={(data: GooglePlaceData, detail: GooglePlaceDetail | null) => handleLocationSelect(data, detail || undefined)}
                             query={{
-                                key: 'AIzaSyCci8Td3waW6ToYzua9q6fxiNDetGa1sBI',
+                                key: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY,
                                 language: 'en',
                             }}
                             styles={{
@@ -427,6 +428,8 @@ const RegisterScreen = () => {
                             }}
                             disableScroll={true}
                             predefinedPlaces={[]}
+                            minLength={2}
+                            keyboardShouldPersistTaps='handled'
                         />
 
                         {/* Display selected location details */}
