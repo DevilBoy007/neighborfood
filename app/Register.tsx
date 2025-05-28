@@ -372,6 +372,8 @@ const RegisterScreen = () => {
                                 placeholderTextColor: '#999',
                                 returnKeyType: "search"
                             }}
+                            predefinedPlaces={[]}
+                            minLength={2}
                             onPress={(data: GooglePlaceData, detail: GooglePlaceDetail | null) => handleLocationSelect(data, detail || undefined)}
                             query={{
                                 key: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY,
