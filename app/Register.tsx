@@ -43,7 +43,6 @@ if (Platform.OS !== 'web') {
 const RegisterScreen = () => {
     const router = useRouter();
     const { setUserData } = useUser();
-    const [user, setUser] = useState<User | null>(null);
     const [formData, setFormData] = useState({
         firstName: '',
         lastName: '',
@@ -273,9 +272,8 @@ const RegisterScreen = () => {
             }
             
             const { email, password, phone, firstName, lastName, dob, location, username } = formData;
-            const authUser = await firebaseService.registerUser(email, password, username);
-            setUser(authUser);
-            await updateProfile(authUser, {
+            const user = await firebaseService.registerUser(email, password, username);
+            await updateProfile(user, {
                 displayName: username, 
                 photoURL: "https://firebasestorage.googleapis.com/v0/b/neighborfoods/o/cloud.gif?alt=media&token=81350c47-c9e3-4c75-8d9d-d0b9ff6e50f0",
             })
@@ -446,37 +444,31 @@ const RegisterScreen = () => {
                     {/* Market Info Section */}
                     { !errorMsg.location && <>
                     <Text style={styles.sectionTitle}>Market Info</Text>
-                        <View style={styles.googlePlacesContainer}>
-                            <TextInput
-                                style={styles.googlePlacesInput}
-                                placeholder="Enter your address"
-                                placeholderTextColor="#999"
-                                returnKeyType="search"
-                                value={searchText}
-                                onChangeText={(text) => {
-                                    setSearchText(text);
-                                    fetchPredictions(text);
-                                }}
-                            />
-                            {showPredictions && predictions.length > 0 && (
-                                <FlatList
-                                    data={predictions}
-                                    keyExtractor={(item) => item.placeID}
-                                    style={styles.predictionsContainer}
-                                    renderItem={({ item }) => (
-                                        <TouchableOpacity
-                                            style={styles.predictionItem}
-                                            onPress={() => handlePlaceSelect(item.placeID, item.primaryText)}
-                                        >
-                                            <Text style={styles.primaryText}>{item.primaryText}</Text>
-                                            {item.secondaryText && (
-                                                <Text style={styles.secondaryText}>{item.secondaryText}</Text>
-                                            )}
-                                        </TouchableOpacity>
-                                    )}
-                                />
-                            )}
-                        </View>
+                        <GooglePlacesAutocomplete
+                            placeholder='Enter your address'
+                            textInputProps={{
+                                placeholderTextColor: '#999',
+                                returnKeyType: "search"
+                            }}
+                            predefinedPlaces={[]}
+                            minLength={2}
+                            onPress={(data: GooglePlaceData, detail: GooglePlaceDetail | null) => handleLocationSelect(data, detail || undefined)}
+                            query={{
+                                key: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY,
+                                language: 'en',
+                            }}
+                            styles={{
+                                textInput: styles.googlePlacesInput,
+                                container: styles.googlePlacesContainer
+                            }}
+                            fetchDetails={true}
+                            enablePoweredByContainer={false}
+                            requestUrl={{
+                                useOnPlatform: 'web',
+                                url: 'https://cors-anywhere.herokuapp.com/https://maps.googleapis.com/maps/api',
+                            }}
+                            disableScroll={true}
+                        />
 
                         {/* Display selected location details */}
                         {formData.location.address ? (
