@@ -48,14 +48,6 @@
           "isAccessMediaLocationEnabled": true
         }
       ],
-      [
-        "expo-google-places",
-        {
-          "androidApiKey": "AIzaSyCci8Td3waW6ToYzua9q6fxiNDetGa1sBI",
-          "iosApiKey": "AIzaSyCci8Td3waW6ToYzua9q6fxiNDetGa1sBI",
-          "webApiKey": "AIzaSyCci8Td3waW6ToYzua9q6fxiNDetGa1sBI"
-        }
-      ],
       "expo-font"
     ],
     "experiments": {

@@ -8,8 +8,7 @@ import {
     ScrollView,
     KeyboardAvoidingView,
     Button,
-    Platform,
-    FlatList
+    Platform
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { updateProfile, User } from 'firebase/auth';
@@ -29,6 +28,23 @@ const KeyboardToolbar = KeyboardControllerImport.KeyboardToolbar;
 // Only import react-native-get-random-values on native platforms
 if (Platform.OS !== 'web') {
   require('react-native-get-random-values');
+}
+
+// Conditionally import native-only components
+let GooglePlacesAutocomplete;
+if (Platform.OS !== 'web') {
+  const GooglePlacesImport = require('react-native-google-places-autocomplete');
+  GooglePlacesAutocomplete = GooglePlacesImport.GooglePlacesAutocomplete;
+} else {
+  // Create a stub component for web
+  GooglePlacesAutocomplete = (props) => (
+    <TextInput
+      style={styles.input}
+      placeholder={props.placeholder || "Enter location"}
+      value={props.text}
+      onChange={(e) => props.onChangeText && props.onChangeText(e.target.value)}
+    />
+  );
 }
 
 // Conditionally import DatePicker
@@ -83,19 +99,8 @@ const RegisterScreen = () => {
     });
     const [showDatePicker, setShowDatePicker] = useState<boolean>(false);
     const [disabled, setDisabled] = useState<boolean>(false);
-    // Google Places autocomplete state
-    const [searchText, setSearchText] = useState<string>('');
-    const [predictions, setPredictions] = useState<ExpoGooglePlaces.AutocompletePrediction[]>([]);
-    const [showPredictions, setShowPredictions] = useState<boolean>(false);
 
-    const updateLocationData = (locationInfo: {
-        address: string,
-        city: string,
-        state: string,
-        zip: string,
-        latitude: number | null,
-        longitude: number | null
-    }) => {
+    const updateLocationData = (locationInfo) => {
         setFormData(prev => ({
             ...prev,
             location: {
@@ -110,8 +115,6 @@ const RegisterScreen = () => {
             }
         }));
     };
-
-    // No changes needed here since we already defined the state
 
     useEffect(() => {
         (async () => {
@@ -134,10 +137,10 @@ const RegisterScreen = () => {
 
                 // Update form data with current location details
                 updateLocationData({
-                    address: addressDetails.formattedAddress ?? '',
-                    city: addressDetails.city ?? '',
-                    state: addressDetails.region ?? '',
-                    zip: addressDetails.postalCode ?? '',
+                    address: addressDetails.formattedAddress??'',
+                    city: addressDetails.city,
+                    state: addressDetails.region,
+                    zip: addressDetails.postalCode,
                     latitude: location.coords.latitude,
                     longitude: location.coords.longitude
                 });
@@ -155,71 +158,41 @@ const RegisterScreen = () => {
         });
 
         return () => {
-            EventRegister.rm(userLoggedInListener as string);
+            EventRegister.rm(userLoggedInListener);
         };
     }, []);
 
-    const handleChange = (name: string, value: string) => {
+    const handleChange = (name, value) => {
         setFormData(prev => ({
             ...prev,
             [name]: value
         }));
     };
 
-    // Fetch Google Places predictions
-    const fetchPredictions = async (text: string) => {
-        if (text.length > 2) {
-            try {
-                const result = await ExpoGooglePlaces.fetchPredictionsWithSession(text, {
-                    countries: ["us"] // Filter to US addresses only
-                });
-                setPredictions(result);
-                setShowPredictions(true);
-            } catch (error) {
-                console.error("Error fetching predictions:", error);
-            }
-        } else {
-            setPredictions([]);
-            setShowPredictions(false);
-        }
-    };
-
-    // Fetch place details when a prediction is selected
-    const handlePlaceSelect = async (placeId: string, primaryText: string) => {
-        try {
-            setShowPredictions(false);
-            setSearchText(primaryText);
-            
-            // Fetch detailed place information
-            const placeDetails = await ExpoGooglePlaces.fetchPlaceWithSession(placeId, [
-                "formattedAddress",
-                "addressComponents",
-                "coordinate"
-            ]);
-            
-            // Extract location components
-            const addressComponents = placeDetails.addressComponents || [];
-            const cityComponent = addressComponents.find(component => 
+    const handleLocationSelect = (data: any, details: any = null) => {
+        if (details) {
+            const addressComponents = details.address_components;
+            const cityComponent = addressComponents.find(component =>
                 component.types.includes('locality')
             );
-            const stateComponent = addressComponents.find(component => 
+            const stateComponent = addressComponents.find(component =>
                 component.types.includes('administrative_area_level_1')
             );
-            const zipComponent = addressComponents.find(component => 
+            const zipComponent = addressComponents.find(component =>
                 component.types.includes('postal_code')
             );
 
-            // Update location data with extracted information
+            const latitude = details.geometry.location.lat;
+            const longitude = details.geometry.location.lng;
+            
             updateLocationData({
-                address: placeDetails.formattedAddress || '',
-                city: cityComponent ? cityComponent.name : '',
-                state: stateComponent ? stateComponent.shortName : '',
-                zip: zipComponent ? zipComponent.name : '',
-                latitude: placeDetails.coordinate ? placeDetails.coordinate.latitude : null,
-                longitude: placeDetails.coordinate ? placeDetails.coordinate.longitude : null
+                address: details.formatted_address,
+                city: cityComponent ? cityComponent.long_name : '',
+                state: stateComponent ? stateComponent.short_name : '',
+                zip: zipComponent ? zipComponent.long_name : '',
+                latitude: latitude,
+                longitude: longitude
             });
-        } catch (error) {
-            console.error("Error fetching place details:", error);
         }
     };
 
@@ -272,44 +245,32 @@ const RegisterScreen = () => {
             
             const { email, password, phone, firstName, lastName, dob, location, username } = formData;
             const user = await firebaseService.registerUser(email, password, username);
+            setUser(user);
             await updateProfile(user, {
                 displayName: username, 
                 photoURL: "https://firebasestorage.googleapis.com/v0/b/neighborfoods/o/cloud.gif?alt=media&token=81350c47-c9e3-4c75-8d9d-d0b9ff6e50f0",
             })
             
-            // Make sure location.coords has non-null values for latitude and longitude
-            const locationWithNonNullCoords = {
-                ...location,
-                coords: {
-                    latitude: location.coords.latitude !== null ? location.coords.latitude : 0,
-                    longitude: location.coords.longitude !== null ? location.coords.longitude : 0
-                }
-            };
-
             // Create comprehensive userData object with all relevant info
-            const createdAtTimestamp = new Date();
             const userData = {
-                uid: authUser.uid,
-                email: authUser.email || '', // Ensure email is never null
+                uid: user.uid,
+                email: user.email,
                 displayName: username,
                 photoURL: "https://firebasestorage.googleapis.com/v0/b/neighborfoods/o/cloud.gif?alt=media&token=81350c47-c9e3-4c75-8d9d-d0b9ff6e50f0",
-                createdAt: { 
-                    seconds: Math.floor(createdAtTimestamp.getTime() / 1000),
-                    nanoseconds: 0
-                },
+                createdAt: new Date(),
                 first: firstName,
                 last: lastName,
                 phone: phone,
                 dob: dob,
-                location: locationWithNonNullCoords
+                location: location
             };
 
             // Convert coords to GeoPoint for Firestore
             const locationWithGeoPoint = {
                 ...location,
                 coords: new GeoPoint(
-                    location.coords.latitude !== null ? location.coords.latitude : 0, 
-                    location.coords.longitude !== null ? location.coords.longitude : 0
+                    location.coords.latitude ?? 0, 
+                    location.coords.longitude ?? 0
                 )
             };
 
@@ -330,7 +291,7 @@ const RegisterScreen = () => {
             setUserData(userData);
             EventRegister.emit('userLoggedIn');
         } catch (error) {
-            alert(`Error registering user: ${(error as Error).message}`);
+            alert(`Error registering user: ${error.message}`);
             setDisabled(false);
         }
     };
@@ -360,8 +321,8 @@ const RegisterScreen = () => {
             );
         }
 
-        // For native platforms (iOS, Android)
-        if (DatePicker) {
+        // If using DatePicker from react-native-date-picker, ensure it's only rendered on native platforms
+        if (Platform.OS !== 'web' && DatePicker) {
             return (
                 <View style={[styles.input, styles.flex1, styles.thin]}>
                     <Button
@@ -449,11 +410,9 @@ const RegisterScreen = () => {
                                 placeholderTextColor: '#999',
                                 returnKeyType: "search"
                             }}
-                            predefinedPlaces={[]}
-                            minLength={2}
                             onPress={(data: GooglePlaceData, detail: GooglePlaceDetail | null) => handleLocationSelect(data, detail || undefined)}
                             query={{
-                                key: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY,
+                                key: 'AIzaSyCci8Td3waW6ToYzua9q6fxiNDetGa1sBI',
                                 language: 'en',
                             }}
                             styles={{
@@ -467,6 +426,7 @@ const RegisterScreen = () => {
                                 url: 'https://cors-anywhere.herokuapp.com/https://maps.googleapis.com/maps/api',
                             }}
                             disableScroll={true}
+                            predefinedPlaces={[]}
                         />
 
                         {/* Display selected location details */}
@@ -626,8 +586,6 @@ const styles = StyleSheet.create({
     },
     googlePlacesContainer: {
         marginBottom: 16,
-        position: 'relative',
-        zIndex: 1,
     },
     googlePlacesInput: {
         backgroundColor: '#fff',
@@ -635,29 +593,6 @@ const styles = StyleSheet.create({
         borderRadius: 8,
         fontSize: 16,
         height: 50,
-    },
-    predictionsContainer: {
-        backgroundColor: '#fff',
-        borderWidth: 1,
-        borderColor: '#ddd',
-        borderRadius: 4,
-        maxHeight: 200,
-        width: '100%',
-        marginTop: 2,
-    },
-    predictionItem: {
-        padding: 10,
-        borderBottomWidth: 1,
-        borderBottomColor: '#eee',
-    },
-    primaryText: {
-        fontWeight: '500',
-        fontSize: 14,
-    },
-    secondaryText: {
-        color: '#666',
-        fontSize: 12,
-        marginTop: 2,
     },
     locationDetailsContainer: {
         backgroundColor: '#00bfff',
