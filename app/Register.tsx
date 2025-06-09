@@ -97,6 +97,8 @@ const RegisterScreen = () => {
     const [locationSelected, setLocationSelected] = useState(false);
 
     const updateLocationData = (locationInfo) => {
+        console.log("Updating location data with:", locationInfo);
+        
         setFormData(prev => ({
             ...prev,
             location: {
@@ -110,7 +112,7 @@ const RegisterScreen = () => {
                 }
             }
         }));
-    
+
         if (locationInfo.address && locationInfo.address.trim() !== '') {
             setLocationSelected(true);
         }
@@ -175,8 +177,8 @@ const RegisterScreen = () => {
                 component.types.includes('postal_code')
             );
 
-            const latitude = details.geometry.location.lat;
-            const longitude = details.geometry.location.lng;
+            const latitude = details.geometry.location.lat();
+            const longitude = details.geometry.location.lng();
             
             setLocationSelected(true);
             
@@ -185,8 +187,8 @@ const RegisterScreen = () => {
                 city: cityComponent ? cityComponent.long_name : '',
                 state: stateComponent ? stateComponent.short_name : '',
                 zip: zipComponent ? zipComponent.long_name : '',
-                latitude: latitude,
-                longitude: longitude
+                latitude: latitude || 0,
+                longitude: longitude || 0
             });
         }
     };
@@ -258,14 +260,26 @@ const RegisterScreen = () => {
                 location: location
             };
 
-            const lat = typeof location.coords.latitude === 'number' ? location.coords.latitude : 0;
-            const lng = typeof location.coords.longitude === 'number' ? location.coords.longitude : 0;
+            // Extract latitude and longitude with proper checks
+            const lat = location.coords && typeof location.coords.latitude === 'number' ? location.coords.latitude : 0;
+            const lng = location.coords && typeof location.coords.longitude === 'number' ? location.coords.longitude : 0;
             
-            const validLat = Math.max(-90, Math.min(90, lat));
-            const validLng = Math.max(-180, Math.min(180, lng));
+            // Only validate if we have non-zero coordinates
+            let validLat = lat;
+            let validLng = lng;
+            
+            if (lat !== 0 || lng !== 0) {
+                validLat = Math.max(-90, Math.min(90, lat));
+                validLng = Math.max(-180, Math.min(180, lng));
+            }
+            
+            console.log("Coordinates being saved:", validLat, validLng);
 
             const locationWithGeoPoint = {
-                ...location,
+                address: location.address,
+                city: location.city,
+                state: location.state,
+                zip: location.zip,
                 coords: new GeoPoint(validLat, validLng)
             };
 

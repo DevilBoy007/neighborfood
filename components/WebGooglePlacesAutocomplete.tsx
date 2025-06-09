@@ -56,7 +56,7 @@ const WebGooglePlacesAutocomplete: React.FC<WebGooglePlacesAutocompleteProps> = 
   const [loading, setLoading] = useState(false);
   const [showPredictions, setShowPredictions] = useState(false);
   const { isLoaded, hasError } = useGoogleMaps();
-  const timeoutRef = useRef<NodeJS.Timeout>();
+  const timeoutRef = useRef<number | undefined>(undefined);
   const sessionToken = useRef<any>(null);
   const placesServiceRef = useRef<any>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -86,7 +86,7 @@ const WebGooglePlacesAutocomplete: React.FC<WebGooglePlacesAutocompleteProps> = 
 
     setLoading(true);
     
-    // Use the AutocompleteService.getPlacePredictions method
+    // Use the AutocompleteService
     const autocompleteService = new window.google.maps.places.AutocompleteService();
     autocompleteService.getPlacePredictions(
       {
@@ -116,7 +116,7 @@ const WebGooglePlacesAutocomplete: React.FC<WebGooglePlacesAutocompleteProps> = 
         return;
       }
 
-      // Use PlacesService.getDetails to get place details using the same session token
+      // Use PlacesService for getting place details
       placesServiceRef.current.getDetails(
         {
           placeId,
@@ -252,17 +252,10 @@ const defaultStyles = StyleSheet.create({
     backgroundColor: '#fff',
     borderRadius: 8,
     elevation: 5,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    zIndex: 10000, // Significantly increase z-index
+    boxShadow: '0px 2px 3.84px rgba(0, 0, 0, 0.25)',
+    zIndex: 10000,
     maxHeight: 200,
-    // Add styles for web platform to ensure proper layering
-    ...(Platform.OS === 'web' ? {
-      pointerEvents: 'auto',
-      overflow: 'visible',
-    } : {})
+    overflow: 'visible'
   },
   predictionsList: {
     maxHeight: 200,
@@ -291,10 +284,8 @@ const defaultStyles = StyleSheet.create({
     padding: 12,
     borderRadius: 8,
     elevation: 3,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
+    boxShadow: '0px 2px 3.84px rgba(0, 0, 0, 0.25)',
+    
   },
   loadingText: {
     textAlign: 'center',
@@ -309,10 +300,7 @@ const defaultStyles = StyleSheet.create({
     padding: 12,
     borderRadius: 8,
     elevation: 3,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
+    boxShadow: '0px 2px 3.84px rgba(0, 0, 0, 0.25)',
   },
   errorText: {
     textAlign: 'center',

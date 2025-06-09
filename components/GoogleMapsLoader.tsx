@@ -47,7 +47,7 @@ export const GoogleMapsLoader: React.FC<{children?: React.ReactNode}> = ({ child
 
         // Load the script if it doesn't exist
         const script = document.createElement('script');
-        script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&libraries=places`;
+        script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&libraries=places&loading=async`;
         script.async = true;
         script.defer = true;
         
