@@ -1,6 +1,7 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import * as Location from 'expo-location';
 import { Platform, NativeModules } from 'react-native';
+import { useGoogleMaps } from '@/components/GoogleMapsLoader';
 
 // Define the Google Maps Geocoder type for web
 declare global {
@@ -63,11 +64,11 @@ const usesImperialSystem = (): boolean => {
     return locale.includes('us') || locale.includes('gb') || locale.includes('uk');
 };
 
-// Updated web reverse geocoding function using Google Maps Geocoder
+// Update web reverse geocoding to use the shared Google Maps instance
 const webReverseGeocode = async (latitude: number, longitude: number): Promise<string | null> => {
   try {
     // Check if the Google Maps API is loaded
-    if (Platform.OS === 'web' && window.google && window.google.maps) {
+    if (Platform.OS === 'web' && window.google?.maps) {
       const geocoder = new window.google.maps.Geocoder();
       
       const response = await geocoder.geocode({
@@ -84,8 +85,6 @@ const webReverseGeocode = async (latitude: number, longitude: number): Promise<s
           }
         }
       }
-    } else {
-      console.warn('Google Maps API not loaded on web platform');
     }
     return null;
   } catch (error) {
@@ -95,6 +94,7 @@ const webReverseGeocode = async (latitude: number, longitude: number): Promise<s
 };
 
 export const LocationProvider: React.FC<{children: React.ReactNode}> = ({ children }) => {
+    const { isLoaded } = useGoogleMaps();
     const [locationData, setLocationData] = useState<LocationData>({
         coords: null,
         zipCode: null,
@@ -131,8 +131,10 @@ export const LocationProvider: React.FC<{children: React.ReactNode}> = ({ childr
 
           // Handle reverse geocoding differently based on platform
           if (Platform.OS === 'web') {
-            // Use our updated web implementation with Google Maps Geocoder
-            zipCode = await webReverseGeocode(coords.latitude, coords.longitude);
+            // Only attempt web geocoding if Google Maps is loaded
+            if (isLoaded) {
+              zipCode = await webReverseGeocode(coords.latitude, coords.longitude);
+            }
           } else {
             // Use Expo Location for native platforms
             const reverseGeocode = await Location.reverseGeocodeAsync({
@@ -191,13 +193,18 @@ export const LocationProvider: React.FC<{children: React.ReactNode}> = ({ childr
         }
     };
 
-    // Initial location fetch
+    // Update initial location fetch to consider Google Maps loading status
     useEffect(() => {
+        if (Platform.OS === 'web' && !isLoaded) {
+            // Wait for Google Maps to load before attempting to get location on web
+            return;
+        }
+        
         const getLocation = async () => {
             await fetchCurrentLocation();
         };
         getLocation();
-    }, []);
+    }, [isLoaded]);
 
     return (
         <LocationContext.Provider value={{ 

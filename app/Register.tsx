@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import {
     View,
     Text,
@@ -13,11 +13,10 @@ import {
 import { useRouter } from 'expo-router';
 import { updateProfile, User } from 'firebase/auth';
 import { EventRegister } from 'react-native-event-listeners';
-import * as Location from 'expo-location';
 import firebaseService from '@/handlers/firebaseService';
 import { useUser } from '@/context/userContext';
+import { useLocation } from '@/context/locationContext';
 import { GeoPoint } from 'firebase/firestore';
-import {  GooglePlaceData, GooglePlaceDetail } from 'react-native-google-places-autocomplete';
 
 // Conditionally import problematic native-only modules
 const KeyboardControllerImport = Platform.OS !== 'web' ? 
@@ -37,15 +36,8 @@ if (Platform.OS !== 'web') {
   const GooglePlacesImport = require('react-native-google-places-autocomplete');
   GooglePlacesAutocomplete = GooglePlacesImport.GooglePlacesAutocomplete;
 } else {
-  // Create a stub component for web
-  GooglePlacesAutocomplete = (props) => (
-    <TextInput
-      style={styles.input}
-      placeholder={props.placeholder || "Enter location"}
-      value={props.text}
-      onChange={(e) => props.onChangeText && props.onChangeText(e.target.value)}
-    />
-  );
+  // Import the web-compatible component
+  GooglePlacesAutocomplete = require('@/components/WebGooglePlacesAutocomplete').default;
 }
 
 // Conditionally import DatePicker
@@ -59,6 +51,8 @@ if (Platform.OS !== 'web') {
 const RegisterScreen = () => {
     const router = useRouter();
     const { setUserData } = useUser();
+    const [user, setUser] = useState<User | null>(null);
+    const { locationData, fetchCurrentLocation } = useLocation();
     const [formData, setFormData] = useState({
         firstName: '',
         lastName: '',
@@ -100,6 +94,7 @@ const RegisterScreen = () => {
     });
     const [showDatePicker, setShowDatePicker] = useState<boolean>(false);
     const [disabled, setDisabled] = useState<boolean>(false);
+    const [locationSelected, setLocationSelected] = useState(false);
 
     const updateLocationData = (locationInfo) => {
         setFormData(prev => ({
@@ -115,42 +110,39 @@ const RegisterScreen = () => {
                 }
             }
         }));
+    
+        if (locationInfo.address && locationInfo.address.trim() !== '') {
+            setLocationSelected(true);
+        }
     };
-
+    
     useEffect(() => {
         (async () => {
-            // Request location permissions
-            let { status } = await Location.requestForegroundPermissionsAsync();
-            if (status !== 'granted') {
-                setErrorMsg({...errorMsg, 'location': 'Permission to access location was denied'});
-                return;
-            }
+            if (!locationSelected) {
+                try {
+                    await fetchCurrentLocation();
 
-            try {
-                // Get the user's current location
-                let location = await Location.getCurrentPositionAsync({});
-
-                // Reverse geocode to get address details
-                const [addressDetails] = await Location.reverseGeocodeAsync({
-                    latitude: location.coords.latitude,
-                    longitude: location.coords.longitude
-                });
-
-                // Update form data with current location details
-                updateLocationData({
-                    address: addressDetails.formattedAddress??'',
-                    city: addressDetails.city,
-                    state: addressDetails.region,
-                    zip: addressDetails.postalCode,
-                    latitude: location.coords.latitude,
-                    longitude: location.coords.longitude
-                });
-            } catch (error) {
-                console.error('Error getting location', error);
-                setErrorMsg({...errorMsg, 'location': 'Could not retrieve location'});
+                    if (locationData.coords && !locationData.error && !locationSelected) {
+                        updateLocationData({
+                            address: locationData.coords ? `${locationData.zipCode || ''}` : '',
+                            city: '', 
+                            state: '',
+                            zip: locationData.zipCode || '',
+                            latitude: locationData.coords.latitude,
+                            longitude: locationData.coords.longitude
+                        });
+                    } else if (locationData.error) {
+                        setErrorMsg({...errorMsg, 'location': locationData.error});
+                    }
+                } catch (error) {
+                    console.error('Error getting location', error);
+                    setErrorMsg({...errorMsg, 'location': 'Could not retrieve location'});
+                }
             }
         })();
-
+    }, [locationData.coords, locationData.zipCode]);
+    
+    useEffect(() => {
         const userLoggedInListener = EventRegister.on('userLoggedIn', () => {
             router.replace('/success');
             setTimeout(() => {
@@ -185,6 +177,8 @@ const RegisterScreen = () => {
 
             const latitude = details.geometry.location.lat;
             const longitude = details.geometry.location.lng;
+            
+            setLocationSelected(true);
             
             updateLocationData({
                 address: details.formatted_address,
@@ -240,22 +234,20 @@ const RegisterScreen = () => {
         try {
             setDisabled(true);
             
-            if (user) { 
-                await firebaseService.logout();
-            }
+            await firebaseService.logout();
             
             const { email, password, phone, firstName, lastName, dob, location, username } = formData;
-            const user = await firebaseService.registerUser(email, password, username);
-            setUser(user);
-            await updateProfile(user, {
+            const newUser = await firebaseService.registerUser(email, password, username);
+            setUser(newUser);
+            
+            await updateProfile(newUser, {
                 displayName: username, 
                 photoURL: "https://firebasestorage.googleapis.com/v0/b/neighborfoods/o/cloud.gif?alt=media&token=81350c47-c9e3-4c75-8d9d-d0b9ff6e50f0",
-            })
+            });
             
-            // Create comprehensive userData object with all relevant info
             const userData = {
-                uid: user.uid,
-                email: user.email,
+                uid: newUser.uid,
+                email: newUser.email,
                 displayName: username,
                 photoURL: "https://firebasestorage.googleapis.com/v0/b/neighborfoods/o/cloud.gif?alt=media&token=81350c47-c9e3-4c75-8d9d-d0b9ff6e50f0",
                 createdAt: new Date(),
@@ -266,13 +258,15 @@ const RegisterScreen = () => {
                 location: location
             };
 
-            // Convert coords to GeoPoint for Firestore
+            const lat = typeof location.coords.latitude === 'number' ? location.coords.latitude : 0;
+            const lng = typeof location.coords.longitude === 'number' ? location.coords.longitude : 0;
+            
+            const validLat = Math.max(-90, Math.min(90, lat));
+            const validLng = Math.max(-180, Math.min(180, lng));
+
             const locationWithGeoPoint = {
                 ...location,
-                coords: new GeoPoint(
-                    location.coords.latitude ?? 0, 
-                    location.coords.longitude ?? 0
-                )
+                coords: new GeoPoint(validLat, validLng)
             };
 
             const firestoreData = {
@@ -292,7 +286,8 @@ const RegisterScreen = () => {
             setUserData(userData);
             EventRegister.emit('userLoggedIn');
         } catch (error) {
-            alert(`Error registering user: ${error.message}`);
+            console.error('Registration error:', error);
+            alert(`Error registering user: ${error.message || 'Unknown error'}`);
             setDisabled(false);
         }
     };
@@ -322,7 +317,6 @@ const RegisterScreen = () => {
             );
         }
 
-        // If using DatePicker from react-native-date-picker, ensure it's only rendered on native platforms
         if (Platform.OS !== 'web' && DatePicker) {
             return (
                 <View style={[styles.input, styles.flex1, styles.thin]}>
@@ -363,7 +357,7 @@ const RegisterScreen = () => {
                     showsVerticalScrollIndicator={false}>
                     {/* Personal Details Section */}
                     <Text style={styles.sectionTitle}>Personal Details</Text>
-                    {errorMsg.fields && <Text style={[styles.errorText, styles.largeText]}>{errorMsg.fields}</Text>}
+                    {errorMsg.fields ? <Text style={[styles.errorText, styles.largeText]}>{errorMsg.fields}</Text> : null}
                     <View style={styles.row}>
                         <TextInput
                             style={[styles.input, styles.flex1, styles.marginRight]}
@@ -391,7 +385,7 @@ const RegisterScreen = () => {
                             value={formData.email}
                             onChangeText={(text) => handleChange('email', text)}
                         />
-                        {errorMsg.email && <Text style={styles.errorText}>{errorMsg.email}</Text>}
+                        {errorMsg.email ? <Text style={styles.errorText}>{errorMsg.email}</Text> : null}
                         {renderDatePicker()}
                     </View>
                     <TextInput
@@ -403,85 +397,108 @@ const RegisterScreen = () => {
                         onChangeText={(text) => handleChange('phone', text)}
                     />
                     {/* Market Info Section */}
-                    { !errorMsg.location && <>
-                    <Text style={styles.sectionTitle}>Market Info</Text>
-                        <GooglePlacesAutocomplete
-                            placeholder='Enter your address'
-                            textInputProps={{
-                                placeholderTextColor: '#999',
-                                returnKeyType: "search"
-                            }}
-                            onPress={(data: GooglePlaceData, detail: GooglePlaceDetail | null) => handleLocationSelect(data, detail || undefined)}
-                            query={{
-                                key: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY,
-                                language: 'en',
-                            }}
-                            styles={{
-                                textInput: styles.googlePlacesInput,
-                                container: styles.googlePlacesContainer
-                            }}
-                            fetchDetails={true}
-                            enablePoweredByContainer={false}
-                            requestUrl={{
-                                useOnPlatform: 'web',
-                                url: 'https://cors-anywhere.herokuapp.com/https://maps.googleapis.com/maps/api',
-                            }}
-                            disableScroll={true}
-                            predefinedPlaces={[]}
-                            minLength={2}
-                            keyboardShouldPersistTaps='handled'
-                        />
+                    {!errorMsg.location ? (
+                        <>
+                            <Text style={styles.sectionTitle}>Market Info</Text>
+                            <View style={styles.googlePlacesWrapper}>
+                                <GooglePlacesAutocomplete
+                                    placeholder='Enter your address'
+                                    textInputProps={{
+                                        placeholderTextColor: '#999',
+                                        returnKeyType: "search"
+                                    }}
+                                    onPress={handleLocationSelect}
+                                    query={{
+                                        key: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY,
+                                        language: 'en',
+                                    }}
+                                    styles={{
+                                        textInput: styles.googlePlacesInput,
+                                        container: {
+                                            ...styles.googlePlacesContainer,
+                                            zIndex: 9999
+                                        },
+                                        listView: {
+                                            zIndex: 10000,
+                                            position: 'relative'
+                                        }
+                                    }}
+                                    predefinedPlaces={[]}
+                                    fetchDetails={true}
+                                    enablePoweredByContainer={false}
+                                    minLength={3}
+                                    keyboardShouldPersistTaps='handled'
+                                    disableScroll={true}
+                                    requestUrl={{
+                                        useOnPlatform: 'web',
+                                        url: 'https://cors-anywhere.herokuapp.com/https://maps.googleapis.com/maps/api',
+                                    }}
+                                />
+                            </View>
 
-                        {/* Display selected location details */}
-                        {formData.location.address ? (
-                            <View style={styles.locationDetailsContainer}>
-                                <Text style={styles.locationDetail}>
-                                    {formData.location.address}
-                                </Text>
-                            </View>
-                        ) : (
-                            <View style={styles.locationDetailsContainer}>
-                                <Text style={styles.locationDetail}>
-                                    {formData.location.city}, {formData.location.state} {formData.location.zip}
-                                </Text>
-                            </View>
-                        )}</>
-                    }
-                    {errorMsg.location && <Text style={styles.errorText}>{errorMsg.location}</Text>}
+                            {/* Display selected location details */}
+                            {formData.location.address ? (
+                                <View style={styles.locationDetailsContainer}>
+                                    <Text style={styles.locationDetail}>
+                                        {formData.location.address}
+                                    </Text>
+                                </View>
+                            ) : (
+                                <View style={styles.locationDetailsContainer}>
+                                    <Text style={styles.locationDetail}>
+                                        {formData.location.city}, {formData.location.state} {formData.location.zip}
+                                    </Text>
+                                </View>
+                            )}
+                        </>
+                    ) : null}
+                    {errorMsg.location ? <Text style={styles.errorText}>{errorMsg.location}</Text> : null}
 
                     {/* Login Info Section */}
-                    <Text style={styles.sectionTitle}>Login Info</Text>
-                    <TextInput
-                        style={styles.input}
-                        placeholder="username"
-                        placeholderTextColor="#999"
-                        value={formData.username}
-                        autoCapitalize='none'
-                        onChangeText={(text) => handleChange('username', text)}
-                    />
-                    <Text style={[styles.subtitle, styles.marginBottom]}>[ <Text style={errorMsg.username1 == '' ? styles.subtitle : styles.errorText}>must be at least 6 characters</Text> | <Text style={errorMsg.username2 == '' ? styles.subtitle : styles.errorText}>cannot contain special characters</Text> ]</Text>
-                    <TextInput
-                        style={styles.input}
-                        placeholder="password"
-                        placeholderTextColor="#999"
-                        secureTextEntry
-                        textContentType='none'
-                        value={formData.password}
-                        autoCapitalize='none'
-                        onChangeText={(text) => handleChange('password', text)}
+                    <View style={{ marginTop: 60 }}>
+                        <Text style={styles.sectionTitle}>Login Info</Text>
+                        <TextInput
+                            style={styles.input}
+                            placeholder="username"
+                            placeholderTextColor="#999"
+                            value={formData.username}
+                            autoCapitalize='none'
+                            onChangeText={(text) => handleChange('username', text)}
                         />
-                    <Text style={[styles.subtitle, styles.marginBottom]}>[ <Text style={errorMsg.password2?styles.errorText:styles.subtitle}>must be at least 6 characters</Text> ]</Text>
-                    {errorMsg.password1 && <Text style={styles.errorText}>{errorMsg.password1}</Text>}
-                    <TextInput
-                        style={[styles.input, styles.marginBottom]}
-                        placeholder="confirm password"
-                        placeholderTextColor="#999"
-                        secureTextEntry
-                        textContentType='none'
-                        value={formData.confirmPassword}
-                        autoCapitalize='none'
-                        onChangeText={(text) => handleChange('confirmPassword', text)}
-                        />
+                        <Text style={[styles.subtitle, styles.marginBottom]}>
+                            [ <Text style={errorMsg.username1 === '' ? styles.subtitle : styles.errorText}>
+                                must be at least 6 characters
+                              </Text> | <Text style={errorMsg.username2 === '' ? styles.subtitle : styles.errorText}>
+                                cannot contain special characters
+                              </Text> ]
+                        </Text>
+                        <TextInput
+                            style={styles.input}
+                            placeholder="password"
+                            placeholderTextColor="#999"
+                            secureTextEntry
+                            textContentType='none'
+                            value={formData.password}
+                            autoCapitalize='none'
+                            onChangeText={(text) => handleChange('password', text)}
+                            />
+                        <Text style={[styles.subtitle, styles.marginBottom]}>
+                            [ <Text style={errorMsg.password2 ? styles.errorText : styles.subtitle}>
+                                must be at least 6 characters
+                              </Text> ]
+                        </Text>
+                        {errorMsg.password1 ? <Text style={styles.errorText}>{errorMsg.password1}</Text> : null}
+                        <TextInput
+                            style={[styles.input, styles.marginBottom]}
+                            placeholder="confirm password"
+                            placeholderTextColor="#999"
+                            secureTextEntry
+                            textContentType='none'
+                            value={formData.confirmPassword}
+                            autoCapitalize='none'
+                            onChangeText={(text) => handleChange('confirmPassword', text)}
+                            />
+                    </View>
                 </ScrollView>
                 <View style={[styles.buttonContainer, Platform.OS === 'ios' && styles.iosButtonContainer]}>
                     <TouchableOpacity
@@ -494,8 +511,8 @@ const RegisterScreen = () => {
                         <Text style={[
                             styles.buttonText,
                             disabled && styles.buttonTextDisabled
-                            ]}>
-                                Register
+                        ]}>
+                            Register
                         </Text>
                     </TouchableOpacity>
                 </View>
@@ -587,8 +604,14 @@ const styles = StyleSheet.create({
     largeText: {
         fontSize: 20,
     },
+    googlePlacesWrapper: {
+        position: 'relative',
+        zIndex: 9999,
+        marginBottom: 10,
+    },
     googlePlacesContainer: {
         marginBottom: 16,
+        zIndex: 9999,
     },
     googlePlacesInput: {
         backgroundColor: '#fff',
@@ -602,6 +625,7 @@ const styles = StyleSheet.create({
         padding: 12,
         borderRadius: 8,
         marginBottom: 16,
+        zIndex: 1, // Lower z-index than predictions
     },
     locationDetail: {
         fontSize: 18,
