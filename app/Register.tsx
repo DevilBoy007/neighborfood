@@ -177,8 +177,25 @@ const RegisterScreen = () => {
                 component.types.includes('postal_code')
             );
 
-            const latitude = details.geometry.location.lat();
-            const longitude = details.geometry.location.lng();
+            let latitude, longitude;
+            
+            // Check if we have proper geometry data
+            if (details.geometry && details.geometry.location) {
+                // Handle both function and direct value cases
+                if (typeof details.geometry.location.lat === 'function') {
+                    latitude = details.geometry.location.lat();
+                } else {
+                    latitude = details.geometry.location.lat;
+                }
+                
+                if (typeof details.geometry.location.lng === 'function') {
+                    longitude = details.geometry.location.lng();
+                } else {
+                    longitude = details.geometry.location.lng;
+                }
+            }
+            
+            console.log("Selected location coordinates (extracted):", latitude, longitude);
             
             setLocationSelected(true);
             
