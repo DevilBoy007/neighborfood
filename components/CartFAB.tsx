@@ -21,7 +21,7 @@ const CartFAB: React.FC<CartFABProps> = ({ bottom = 20 }) => {
     }
     
     const handlePress = () => {
-        router.navigate('/(home)/(cart)/Cart');
+        router.navigate('/(cart)/Cart');
     };
     
     return (
