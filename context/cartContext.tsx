@@ -3,13 +3,12 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 
 type CartItem = {
-  id: string;
   itemId: string;
   name: string;
   price: number;
   quantity: number;
   photoURL?: string;
-  specialInstructions?: string;
+  negotiable?: boolean;
 };
 
 type ShopCart = {
@@ -26,7 +25,6 @@ type CartContextType = {
   addToCart: (item: Omit<CartItem, 'id'> & { shopId: string; shopName: string; shopPhotoURL?: string }) => void;
   removeFromCart: (shopId: string, itemId: string) => void;
   updateItemQuantity: (shopId: string, itemId: string, quantity: number) => void;
-  updateSpecialInstructions: (shopId: string, itemId: string, instructions: string) => void;
   clearCart: () => void;
   clearShopCart: (shopId: string) => void;
   calculateTotalSubtotal: () => number;
@@ -94,9 +92,6 @@ export const CartProvider = ({ children }: CartProviderProps) => {
 
   const addToCart = (item: Omit<CartItem, 'id'> & { shopId: string; shopName: string; shopPhotoURL?: string }) => {
     const { shopId, shopName, shopPhotoURL, ...itemData } = item;
-
-    // Generate a unique ID for the cart item
-    const cartItemId = `${itemData.itemId}_${Date.now()}`;
     
     setShopCarts(prevShopCarts => {
       // Find if we already have a cart for this shop
@@ -108,7 +103,7 @@ export const CartProvider = ({ children }: CartProviderProps) => {
           shopId,
           shopName,
           shopPhotoURL,
-          items: [{ id: cartItemId, ...itemData }],
+          items: [itemData],
           subtotal: itemData.price * itemData.quantity
         };
         
@@ -129,8 +124,7 @@ export const CartProvider = ({ children }: CartProviderProps) => {
         const updatedItems = [...shopCart.items];
         updatedItems[existingItemIndex] = {
           ...updatedItems[existingItemIndex],
-          quantity: updatedItems[existingItemIndex].quantity + itemData.quantity,
-          specialInstructions: itemData.specialInstructions || updatedItems[existingItemIndex].specialInstructions
+          quantity: updatedItems[existingItemIndex].quantity + itemData.quantity
         };
         
         updatedShopCarts[shopCartIndex] = {
@@ -140,7 +134,7 @@ export const CartProvider = ({ children }: CartProviderProps) => {
         };
       } else {
         // Add the new item
-        const updatedItems = [...shopCart.items, { id: cartItemId, ...itemData }];
+        const updatedItems = [...shopCart.items, itemData];
         
         updatedShopCarts[shopCartIndex] = {
           ...shopCart,
@@ -163,7 +157,7 @@ export const CartProvider = ({ children }: CartProviderProps) => {
       const updatedShopCarts = [...prevShopCarts];
       const shopCart = updatedShopCarts[shopCartIndex];
       
-      const updatedItems = shopCart.items.filter(item => item.id !== itemId);
+      const updatedItems = shopCart.items.filter(item => item.itemId !== itemId);
       
       // If there are no items left in this shop's cart, remove the shop cart
       if (updatedItems.length === 0) {
@@ -197,36 +191,13 @@ export const CartProvider = ({ children }: CartProviderProps) => {
       const shopCart = updatedShopCarts[shopCartIndex];
       
       const updatedItems = shopCart.items.map(item => 
-        item.id === itemId ? { ...item, quantity } : item
+        item.itemId === itemId ? { ...item, quantity } : item
       );
       
       updatedShopCarts[shopCartIndex] = {
         ...shopCart,
         items: updatedItems,
         subtotal: calculateSubtotalFromItems(updatedItems)
-      };
-      
-      return updatedShopCarts;
-    });
-  };
-
-  const updateSpecialInstructions = (shopId: string, itemId: string, instructions: string) => {
-    setShopCarts(prevShopCarts => {
-      const shopCartIndex = prevShopCarts.findIndex(cart => cart.shopId === shopId);
-      
-      // If shop cart doesn't exist, do nothing
-      if (shopCartIndex === -1) return prevShopCarts;
-      
-      const updatedShopCarts = [...prevShopCarts];
-      const shopCart = updatedShopCarts[shopCartIndex];
-      
-      const updatedItems = shopCart.items.map(item => 
-        item.id === itemId ? { ...item, specialInstructions: instructions } : item
-      );
-      
-      updatedShopCarts[shopCartIndex] = {
-        ...shopCart,
-        items: updatedItems
       };
       
       return updatedShopCarts;
@@ -261,7 +232,6 @@ export const CartProvider = ({ children }: CartProviderProps) => {
       addToCart,
       removeFromCart,
       updateItemQuantity,
-      updateSpecialInstructions,
       clearCart,
       clearShopCart,
       calculateTotalSubtotal,

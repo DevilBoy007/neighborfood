@@ -3,7 +3,8 @@ const { getDefaultConfig } = require('expo/metro-config');
 
 /** @type {import('expo/metro-config').MetroConfig} */
 const config = getDefaultConfig(__dirname);
-
+config.resolver.sourceExts.push('cjs');
+config.resolver.unstable_enablePackageExports = false;
 const ALIASES = {
     'react-native-maps': 'react-native-web-maps',
 };
