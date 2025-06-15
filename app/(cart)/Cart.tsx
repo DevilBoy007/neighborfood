@@ -112,7 +112,7 @@ const CartScreen = () => {
 
     const handleCheckout = () => {
         // Navigate to checkout screen
-        router.navigate('/Checkout');
+        router.navigate('/(checkout)/Checkout');
     };
 
     return (
