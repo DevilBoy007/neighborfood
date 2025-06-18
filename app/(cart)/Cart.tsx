@@ -112,11 +112,11 @@ const CartScreen = () => {
 
     const handleCheckout = () => {
         // Navigate to checkout screen
-        router.navigate('/(checkout)/Checkout');
+        router.navigate('/Checkout');
     };
 
     return (
-        <SafeAreaView style={styles.container}>
+        <View style={styles.container}>
             <View style={styles.header}>
                 <TouchableOpacity
                     style={styles.backButton}
@@ -171,14 +171,8 @@ const CartScreen = () => {
                         <Text style={styles.itemCount}>
                             items: {itemCount}
                         </Text>
-
-                        <TouchableOpacity
-                            style={styles.checkoutButton}
-                            onPress={handleCheckout}
-                        >
-                            <Text style={styles.checkoutButtonText}>Proceed to Checkout</Text>
-                        </TouchableOpacity>
                     </View>
+                    
                 ) : (
                     <View style={styles.emptyCartContainer}>
                         <Ionicons name="cart-outline" size={80} color="#999" />
@@ -192,7 +186,17 @@ const CartScreen = () => {
                     </View>
                 )}
             </Animated.ScrollView>
-        </SafeAreaView>
+            {shopCarts.length > 0 &&
+            <View style={styles.buttonContainer}>
+                <TouchableOpacity
+                style={styles.checkoutButton}
+                onPress={handleCheckout}
+                >
+                    <Text style={styles.checkoutButtonText}>Proceed to Checkout</Text>
+                </TouchableOpacity>
+            </View>
+    }
+        </View>
     );
 };
 
@@ -200,6 +204,7 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: '#b7ffb0',
+        paddingTop: Platform.OS === 'ios' ? 60 : 0,
     },
     header: {
         flexDirection: 'row',
@@ -364,19 +369,29 @@ const styles = StyleSheet.create({
         fontFamily: 'TextMeOne',
         marginBottom: 24,
     },
+    buttonContainer: {
+        bottom: 0,
+        left: 0,
+        right: 0,
+        // uncomment if adding checkout to (home) route
+        // ...Platform.select({
+        //     ios: {
+        //         paddingBottom: 30,
+        //     }
+        // }),
+    },
     checkoutButton: {
+        width: '100%',
+        marginBottom: 0,
+        padding: 10,
+        paddingBottom: 33,
         backgroundColor: '#00bfff',
-        borderRadius: 30,
-        padding: 16,
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginBottom: 16,
     },
     checkoutButtonText: {
         color: 'white',
-        fontSize: 18,
+        textAlign: 'center',
+        fontSize: 30,
         fontFamily: 'TextMeOne',
-        fontWeight: 'bold',
     },
     emptyCartContainer: {
         flex: 1,
