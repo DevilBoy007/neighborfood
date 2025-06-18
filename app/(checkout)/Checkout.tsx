@@ -155,7 +155,7 @@ const Checkout = () => {
     }
 
     return (
-        <SafeAreaView style={styles.container}>
+        <View style={styles.container}>
             <View style={styles.header}>
                 <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
                     <Ionicons name="chevron-back" size={24} color="black" />
@@ -309,8 +309,9 @@ const Checkout = () => {
                         </View>
                     </View>
                 </View>
-
-                {/* Place Order Button */}
+            </ScrollView>
+            {/* Place Order Button */}
+            <View style={styles.buttonContainer} >
                 <TouchableOpacity
                     style={[styles.placeOrderButton, isPlacingOrder && styles.disabledButton]}
                     onPress={handlePlaceOrder}
@@ -320,8 +321,8 @@ const Checkout = () => {
                         {isPlacingOrder ? 'Placing Order...' : 'Place Order'}
                     </Text>
                 </TouchableOpacity>
-            </ScrollView>
-        </SafeAreaView>
+            </View>
+        </View>
     );
 };
 
@@ -329,6 +330,8 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: '#b7ffb0',
+        paddingTop: Platform.OS === 'ios' ? 60 : 0,
+
     },
     header: {
         flexDirection: 'row',
@@ -336,6 +339,11 @@ const styles = StyleSheet.create({
         padding: 24,
         borderBottomWidth: 1,
         borderBottomColor: '#000',
+        ...Platform.select({
+            ios: {
+                justifyContent: 'flex-end',
+            },
+        }),
     },
     backButton: {
         marginRight: 16,
@@ -522,22 +530,32 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
         color: '#00bfff',
     },
-    placeOrderButton: {
-        backgroundColor: '#00bfff',
-        borderRadius: 30,
-        padding: 16,
-        alignItems: 'center',
-        marginTop: 16,
-        marginBottom: 32,
+    buttonContainer: {
+        bottom: 0,
+        left: 0,
+        right: 0,
+        // uncomment if adding checkout to (home) route
+        // ...Platform.select({
+        //     ios: {
+        //         paddingBottom: 30,
+        //     }
+        // }),
     },
-    disabledButton: {
-        backgroundColor: '#ccc',
+    placeOrderButton: {
+        width: '100%',
+        marginBottom: 0,
+        padding: 10,
+        paddingBottom: 33,
+        backgroundColor: '#00bfff',
     },
     placeOrderText: {
         color: 'white',
-        fontSize: 18,
+        textAlign: 'center',
+        fontSize: 30,
         fontFamily: 'TextMeOne',
-        fontWeight: 'bold',
+    },
+    disabledButton: {
+        backgroundColor: '#ccc',
     },
     emptyContainer: {
         flex: 1,
