@@ -38,6 +38,7 @@ type OrderData = {
     paymentMethod: string;
     deliveryAddress: string;
     contactPhone: string;
+    deliveryOption: 'pickup' | 'delivery';
 };
 
 type OrderContextType = {
