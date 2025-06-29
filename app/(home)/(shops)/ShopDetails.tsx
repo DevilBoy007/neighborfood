@@ -393,6 +393,8 @@ export default function ShopDetails() {
                         item={item}
                         shopName={selectedShop.name}
                         shopPhotoURL={selectedShop.backgroundImageUrl}
+                        allowPickup={selectedShop.allowPickup}
+                        localDelivery={selectedShop.localDelivery}
                         showCartControls={selectedShop.userId !== userData?.uid}
                         isShopOwner={selectedShop.userId === userData?.uid}
                         onDeleteItem={selectedShop.userId === userData?.uid ? handleRemoveItemFromShop : undefined}
