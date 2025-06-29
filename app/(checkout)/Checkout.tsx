@@ -28,7 +28,7 @@ const Checkout = () => {
     const { addToOrderHistory } = useOrder();
     const { locationData } = useLocation();
     
-    const [deliveryOption, setDeliveryOption] = useState<DeliveryOption>('delivery');
+    const [shopDeliveryOptions, setShopDeliveryOptions] = useState<Record<string, DeliveryOption>>({});
     const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('apple_pay');
     const [deliveryAddress, setDeliveryAddress] = useState('');
     const [contactPhone, setContactPhone] = useState('');
@@ -36,11 +36,23 @@ const Checkout = () => {
     const [isPlacingOrder, setIsPlacingOrder] = useState(false);
     
     const subtotal = calculateTotalSubtotal();
-    const deliveryFee = deliveryOption === 'delivery' ? 3.99 : 0;
+    const deliveryFee = Object.values(shopDeliveryOptions).filter(option => option === 'delivery').length * 3.99;
     const tax = subtotal * 0.08; // 8% tax
     const total = subtotal + deliveryFee + tax;
 
     useEffect(() => {
+        // Initialize delivery options for each shop
+        const initialOptions: Record<string, DeliveryOption> = {};
+        shopCarts.forEach(shopCart => {
+            // Default to pickup if available, otherwise delivery
+            if (shopCart.allowPickup) {
+                initialOptions[shopCart.shopId] = 'pickup';
+            } else if (shopCart.localDelivery) {
+                initialOptions[shopCart.shopId] = 'delivery';
+            }
+        });
+        setShopDeliveryOptions(initialOptions);
+        
         // Initialize with user's saved address and phone
         if (userData?.location?.address) {
             setDeliveryAddress(userData.location.address);
@@ -48,7 +60,16 @@ const Checkout = () => {
         if (userData?.phone) {
             setContactPhone(userData.phone);
         }
-    }, [userData]);
+    }, [shopCarts, userData]);
+
+    const updateShopDeliveryOption = (shopId: string, option: DeliveryOption) => {
+        setShopDeliveryOptions(prev => ({
+            ...prev,
+            [shopId]: option
+        }));
+    };
+
+    const hasDeliveryOrders = Object.values(shopDeliveryOptions).some(option => option === 'delivery');
 
     const handlePlaceOrder = async () => {
         if (!userData) {
@@ -56,8 +77,8 @@ const Checkout = () => {
             return;
         }
 
-        if (deliveryOption === 'delivery' && !deliveryAddress.trim()) {
-            Alert.alert('Error', 'Please enter a delivery address');
+        if (hasDeliveryOrders && !deliveryAddress.trim()) {
+            Alert.alert('Error', 'Please enter a delivery address for delivery orders');
             return;
         }
 
@@ -66,11 +87,19 @@ const Checkout = () => {
             return;
         }
 
+        // Check if all shops have a delivery option selected
+        const missingOptions = shopCarts.filter(shopCart => !shopDeliveryOptions[shopCart.shopId]);
+        if (missingOptions.length > 0) {
+            Alert.alert('Error', 'Please select a delivery option for all shops');
+            return;
+        }
+
         setIsPlacingOrder(true);
 
         try {
             // Create orders for each shop
             const orderPromises = shopCarts.map(async (shopCart) => {
+                const deliveryOption = shopDeliveryOptions[shopCart.shopId];
                 const orderData = {
                     userId: userData.uid,
                     shopId: shopCart.shopId,
@@ -164,12 +193,14 @@ const Checkout = () => {
             </View>
 
             <ScrollView style={styles.content}>
-                {/* Order Summary */}
+                {/* Order Summary with Delivery Options */}
                 <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>Order Summary</Text>
+                    <Text style={styles.sectionTitle}>Order Summary & Delivery</Text>
                     {shopCarts.map((shopCart) => (
                         <View key={shopCart.shopId} style={styles.shopOrderSummary}>
                             <Text style={styles.shopName}>{shopCart.shopName}</Text>
+                            
+                            {/* Items */}
                             {shopCart.items.map((item) => (
                                 <View key={item.itemId} style={styles.orderItem}>
                                     <Text style={styles.orderItemName}>
@@ -180,6 +211,57 @@ const Checkout = () => {
                                     </Text>
                                 </View>
                             ))}
+                            
+                            {/* Delivery Options for this shop */}
+                            <View style={styles.shopDeliveryOptions}>
+                                <Text style={styles.deliveryOptionsTitle}>Delivery Option:</Text>
+                                <View style={styles.optionGroup}>
+                                    {shopCart.allowPickup && (
+                                        <TouchableOpacity
+                                            style={[
+                                                styles.shopOption, 
+                                                shopDeliveryOptions[shopCart.shopId] === 'pickup' && styles.selectedShopOption
+                                            ]}
+                                            onPress={() => updateShopDeliveryOption(shopCart.shopId, 'pickup')}
+                                        >
+                                            <Ionicons 
+                                                name="storefront" 
+                                                size={20} 
+                                                color={shopDeliveryOptions[shopCart.shopId] === 'pickup' ? '#00bfff' : '#666'} 
+                                            />
+                                            <Text style={[
+                                                styles.shopOptionText, 
+                                                shopDeliveryOptions[shopCart.shopId] === 'pickup' && styles.selectedShopOptionText
+                                            ]}>
+                                                Pickup
+                                            </Text>
+                                        </TouchableOpacity>
+                                    )}
+                                    
+                                    {shopCart.localDelivery && (
+                                        <TouchableOpacity
+                                            style={[
+                                                styles.shopOption, 
+                                                shopDeliveryOptions[shopCart.shopId] === 'delivery' && styles.selectedShopOption
+                                            ]}
+                                            onPress={() => updateShopDeliveryOption(shopCart.shopId, 'delivery')}
+                                        >
+                                            <Ionicons 
+                                                name="bicycle" 
+                                                size={20} 
+                                                color={shopDeliveryOptions[shopCart.shopId] === 'delivery' ? '#00bfff' : '#666'} 
+                                            />
+                                            <Text style={[
+                                                styles.shopOptionText, 
+                                                shopDeliveryOptions[shopCart.shopId] === 'delivery' && styles.selectedShopOptionText
+                                            ]}>
+                                                Delivery (+$3.99)
+                                            </Text>
+                                        </TouchableOpacity>
+                                    )}
+                                </View>
+                            </View>
+                            
                             <View style={styles.shopSubtotalRow}>
                                 <Text style={styles.shopSubtotalLabel}>Shop subtotal:</Text>
                                 <Text style={styles.shopSubtotalAmount}>${shopCart.subtotal.toFixed(2)}</Text>
@@ -188,40 +270,8 @@ const Checkout = () => {
                     ))}
                 </View>
 
-                {/* Delivery Options */}
-                <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>Delivery Option</Text>
-                    <View style={styles.optionGroup}>
-                        <TouchableOpacity
-                            style={[styles.option, deliveryOption === 'delivery' && styles.selectedOption]}
-                            onPress={() => setDeliveryOption('delivery')}
-                        >
-                            <Ionicons name="bicycle" size={24} color={deliveryOption === 'delivery' ? '#00bfff' : '#666'} />
-                            <View style={styles.optionContent}>
-                                <Text style={[styles.optionTitle, deliveryOption === 'delivery' && styles.selectedOptionText]}>
-                                    Delivery
-                                </Text>
-                                <Text style={styles.optionSubtitle}>$3.99 delivery fee</Text>
-                            </View>
-                        </TouchableOpacity>
-                        
-                        <TouchableOpacity
-                            style={[styles.option, deliveryOption === 'pickup' && styles.selectedOption]}
-                            onPress={() => setDeliveryOption('pickup')}
-                        >
-                            <Ionicons name="storefront" size={24} color={deliveryOption === 'pickup' ? '#00bfff' : '#666'} />
-                            <View style={styles.optionContent}>
-                                <Text style={[styles.optionTitle, deliveryOption === 'pickup' && styles.selectedOptionText]}>
-                                    Pickup
-                                </Text>
-                                <Text style={styles.optionSubtitle}>No delivery fee</Text>
-                            </View>
-                        </TouchableOpacity>
-                    </View>
-                </View>
-
-                {/* Delivery Address */}
-                {deliveryOption === 'delivery' && (
+                {/* Delivery Address - only show if any shop needs delivery */}
+                {hasDeliveryOrders && (
                     <View style={styles.section}>
                         <Text style={styles.sectionTitle}>Delivery Address</Text>
                         <TextInput
@@ -300,7 +350,7 @@ const Checkout = () => {
                             <Text style={styles.totalValue}>${tax.toFixed(2)}</Text>
                         </View>
                         <View style={styles.totalRow}>
-                            <Text style={styles.totalLabel}>Delivery Fee:</Text>
+                            <Text style={styles.totalLabel}>Delivery Fees:</Text>
                             <Text style={styles.totalValue}>${deliveryFee.toFixed(2)}</Text>
                         </View>
                         <View style={[styles.totalRow, styles.finalTotalRow]}>
@@ -580,6 +630,42 @@ const styles = StyleSheet.create({
         color: 'white',
         fontSize: 16,
         fontFamily: 'TextMeOne',
+        fontWeight: 'bold',
+    },
+    shopDeliveryOptions: {
+        marginTop: 12,
+        marginBottom: 8,
+    },
+    deliveryOptionsTitle: {
+        fontSize: 14,
+        fontFamily: 'TextMeOne',
+        fontWeight: 'bold',
+        color: '#555',
+        marginBottom: 8,
+    },
+    shopOption: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        padding: 8,
+        borderRadius: 6,
+        borderWidth: 1,
+        borderColor: '#ddd',
+        backgroundColor: '#f9f9f9',
+        marginRight: 8,
+        marginBottom: 4,
+    },
+    selectedShopOption: {
+        borderColor: '#00bfff',
+        backgroundColor: '#f0f9ff',
+    },
+    shopOptionText: {
+        marginLeft: 6,
+        fontSize: 12,
+        fontFamily: 'TextMeOne',
+        color: '#333',
+    },
+    selectedShopOptionText: {
+        color: '#00bfff',
         fontWeight: 'bold',
     },
 });
