@@ -19,7 +19,7 @@ import { useLocation } from '@/context/locationContext';
 import firebaseService from '@/handlers/firebaseService';
 
 type DeliveryOption = 'pickup' | 'delivery';
-type PaymentMethod = 'cash' | 'card' | 'venmo' | 'paypal';
+type PaymentMethod = 'apple_pay' | 'card' | 'venmo' | 'paypal';
 
 const Checkout = () => {
     const router = useRouter();
@@ -29,7 +29,7 @@ const Checkout = () => {
     const { locationData } = useLocation();
     
     const [deliveryOption, setDeliveryOption] = useState<DeliveryOption>('delivery');
-    const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cash');
+    const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('apple_pay');
     const [deliveryAddress, setDeliveryAddress] = useState('');
     const [contactPhone, setContactPhone] = useState('');
     const [specialInstructions, setSpecialInstructions] = useState('');
@@ -251,7 +251,7 @@ const Checkout = () => {
                     <Text style={styles.sectionTitle}>Payment Method</Text>
                     <View style={styles.paymentOptions}>
                         {[
-                            { key: 'cash', icon: 'cash', label: 'Cash' },
+                            { key: 'apple_pay', icon: 'logo-apple', label: 'Apple Pay' },
                             { key: 'card', icon: 'card', label: 'Card' },
                             { key: 'venmo', icon: 'logo-venmo', label: 'Venmo' },
                             { key: 'paypal', icon: 'logo-paypal', label: 'PayPal' }
