@@ -9,6 +9,8 @@ interface ItemCardProps {
     item: ItemData;
     shopName?: string;
     shopPhotoURL?: string;
+    allowPickup?: boolean;
+    localDelivery?: boolean;
     onPress?: () => void;
     showCartControls?: boolean;
     isShopOwner?: boolean;
@@ -21,7 +23,9 @@ interface ItemCardProps {
 const ItemCard = ({
     item,
     shopName = '', 
-    shopPhotoURL = '', 
+    shopPhotoURL = '',
+    allowPickup = true,
+    localDelivery = true,
     onPress,
     showCartControls = true,
     isShopOwner = false,
@@ -43,6 +47,8 @@ const ItemCard = ({
         shopId: item.shopId,
         shopName,
         shopPhotoURL,
+        allowPickup,
+        localDelivery,
         name: item.name,
         price: item.price,
         quantity,
