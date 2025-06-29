@@ -362,15 +362,28 @@ const Checkout = () => {
             </ScrollView>
             {/* Place Order Button */}
             <View style={styles.buttonContainer} >
-                <TouchableOpacity
-                    style={[styles.placeOrderButton, isPlacingOrder && styles.disabledButton]}
-                    onPress={handlePlaceOrder}
-                    disabled={isPlacingOrder}
-                >
-                    <Text style={styles.placeOrderText}>
-                        {isPlacingOrder ? 'Placing Order...' : 'Place Order'}
-                    </Text>
-                </TouchableOpacity>
+                {paymentMethod === 'apple_pay' ? (
+                    <TouchableOpacity
+                        style={[styles.applePayButton, isPlacingOrder && styles.disabledButton]}
+                        onPress={handlePlaceOrder}
+                        disabled={isPlacingOrder}
+                    >
+                        <Ionicons name="logo-apple" size={24} color="white" style={styles.applePayIcon} />
+                        <Text style={styles.applePayText}>
+                            {isPlacingOrder ? 'Processing...' : 'Pay with Apple Pay'}
+                        </Text>
+                    </TouchableOpacity>
+                ) : (
+                    <TouchableOpacity
+                        style={[styles.placeOrderButton, isPlacingOrder && styles.disabledButton]}
+                        onPress={handlePlaceOrder}
+                        disabled={isPlacingOrder}
+                    >
+                        <Text style={styles.placeOrderText}>
+                            {isPlacingOrder ? 'Placing Order...' : 'Place Order'}
+                        </Text>
+                    </TouchableOpacity>
+                )}
             </View>
         </View>
     );
@@ -603,6 +616,24 @@ const styles = StyleSheet.create({
         textAlign: 'center',
         fontSize: 30,
         fontFamily: 'TextMeOne',
+    },
+    applePayButton: {
+        width: '100%',
+        marginBottom: 0,
+        padding: 10,
+        paddingBottom: 33,
+        backgroundColor: '#000',
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    applePayIcon: {
+        marginRight: 8,
+    },
+    applePayText: {
+        color: 'white',
+        textAlign: 'center',
+        fontSize: 30,
     },
     disabledButton: {
         backgroundColor: '#ccc',
