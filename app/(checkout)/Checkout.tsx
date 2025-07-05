@@ -7,11 +7,11 @@ import {
     TouchableOpacity,
     ScrollView,
     TextInput,
-    Alert,
     Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import Toast from 'react-native-toast-message';
 import { useCart } from '@/context/cartContext';
 import { useUser } from '@/context/userContext';
 import { useOrder } from '@/context/orderContext';
@@ -73,24 +73,44 @@ const Checkout = () => {
 
     const handlePlaceOrder = async () => {
         if (!userData) {
-            Alert.alert('Error', 'Please log in to place an order');
+            Toast.show({
+                type: 'error',
+                text1: 'Error',
+                text2: 'Please log in to place an order',
+				visibilityTime: 3000
+            });
             return;
         }
 
         if (hasDeliveryOrders && !deliveryAddress.trim()) {
-            Alert.alert('Error', 'Please enter a delivery address for delivery orders');
+            Toast.show({
+                type: 'error',
+                text1: 'Error',
+                text2: 'Please enter a delivery address for delivery orders',
+				visibilityTime: 3000
+            });
             return;
         }
 
         if (!contactPhone.trim()) {
-            Alert.alert('Error', 'Please enter a contact phone number');
+            Toast.show({
+                type: 'error',
+                text1: 'Error',
+                text2: 'Please enter a contact phone number',
+				visibilityTime: 3000
+            });
             return;
         }
 
         // Check if all shops have a delivery option selected
         const missingOptions = shopCarts.filter(shopCart => !shopDeliveryOptions[shopCart.shopId]);
         if (missingOptions.length > 0) {
-            Alert.alert('Error', 'Please select a delivery option for all shops');
+            Toast.show({
+                type: 'error',
+                text1: 'Error',
+                text2: 'Please select a delivery option for all shops',
+				visibilityTime: 3000
+            });
             return;
         }
 
@@ -133,29 +153,35 @@ const Checkout = () => {
             });
 
             const createdOrders = await Promise.all(orderPromises);
-            
-            // Add orders to order history
             createdOrders.forEach(order => {
                 addToOrderHistory(order);
             });
 
-            // Clear the cart
             clearCart();
 
-            Alert.alert(
-                'Order Placed!',
-                `Your order${createdOrders.length > 1 ? 's have' : ' has'} been placed successfully. You'll receive updates on the status.`,
-                [
-                    {
-                        text: 'View Orders',
-                        onPress: () => router.navigate('/(orders)/OrderHistory')
-                    }
-                ]
-            );
+            Toast.show({
+                type: 'success',
+                text1: 'Order Placed!',
+                text2: `Your order${createdOrders.length > 1 ? 's have' : ' has'} been placed successfully. You'll receive updates on the status.`
+            });
+
+            // Navigate to success page, then to menu, then to orders
+            router.navigate('/success');
+            setTimeout(() => {
+                router.navigate('/(home)/Menu');
+                setTimeout(() => {
+                    router.navigate('/(home)/(orders)/OrderHistory');
+                }, 100);
+            }, Platform.OS === 'web' ? 2100 : 2000);
 
         } catch (error) {
             console.error('Error placing order:', error);
-            Alert.alert('Error', 'Failed to place order. Please try again.');
+            Toast.show({
+                type: 'error',
+                text1: 'Error',
+                text2: 'Failed to place order. Please try again.',
+				visibilityTime: 3000
+            });
         } finally {
             setIsPlacingOrder(false);
         }
