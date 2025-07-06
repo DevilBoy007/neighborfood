@@ -16,12 +16,12 @@ const CartFAB: React.FC<CartFABProps> = ({ bottom = 20 }) => {
     const itemCount = getItemCount();
     
     // Don't render if there are no items in the cart or if we're on the Cart screen
-    if (itemCount <= 0 || pathname.includes('Cart')) {
+    if (itemCount <= 0 || pathname.includes('Cart') || pathname.includes('Checkout')) {
         return null;
     }
     
     const handlePress = () => {
-        router.navigate('/(home)/(cart)/Cart');
+        router.navigate('/(cart)/Cart');
     };
     
     return (

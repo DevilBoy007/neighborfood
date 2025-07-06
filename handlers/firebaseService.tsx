@@ -707,6 +707,93 @@ class FirebaseService {
             throw error;
         }
     }
+
+    async createOrder(orderData: object): Promise<string> {
+        try {
+            if (!this.db) {
+                await this.connect();
+                if (!this.db) {
+                    throw new Error('Error connecting to Firestore');
+                }
+            }
+            
+            const ordersCollectionRef = collection(this.db, 'orders');
+            const docRef = await addDoc(ordersCollectionRef, {
+                ...orderData,
+                createdAt: new Date()
+            });
+            
+            console.log("Order created with ID: ", docRef.id);
+            return docRef.id;
+        } catch (error) {
+            console.error("Error creating order: ", error);
+            throw error;
+        }
+    }
+
+    async getOrdersForUser(userId: string): Promise<any[]> {
+        try {
+            if (!this.db) {
+                await this.connect();
+                if (!this.db) {
+                    throw new Error('Error connecting to Firestore');
+                }
+            }
+            const ordersSnapshot = await this.getDocumentsWhere('orders', 'userId', '==', userId);
+            return ordersSnapshot.sort((a, b) => {
+                // Sort by creation date, newest first
+                const aTime = a.createdAt?.seconds || 0;
+                const bTime = b.createdAt?.seconds || 0;
+                return bTime - aTime;
+            });
+        } catch (error) {
+            console.error("Error fetching orders for user:", error);
+            throw error;
+        }
+    }
+
+    async getOrdersForShop(shopId: string): Promise<any[]> {
+        try {
+            if (!this.db) {
+                await this.connect();
+                if (!this.db) {
+                    throw new Error('Error connecting to Firestore');
+                }
+            }
+            const ordersSnapshot = await this.getDocumentsWhere('orders', 'shopId', '==', shopId);
+            return ordersSnapshot.sort((a, b) => {
+                // Sort by creation date, newest first
+                const aTime = a.createdAt?.seconds || 0;
+                const bTime = b.createdAt?.seconds || 0;
+                return bTime - aTime;
+            });
+        } catch (error) {
+            console.error("Error fetching orders for shop:", error);
+            throw error;
+        }
+    }
+
+    async updateOrderStatus(orderId: string, status: string): Promise<void> {
+        try {
+            if (!this.db) {
+                await this.connect();
+                if (!this.db) {
+                    throw new Error('Error connecting to Firestore');
+                }
+            }
+            
+            const orderDocRef = doc(this.db, 'orders', orderId);
+            await updateDoc(orderDocRef, {
+                status,
+                updatedAt: new Date()
+            });
+            
+            console.log("Order status updated: ", orderId, status);
+        } catch (error) {
+            console.error("Error updating order status: ", error);
+            throw error;
+        }
+    }
 }
 
 const firebaseService = FirebaseService.getInstance();

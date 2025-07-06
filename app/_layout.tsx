@@ -66,37 +66,39 @@ export default function RootLayout() {
     }
     return (
         <GoogleMapsLoader>
-            <UserProvider>
-                <LocationProvider>
-                    <ShopProvider>
-                        <ItemProvider>
-                            <CartProvider>
-                                <KeyboardProvider>
-                                    <GestureHandlerRootView style={{ flex: 1 }}>
-                                        <Stack>
-                                            <Stack.Screen name="index" options={{ headerShown: false }} />
-                                            <Stack.Screen name="Register" options={{ headerShown: false }} />
-                                            <Stack.Screen name="Login" options={{ headerShown: false }} />
-                                            <Stack.Screen name="+not-found" options={{ headerShown: false }} />
-                                            <Stack.Screen name="success" options={{ headerShown: false, animation: 'fade' }} />
-                                            <Stack.Screen name="EditDetails" options={{ headerShown: false }} />
-                                            <Stack.Screen
-                                                name="Settings"
-                                                options={{
-                                                    headerShown: false,
-                                                    presentation: 'modal',
-                                                    animation: 'slide_from_bottom',
-                                                }}
-                                            />
-                                        </Stack>
-                                        <Toast />
-                                    </GestureHandlerRootView>
-                                </KeyboardProvider>
-                            </CartProvider>
-                        </ItemProvider>
-                    </ShopProvider>
-                </LocationProvider>
-            </UserProvider>
+            <OrderProvider>
+                <UserProvider>
+                    <LocationProvider>
+                        <ShopProvider>
+                            <ItemProvider>
+                                <CartProvider>
+                                    <KeyboardProvider>
+                                        <GestureHandlerRootView style={{ flex: 1 }}>
+                                            <Stack>
+                                                <Stack.Screen name="index" options={{ headerShown: false }} />
+                                                <Stack.Screen name="Register" options={{ headerShown: false }} />
+                                                <Stack.Screen name="Login" options={{ headerShown: false }} />
+                                                <Stack.Screen name="+not-found" options={{ headerShown: false }} />
+                                                <Stack.Screen name="success" options={{ headerShown: false, animation: 'fade' }} />
+                                                <Stack.Screen name="EditDetails" options={{ headerShown: false }} />
+                                                <Stack.Screen
+                                                    name="Settings"
+                                                    options={{
+                                                        headerShown: false,
+                                                        presentation: 'modal',
+                                                        animation: 'slide_from_bottom',
+                                                    }}
+                                                />
+                                            </Stack>
+                                            <Toast />
+                                        </GestureHandlerRootView>
+                                    </KeyboardProvider>
+                                </CartProvider>
+                            </ItemProvider>
+                        </ShopProvider>
+                    </LocationProvider>
+                </UserProvider>
+            </OrderProvider>
         </GoogleMapsLoader>
     );
 }

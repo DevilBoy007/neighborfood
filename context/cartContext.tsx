@@ -15,6 +15,8 @@ type ShopCart = {
   shopId: string;
   shopName: string;
   shopPhotoURL?: string;
+  allowPickup: boolean;
+  localDelivery: boolean;
   items: CartItem[];
   subtotal: number;
 };
@@ -22,7 +24,7 @@ type ShopCart = {
 type CartContextType = {
   shopCarts: ShopCart[];
   isLoadingCart: boolean;
-  addToCart: (item: Omit<CartItem, 'id'> & { shopId: string; shopName: string; shopPhotoURL?: string }) => void;
+  addToCart: (item: Omit<CartItem, 'id'> & { shopId: string; shopName: string; shopPhotoURL?: string; allowPickup: boolean; localDelivery: boolean }) => void;
   removeFromCart: (shopId: string, itemId: string) => void;
   updateItemQuantity: (shopId: string, itemId: string, quantity: number) => void;
   clearCart: () => void;
@@ -90,8 +92,8 @@ export const CartProvider = ({ children }: CartProviderProps) => {
     return items.reduce((total, item) => total + (item.price * item.quantity), 0);
   };
 
-  const addToCart = (item: Omit<CartItem, 'id'> & { shopId: string; shopName: string; shopPhotoURL?: string }) => {
-    const { shopId, shopName, shopPhotoURL, ...itemData } = item;
+  const addToCart = (item: Omit<CartItem, 'id'> & { shopId: string; shopName: string; shopPhotoURL?: string; allowPickup: boolean; localDelivery: boolean }) => {
+    const { shopId, shopName, shopPhotoURL, allowPickup, localDelivery, ...itemData } = item;
     
     setShopCarts(prevShopCarts => {
       // Find if we already have a cart for this shop
@@ -103,6 +105,8 @@ export const CartProvider = ({ children }: CartProviderProps) => {
           shopId,
           shopName,
           shopPhotoURL,
+          allowPickup,
+          localDelivery,
           items: [itemData],
           subtotal: itemData.price * itemData.quantity
         };
