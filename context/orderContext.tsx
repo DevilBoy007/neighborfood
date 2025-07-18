@@ -1,5 +1,4 @@
 import React, { createContext, useState, useContext, ReactNode } from 'react';
-import { v4 as uuidv4 } from 'uuid';
 
 type OrderItem = {
     itemId: string;
@@ -52,7 +51,6 @@ type OrderContextType = {
     addToOrderHistory: (order: OrderData) => void;
     updateOrderStatus: (orderId: string, status: OrderStatus) => void;
     clearCurrentOrder: () => void;
-    createNewOrder: (orderData: Omit<OrderData, 'id'>) => OrderData;
 };
 
 const OrderContext = createContext<OrderContextType | undefined>(undefined);
@@ -124,15 +122,6 @@ export const OrderProvider = ({ children }: OrderProviderProps) => {
         setCurrentOrderState(null);
     };
 
-    const createNewOrder = (orderData: Omit<OrderData, 'id'>): OrderData => {
-        const newOrder: OrderData = {
-            ...orderData,
-            id: uuidv4()
-        };
-        return newOrder;
-    };
-
-
     return (
         <OrderContext.Provider value={{
             currentOrder,
@@ -145,7 +134,6 @@ export const OrderProvider = ({ children }: OrderProviderProps) => {
             addToOrderHistory,
             updateOrderStatus,
             clearCurrentOrder,
-            createNewOrder
         }}>
             {children}
         </OrderContext.Provider>

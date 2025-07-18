@@ -16,7 +16,6 @@ import { v4 as uuidv4 } from 'uuid';
 import { useCart } from '@/context/cartContext';
 import { useUser } from '@/context/userContext';
 import { useOrder } from '@/context/orderContext';
-import { useLocation } from '@/context/locationContext';
 import firebaseService from '@/handlers/firebaseService';
 
 type DeliveryOption = 'pickup' | 'delivery';
@@ -26,8 +25,7 @@ const Checkout = () => {
     const router = useRouter();
     const { shopCarts, clearCart, calculateTotalSubtotal } = useCart();
     const { userData } = useUser();
-    const { addToOrderHistory, createNewOrder } = useOrder();
-    const { locationData } = useLocation();
+    const { addToOrderHistory } = useOrder();
     
     const [shopDeliveryOptions, setShopDeliveryOptions] = useState<Record<string, DeliveryOption>>({});
     const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('apple_pay');
@@ -78,7 +76,7 @@ const Checkout = () => {
                 type: 'error',
                 text1: 'Error',
                 text2: 'Please log in to place an order',
-				visibilityTime: 3000
+				visibilityTime: 3000,
             });
             return;
         }
@@ -128,12 +126,7 @@ const Checkout = () => {
                     shopName: shopCart.shopName,
                     shopPhotoURL: shopCart.shopPhotoURL || '',
                     items: shopCart.items.map(item => ({
-                        itemId: item.itemId,
-                        name: item.name,
-                        price: item.price,
-                        quantity: item.quantity,
-                        specialInstructions: specialInstructions,
-                        photoURL: item.photoURL
+                        ...item,
                     })),
                     subtotal: shopCart.subtotal,
                     tax: shopCart.subtotal * 0.08,
@@ -141,12 +134,13 @@ const Checkout = () => {
                     tip: 0, // TODO: implement later
                     total: shopCart.subtotal + (shopCart.subtotal * 0.08) + (deliveryOption === 'delivery' ? 3.99 : 0),
                     status: 'pending' as const,
-                    createdAt: { seconds: Math.floor(Date.now() / 1000), nanoseconds: 0 },
-                    estimatedDeliveryTime: { seconds: Math.floor((Date.now() + 45 * 60 * 1000) / 1000), nanoseconds: 0 },
+                    createdAt: new Date(),
+                    estimatedDeliveryTime: new Date(Date.now() + 45 * 60 * 1000), // 45 minutes from now
                     paymentMethod,
                     deliveryAddress: deliveryOption === 'delivery' ? deliveryAddress : 'Pickup',
                     contactPhone,
                     deliveryOption,
+                    specialInstructions
                 };
 ;                
                 await firebaseService.addDocument('orders', orderData, null);
