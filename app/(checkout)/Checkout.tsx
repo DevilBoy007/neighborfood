@@ -158,7 +158,8 @@ const Checkout = () => {
             Toast.show({
                 type: 'success',
                 text1: 'Order Placed!',
-                text2: `Your order${createdOrders.length > 1 ? 's have' : ' has'} been placed successfully. You'll receive updates on the status.`
+                text2: `Your order${createdOrders.length > 1 ? 's have' : ' has'} been placed successfully. You'll receive updates on the status.`,
+                visibilityTime: 3000
             });
 
             // Navigate to success page, then to menu, then to orders
@@ -301,6 +302,7 @@ const Checkout = () => {
                             value={deliveryAddress}
                             onChangeText={setDeliveryAddress}
                             placeholder="Enter your delivery address"
+                            placeholderTextColor={'#ddd'}
                             multiline
                         />
                     </View>
@@ -314,6 +316,7 @@ const Checkout = () => {
                         value={contactPhone}
                         onChangeText={setContactPhone}
                         placeholder="Enter your phone number"
+                        placeholderTextColor={'#ddd'}
                         keyboardType="phone-pad"
                     />
                 </View>
@@ -354,6 +357,7 @@ const Checkout = () => {
                         value={specialInstructions}
                         onChangeText={setSpecialInstructions}
                         placeholder="Any special requests or instructions..."
+                        placeholderTextColor={'#ddd'}
                         multiline
                         numberOfLines={3}
                     />

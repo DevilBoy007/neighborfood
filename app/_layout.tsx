@@ -5,7 +5,7 @@ import { useFonts } from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
 import { GestureHandlerRootView } from "react-native-gesture-handler";
-import Toast from 'react-native-toast-message';
+import Toast, { BaseToast } from 'react-native-toast-message';
 import { UserProvider } from "@/context/userContext";
 import { LocationProvider, useLocation } from "@/context/locationContext";
 import { ShopProvider } from "@/context/shopContext";
@@ -55,6 +55,29 @@ export default function RootLayout() {
         TextMeOne: require('../assets/fonts/TextMeOne-Regular.ttf'),
     });
 
+    const toastConfig = {
+            success: (props) => (
+                <BaseToast
+                    {...props}
+                    style={{ borderLeftColor: '#00bfff', width: '90%' }}
+                    contentContainerStyle={{ paddingHorizontal: 15 }}
+                    text1Style={{ fontSize: 16, color: '#333' }}
+                    text2Style={{ fontSize: 12, color: '#666' }}
+                    text2NumberOfLines={2}
+                />
+            ),
+            error: (props) => (
+                <BaseToast
+                    {...props}
+                    style={{ borderLeftColor: '#ff3b30', width: '90%' }}
+                    contentContainerStyle={{ paddingHorizontal: 15 }}
+                    text1Style={{ fontSize: 14, color: '#333' }}
+                    text2Style={{ fontSize: 12, color: '#666' }}
+                    text2NumberOfLines={2}
+                />
+            ),
+        }
+
     useEffect(() => {
         if (loaded) {
             SplashScreen.hideAsync();
@@ -90,7 +113,7 @@ export default function RootLayout() {
                                                     }}
                                                 />
                                             </Stack>
-                                            <Toast />
+                                            <Toast config={toastConfig} />
                                         </GestureHandlerRootView>
                                     </KeyboardProvider>
                                 </CartProvider>
