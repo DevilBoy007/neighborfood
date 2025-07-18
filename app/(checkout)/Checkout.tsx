@@ -12,6 +12,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import Toast from 'react-native-toast-message';
+import { v4 as uuidv4 } from 'uuid';
 import { useCart } from '@/context/cartContext';
 import { useUser } from '@/context/userContext';
 import { useOrder } from '@/context/orderContext';
@@ -25,7 +26,7 @@ const Checkout = () => {
     const router = useRouter();
     const { shopCarts, clearCart, calculateTotalSubtotal } = useCart();
     const { userData } = useUser();
-    const { addToOrderHistory } = useOrder();
+    const { addToOrderHistory, createNewOrder } = useOrder();
     const { locationData } = useLocation();
     
     const [shopDeliveryOptions, setShopDeliveryOptions] = useState<Record<string, DeliveryOption>>({});
@@ -115,41 +116,42 @@ const Checkout = () => {
         }
 
         setIsPlacingOrder(true);
-
+        const orderId = uuidv4();
         try {
             // Create orders for each shop
             const orderPromises = shopCarts.map(async (shopCart) => {
                 const deliveryOption = shopDeliveryOptions[shopCart.shopId];
                 const orderData = {
+                    id: orderId,
                     userId: userData.uid,
                     shopId: shopCart.shopId,
                     shopName: shopCart.shopName,
                     shopPhotoURL: shopCart.shopPhotoURL || '',
                     items: shopCart.items.map(item => ({
-                        ...item,
-                        specialInstructions: specialInstructions
+                        itemId: item.itemId,
+                        name: item.name,
+                        price: item.price,
+                        quantity: item.quantity,
+                        specialInstructions: specialInstructions,
+                        photoURL: item.photoURL
                     })),
                     subtotal: shopCart.subtotal,
                     tax: shopCart.subtotal * 0.08,
                     deliveryFee: deliveryOption === 'delivery' ? 3.99 : 0,
-                    tip: 0, // Can be added later
+                    tip: 0, // TODO: implement later
                     total: shopCart.subtotal + (shopCart.subtotal * 0.08) + (deliveryOption === 'delivery' ? 3.99 : 0),
-                    status: 'pending',
-                    createdAt: new Date(),
-                    estimatedDeliveryTime: new Date(Date.now() + 45 * 60 * 1000), // 45 minutes from now
+                    status: 'pending' as const,
+                    createdAt: { seconds: Math.floor(Date.now() / 1000), nanoseconds: 0 },
+                    estimatedDeliveryTime: { seconds: Math.floor((Date.now() + 45 * 60 * 1000) / 1000), nanoseconds: 0 },
                     paymentMethod,
                     deliveryAddress: deliveryOption === 'delivery' ? deliveryAddress : 'Pickup',
                     contactPhone,
                     deliveryOption,
-                    specialInstructions
                 };
-
-                const orderId = await firebaseService.addDocument('orders', orderData, null);
+;                
+                await firebaseService.addDocument('orders', orderData, null);
                 
-                return {
-                    id: orderId,
-                    ...orderData
-                };
+                return orderData;
             });
 
             const createdOrders = await Promise.all(orderPromises);
