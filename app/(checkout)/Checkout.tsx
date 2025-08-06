@@ -28,7 +28,7 @@ const Checkout = () => {
     const { addToOrderHistory } = useOrder();
     
     const [shopDeliveryOptions, setShopDeliveryOptions] = useState<Record<string, DeliveryOption>>({});
-    const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('apple_pay');
+    const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('card');
     const [deliveryAddress, setDeliveryAddress] = useState('');
     const [contactPhone, setContactPhone] = useState('');
     const [specialInstructions, setSpecialInstructions] = useState('');
