@@ -66,7 +66,7 @@ const MenuScreen = () => {
                     <MenuButton icon="+" title="add item" destination="./(items)/AddItem"/>
                     <MenuButton icon={shopIcon} title="manage shops" destination={"./(shops)/Shops"}/>
                     <MenuButton icon={manageItemIcon} title="manage items" destination="./(items)/ManageItems" />
-                    <MenuButton icon={receiptIcon} title="order history" destination={"./(orders)/OrderHistory"}/>
+                    <MenuButton icon={receiptIcon} title="orders" destination={"./(orders)"}/>
                     <MenuButton icon={contactUsIcon} title="contact us" destination={"./(contact)/ContactUs"}/>
                     <MenuButton icon={dashboardIcon} title="dashboard" />
                 </View>

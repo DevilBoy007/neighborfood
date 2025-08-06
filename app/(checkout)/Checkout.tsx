@@ -167,7 +167,7 @@ const Checkout = () => {
             setTimeout(() => {
                 router.navigate('/(home)/Menu');
                 setTimeout(() => {
-                    router.navigate('/(home)/(orders)/OrderHistory');
+                    router.navigate('/(home)/(orders)');
                 }, 100);
             }, Platform.OS === 'web' ? 2100 : 2000);
 

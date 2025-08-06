@@ -102,7 +102,7 @@ const OrderDetailScreen = ({ navigation, route }) => {
                 >
                     <Ionicons name="chevron-back" size={24} color="black" />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>order history</Text>
+                <Text style={styles.headerTitle}>order details</Text>
             </View>
 
             <Animated.ScrollView
