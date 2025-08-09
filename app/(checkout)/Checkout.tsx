@@ -25,7 +25,7 @@ const Checkout = () => {
     const router = useRouter();
     const { shopCarts, clearCart, calculateTotalSubtotal } = useCart();
     const { userData } = useUser();
-    const { addToOrderHistory } = useOrder();
+    const { addToOrderHistory, clearCurrentOrder } = useOrder();
     
     const [shopDeliveryOptions, setShopDeliveryOptions] = useState<Record<string, DeliveryOption>>({});
     const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('card');
@@ -153,6 +153,7 @@ const Checkout = () => {
                 addToOrderHistory(order);
             });
 
+            clearCurrentOrder();
             clearCart();
 
             Toast.show({
