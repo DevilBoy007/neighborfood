@@ -13,9 +13,19 @@ const OrdersScreen = () => {
     const router = useRouter();
     const { filter } = useLocalSearchParams<{ filter: 'current' | 'history' }>();
     const { userData } = useUser();
-    const { currentOrder, setCurrentOrder, orderHistory, setOrderHistory } = useOrder();
+    const { 
+        currentOrders, 
+        setCurrentOrders, 
+        orderHistory, 
+        setOrderHistory, 
+        setSelectedOrder,
+        isLoadingOrders
+    } = useOrder();
     const [orders, setOrders] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+
+    // Use context loading state or local loading state
+    const isCurrentlyLoading = isLoadingOrders || isLoading;
 
     // Default to 'current' if no filter is provided
     const orderFilter = filter || 'current';
@@ -26,22 +36,43 @@ const OrdersScreen = () => {
             
             try {
                 setIsLoading(true);
-                const userOrders = await firebaseService.getOrdersForUser(userData.uid);
                 
                 let filteredOrders;
                 if (orderFilter === 'current') {
+                    // For current orders, check if we have data in context first
+                    if (currentOrders.length > 0) {
+                        filteredOrders = currentOrders;
+                        setOrders(filteredOrders);
+                        setIsLoading(false);
+                        return;
+                    }
+                    
+                    // Fetch from Firebase if no current orders in context
+                    const userOrders = await firebaseService.getOrdersForUser(userData.uid);
                     filteredOrders = userOrders.filter(order => 
                         order.status !== 'completed' && order.status !== 'cancelled'
                     );
                     setOrders(filteredOrders);
 
-                    // Set the most recent active order as current order if there's one
-                    if (filteredOrders.length > 0 && !currentOrder) {
-                        setCurrentOrder(filteredOrders[0]);
+                    // Set all current orders in context
+                    if (filteredOrders.length > 0) {
+                        setCurrentOrders(filteredOrders);
                     }
                 } else {
+                    // For history, check if we have data in context first
+                    if (orderHistory.length > 0) {
+                        filteredOrders = orderHistory.filter(order => order.status === 'completed');
+                        setOrders(filteredOrders);
+                        setIsLoading(false);
+                        return;
+                    }
+                    
+                    // Fetch from Firebase if no history in context
+                    const userOrders = await firebaseService.getOrdersForUser(userData.uid);
                     filteredOrders = userOrders.filter(order => order.status === 'completed');
                     setOrders(filteredOrders);
+                    
+                    // Update order history in context
                     setOrderHistory(filteredOrders);
                 }
             } catch (error) {
@@ -73,7 +104,8 @@ const OrdersScreen = () => {
     };
 
     const handleOrderPress = (orderCardData: any) => {
-        router.setParams({ order: JSON.stringify(orderCardData.originalOrder) });
+        // Set the selected order in context instead of using route params
+        setSelectedOrder(orderCardData.originalOrder);
         router.push('./details');
     };
 
@@ -97,7 +129,7 @@ const OrdersScreen = () => {
 
     const currentConfig = config[orderFilter];
 
-    if (isLoading) {
+    if (isCurrentlyLoading) {
         return (
             <SafeAreaView style={styles.container}>
                 <View style={styles.header}>

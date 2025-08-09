@@ -1,6 +1,6 @@
 // OrderDetailScreen.js
-import React, { useEffect, useRef, useState } from 'react';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import React, { useEffect, useRef } from 'react';
+import { useRouter } from 'expo-router';
 import {
     View,
     Text,
@@ -13,6 +13,7 @@ import {
     Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useOrder } from '@/context/orderContext';
 
 const { height } = Dimensions.get('window');
 
@@ -35,33 +36,11 @@ const ShopSection = ({ shop, items }: { shop: string; items: any[] }) => (
 
 const OrderDetailScreen = () => {
     const router = useRouter();
-    const params = useLocalSearchParams();
-    const [orderData, setOrderData] = useState<any>(null);
+    const { selectedOrder, setSelectedOrder } = useOrder();
     const slideAnim = useRef(new Animated.Value(height)).current;
     const fadeAnim = useRef(new Animated.Value(0)).current;
 
     useEffect(() => {
-        
-        console.log(params.order)
-        if (params.order) {
-            try {
-                const parsedOrder = JSON.parse(params.order as string);
-                setOrderData(parsedOrder);
-            } catch (error) {
-                console.error('Error parsing order data:', error);
-                // Fallback to mock data
-                setOrderData({
-                    date: 'Wed, Nov 27',
-                    shopName: 'Sample Shop',
-                    items: [
-                        { name: 'Sample Item', quantity: 1, price: 10.00 }
-                    ],
-                    total: 10.00,
-                    status: 'completed'
-                });
-            }
-        }
-
         Animated.parallel([
             Animated.timing(slideAnim, {
                 toValue: 0,
@@ -74,7 +53,12 @@ const OrderDetailScreen = () => {
                 useNativeDriver: true,
             })
         ]).start();
-    }, [params.order]);
+
+        // Clear selected order when component unmounts
+        return () => {
+            setSelectedOrder(null);
+        };
+    }, [selectedOrder]);
 
     const formatOrderData = (order: any) => {
         if (!order) return null;
@@ -96,7 +80,7 @@ const OrderDetailScreen = () => {
         };
     };
 
-    const formattedOrder = formatOrderData(orderData);
+    const formattedOrder = formatOrderData(selectedOrder);
 
     if (!formattedOrder) {
         return (
@@ -108,7 +92,9 @@ const OrderDetailScreen = () => {
                     <Text style={styles.headerTitle}>order details</Text>
                 </View>
                 <View style={styles.loadingContainer}>
-                    <Text style={styles.loadingText}>Loading order details...</Text>
+                    <Text style={styles.loadingText}>
+                        {selectedOrder ? 'Loading order details...' : 'No order selected'}
+                    </Text>
                 </View>
             </SafeAreaView>
         );
