@@ -1,6 +1,7 @@
+import { v4 as uuidv4 } from 'uuid';
 import React, { useEffect, useState } from 'react';
-import { useRouter } from 'expo-router'
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, Platform } from 'react-native';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
 import OrderCard from '@/components/OrderCard';
@@ -8,14 +9,19 @@ import { useUser } from '@/context/userContext';
 import { useOrder } from '@/context/orderContext';
 import firebaseService from '@/handlers/firebaseService';
 
-const OrderHistoryScreen = () => {
+const OrdersScreen = () => {
     const router = useRouter();
+    const { filter } = useLocalSearchParams<{ filter: 'current' | 'history' }>();
     const { userData } = useUser();
-    const { orderHistory, setOrderHistory } = useOrder();
+    const { currentOrder, setCurrentOrder, orderHistory, setOrderHistory } = useOrder();
+    const [orders, setOrders] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(true);
 
+    // Default to 'current' if no filter is provided
+    const orderFilter = filter || 'current';
+
     useEffect(() => {
-        const fetchOrderHistory = async () => {
+        const fetchOrders = async () => {
             if (!userData?.uid) return;
             
             try {
@@ -23,19 +29,34 @@ const OrderHistoryScreen = () => {
                 // Get all orders for the user
                 const userOrders = await firebaseService.getOrdersForUser(userData.uid);
                 
-                // Filter only completed orders for history
-                const completedOrders = userOrders.filter(order => order.status === 'completed');
+                // Filter orders based on the filter parameter
+                let filteredOrders;
+                if (orderFilter === 'current') {
+                    // Filter active orders (not completed)
+                    filteredOrders = userOrders.filter(order => 
+                        order.status !== 'completed' && order.status !== 'cancelled'
+                    );
+                    setOrders(filteredOrders);
 
-                setOrderHistory(completedOrders);
+                    // Set the most recent active order as current order if there's one
+                    if (filteredOrders.length > 0 && !currentOrder) {
+                        setCurrentOrder(filteredOrders[0]);
+                    }
+                } else {
+                    // Filter only completed orders for history
+                    filteredOrders = userOrders.filter(order => order.status === 'completed');
+                    setOrders(filteredOrders);
+                    setOrderHistory(filteredOrders);
+                }
             } catch (error) {
-                console.error('Error fetching order history:', error);
+                console.error(`Error fetching ${orderFilter} orders:`, error);
             } finally {
                 setIsLoading(false);
             }
         };
 
-        fetchOrderHistory();
-    }, [userData?.uid]);
+        fetchOrders();
+    }, [userData?.uid, orderFilter]);
 
     const formatOrderForCard = (order: any) => {
         const date = new Date(order.createdAt.seconds * 1000).toLocaleDateString('en-US', {
@@ -45,7 +66,7 @@ const OrderHistoryScreen = () => {
         });
         
         return {
-            id: order.id,
+            id: orderFilter === 'current' ? uuidv4() : order.id,
             date,
             total: order.total.toFixed(2),
             shops: [order.shopName],
@@ -56,9 +77,32 @@ const OrderHistoryScreen = () => {
     };
 
     const handleOrderPress = (orderCardData: any) => {
+        if (orderFilter === 'current') {
+            console.log('order pressed:', orderCardData.originalOrder);
+        }
         router.setParams({ order: JSON.stringify(orderCardData.originalOrder) });
         router.push('./details');
     };
+
+    // Configuration based on filter type
+    const config = {
+        current: {
+            title: 'current orders',
+            loadingText: 'Loading current orders...',
+            emptyIcon: 'time-outline' as const,
+            emptyText: 'No current orders',
+            emptySubtext: 'Your active orders will appear here'
+        },
+        history: {
+            title: 'order history',
+            loadingText: 'Loading order history...',
+            emptyIcon: 'receipt-outline' as const,
+            emptyText: 'No order history',
+            emptySubtext: 'Your completed orders will appear here'
+        }
+    };
+
+    const currentConfig = config[orderFilter];
 
     if (isLoading) {
         return (
@@ -67,10 +111,10 @@ const OrderHistoryScreen = () => {
                     <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
                         <Ionicons name="chevron-back" size={24} color="black" />
                     </TouchableOpacity>
-                    <Text style={styles.headerTitle}>order history</Text>
+                    <Text style={styles.headerTitle}>{currentConfig.title}</Text>
                 </View>
                 <View style={styles.loadingContainer}>
-                    <Text style={styles.loadingText}>Loading order history...</Text>
+                    <Text style={styles.loadingText}>{currentConfig.loadingText}</Text>
                 </View>
             </SafeAreaView>
         );
@@ -82,20 +126,29 @@ const OrderHistoryScreen = () => {
                 <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
                     <Ionicons name="chevron-back" size={24} color="black" />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>order history</Text>
+                <Text style={styles.headerTitle}>{currentConfig.title}</Text>
             </View>
 
             <ScrollView style={styles.scrollView}>
-                {orderHistory.length === 0 ? (
+                {orders.length === 0 ? (
                     <View style={styles.emptyState}>
-                        <Ionicons name="receipt-outline" size={64} color="#ccc" />
-                        <Text style={styles.emptyStateText}>No order history</Text>
-                        <Text style={styles.emptyStateSubtext}>Your completed orders will appear here</Text>
+                        <Ionicons name={currentConfig.emptyIcon} size={64} color="#ccc" />
+                        <Text style={styles.emptyStateText}>{currentConfig.emptyText}</Text>
+                        <Text style={styles.emptyStateSubtext}>{currentConfig.emptySubtext}</Text>
                     </View>
                 ) : (
-                    orderHistory.map((order, index) => {
+                    orders.map((order, index) => {
                         const formattedOrder = formatOrderForCard(order);
-                        return (
+                        return orderFilter === 'current' ? (
+                            <View key={order.docId || index} style={styles.orderContainer}>
+                                <OrderCard
+                                    order={formattedOrder}
+                                    onPress={() => handleOrderPress(formattedOrder)}
+                                />
+                                <View style={styles.statusContainer}>
+                                </View>
+                            </View>
+                        ) : (
                             <OrderCard
                                 key={index}
                                 order={formattedOrder}
@@ -113,7 +166,6 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: '#b7ffb0',
-        // backgroundColor: '#c2f7d7',
     },
     header: {
         flexDirection: 'row',
@@ -172,6 +224,15 @@ const styles = StyleSheet.create({
         color: '#999',
         textAlign: 'center',
     },
+    orderContainer: {
+        marginBottom: 16,
+    },
+    statusContainer: {
+        position: 'absolute',
+        top: 10,
+        right: 10,
+        zIndex: 1,
+    },
 });
 
-export default OrderHistoryScreen;
+export default OrdersScreen;

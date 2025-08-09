@@ -20,7 +20,7 @@ const OrdersScreen = () => {
                 <View style={styles.tabContainer}>
                     <TouchableOpacity 
                         style={styles.tabButton}
-                        onPress={() => router.push('./current')}
+                        onPress={() => router.push('./orders?filter=current')}
                     >
                         <View style={styles.tabIcon}>
                             <Ionicons name="time-outline" size={32} color="#4CAF50" />
@@ -31,7 +31,7 @@ const OrdersScreen = () => {
                     
                     <TouchableOpacity 
                         style={styles.tabButton}
-                        onPress={() => router.push('./history')}
+                        onPress={() => router.push('./orders?filter=history')}
                     >
                         <View style={styles.tabIcon}>
                             <Ionicons name="receipt-outline" size={32} color="#FF9800" />
