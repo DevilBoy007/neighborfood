@@ -25,7 +25,7 @@ const Checkout = () => {
     const router = useRouter();
     const { shopCarts, clearCart, calculateTotalSubtotal } = useCart();
     const { userData } = useUser();
-    const { addToOrderHistory, clearCurrentOrders } = useOrder();
+    const { addToOrderHistory, addToCurrentOrders, refreshOrders } = useOrder();
     
     const [shopDeliveryOptions, setShopDeliveryOptions] = useState<Record<string, DeliveryOption>>({});
     const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('card');
@@ -149,11 +149,12 @@ const Checkout = () => {
             });
 
             const createdOrders = await Promise.all(orderPromises);
-            createdOrders.forEach(order => {
-                addToOrderHistory(order);
-            });
-
-            clearCurrentOrders();
+            
+            // Refresh orders to get the newly created orders from Firebase
+            if (userData?.uid) {
+                await refreshOrders(userData.uid);
+            }
+            
             clearCart();
 
             Toast.show({

@@ -1,4 +1,5 @@
 import React, { createContext, useState, useContext, ReactNode } from 'react';
+import firebaseService from '@/handlers/firebaseService';
 
 type OrderItem = {
     itemId: string;
@@ -45,6 +46,7 @@ type OrderContextType = {
     orderHistory: OrderData[];
     selectedOrder: OrderData | null;
     isLoadingOrders: boolean;
+    isInitialized: boolean;
     setCurrentOrders: (orders: OrderData[]) => void;
     setSelectedOrder: (order: OrderData | null) => void;
     setOrderHistory: (orders: OrderData[]) => void;
@@ -52,6 +54,9 @@ type OrderContextType = {
     addToCurrentOrders: (order: OrderData) => void;
     updateOrderStatus: (orderId: string, status: OrderStatus) => void;
     clearCurrentOrders: () => void;
+    initializeOrders: (userId: string) => Promise<void>;
+    refreshOrders: (userId: string) => Promise<void>;
+    resetOrderContext: () => void;
 };
 
 const OrderContext = createContext<OrderContextType | undefined>(undefined);
@@ -73,6 +78,7 @@ export const OrderProvider = ({ children }: OrderProviderProps) => {
     const [orderHistory, setOrderHistoryState] = useState<OrderData[]>([]);
     const [selectedOrder, setSelectedOrderState] = useState<OrderData | null>(null);
     const [isLoadingOrders, setIsLoadingOrders] = useState(false);
+    const [isInitialized, setIsInitialized] = useState(false);
 
     const setCurrentOrders = (orders: OrderData[]) => {
         setCurrentOrdersState(orders);
@@ -92,6 +98,77 @@ export const OrderProvider = ({ children }: OrderProviderProps) => {
 
     const addToCurrentOrders = (order: OrderData) => {
         setCurrentOrdersState(prevOrders => [order, ...prevOrders]);
+    };
+
+    const initializeOrders = async (userId: string) => {
+        if (!userId) return;
+        
+        // Don't re-initialize if already done for this user session
+        if (isInitialized) {
+            console.log('Orders already initialized, skipping...');
+            return;
+        }
+        
+        try {
+            setIsLoadingOrders(true);
+            console.log('Initializing orders for user:', userId);
+            
+            // Fetch all orders for the user
+            const userOrders = await firebaseService.getOrdersForUser(userId);
+            
+            // Separate current orders from history
+            const currentOrdersData = userOrders.filter(order => 
+                order.status !== 'completed' && order.status !== 'cancelled'
+            );
+            
+            const orderHistoryData = userOrders.filter(order => 
+                order.status === 'completed' || order.status === 'cancelled'
+            );
+            
+            // Update state
+            setCurrentOrdersState(currentOrdersData);
+            setOrderHistoryState(orderHistoryData);
+            setIsInitialized(true);
+            
+            console.log(`Initialized: ${currentOrdersData.length} current orders, ${orderHistoryData.length} historical orders`);
+            
+        } catch (error) {
+            console.error('Error initializing orders:', error);
+        } finally {
+            setIsLoadingOrders(false);
+        }
+    };
+
+    const refreshOrders = async (userId: string) => {
+        if (!userId) return;
+        
+        try {
+            setIsLoadingOrders(true);
+            console.log('Refreshing orders for user:', userId);
+            
+            // Re-fetch all orders
+            const userOrders = await firebaseService.getOrdersForUser(userId);
+            
+            // Separate current orders from history
+            const currentOrdersData = userOrders.filter(order => 
+                order.status !== 'completed' && order.status !== 'cancelled'
+            );
+            
+            const orderHistoryData = userOrders.filter(order => 
+                order.status === 'completed' || order.status === 'cancelled'
+            );
+            
+            // Update state
+            setCurrentOrdersState(currentOrdersData);
+            setOrderHistoryState(orderHistoryData);
+            
+            console.log(`Refreshed: ${currentOrdersData.length} current orders, ${orderHistoryData.length} historical orders`);
+            
+        } catch (error) {
+            console.error('Error refreshing orders:', error);
+        } finally {
+            setIsLoadingOrders(false);
+        }
     };
 
     const updateOrderStatus = (orderId: string, status: OrderStatus) => {
@@ -128,12 +205,22 @@ export const OrderProvider = ({ children }: OrderProviderProps) => {
         setCurrentOrdersState([]);
     };
 
+    const resetOrderContext = () => {
+        setCurrentOrdersState([]);
+        setOrderHistoryState([]);
+        setSelectedOrderState(null);
+        setIsLoadingOrders(false);
+        setIsInitialized(false);
+        console.log('Order context reset');
+    };
+
     return (
         <OrderContext.Provider value={{
             currentOrders,
             orderHistory,
             selectedOrder,
             isLoadingOrders,
+            isInitialized,
             setCurrentOrders,
             setSelectedOrder,
             setOrderHistory,
@@ -141,6 +228,9 @@ export const OrderProvider = ({ children }: OrderProviderProps) => {
             addToCurrentOrders,
             updateOrderStatus,
             clearCurrentOrders,
+            initializeOrders,
+            refreshOrders,
+            resetOrderContext,
         }}>
             {children}
         </OrderContext.Provider>

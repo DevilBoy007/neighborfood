@@ -9,10 +9,10 @@ const OrdersScreen = () => {
     return (
         <SafeAreaView style={styles.container}>
             <View style={styles.header}>
+                <Text style={styles.headerTitle}>orders</Text>
                 <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
                     <Ionicons name="chevron-back" size={24} color="black" />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>orders</Text>
             </View>
 
             <View style={styles.content}>
@@ -61,7 +61,7 @@ const styles = StyleSheet.create({
         }),
     },
     backButton: {
-        marginRight: 16,
+        padding: 2,
     },
     headerTitle: {
         fontSize: 24,

@@ -1,13 +1,12 @@
 import { v4 as uuidv4 } from 'uuid';
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, Platform } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, Platform, RefreshControl } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
 import OrderCard from '@/components/OrderCard';
 import { useUser } from '@/context/userContext';
 import { useOrder } from '@/context/orderContext';
-import firebaseService from '@/handlers/firebaseService';
 
 const OrdersScreen = () => {
     const router = useRouter();
@@ -15,75 +14,44 @@ const OrdersScreen = () => {
     const { userData } = useUser();
     const { 
         currentOrders, 
-        setCurrentOrders, 
         orderHistory, 
-        setOrderHistory, 
         setSelectedOrder,
-        isLoadingOrders
+        isLoadingOrders,
+        isInitialized,
+        initializeOrders,
+        refreshOrders
     } = useOrder();
     const [orders, setOrders] = useState<any[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
-
-    // Use context loading state or local loading state
-    const isCurrentlyLoading = isLoadingOrders || isLoading;
 
     // Default to 'current' if no filter is provided
     const orderFilter = filter || 'current';
 
     useEffect(() => {
-        const fetchOrders = async () => {
+        const loadOrders = async () => {
             if (!userData?.uid) return;
             
-            try {
-                setIsLoading(true);
-                
-                let filteredOrders;
-                if (orderFilter === 'current') {
-                    // For current orders, check if we have data in context first
-                    if (currentOrders.length > 0) {
-                        filteredOrders = currentOrders;
-                        setOrders(filteredOrders);
-                        setIsLoading(false);
-                        return;
-                    }
-                    
-                    // Fetch from Firebase if no current orders in context
-                    const userOrders = await firebaseService.getOrdersForUser(userData.uid);
-                    filteredOrders = userOrders.filter(order => 
-                        order.status !== 'completed' && order.status !== 'cancelled'
-                    );
-                    setOrders(filteredOrders);
-
-                    // Set all current orders in context
-                    if (filteredOrders.length > 0) {
-                        setCurrentOrders(filteredOrders);
-                    }
-                } else {
-                    // For history, check if we have data in context first
-                    if (orderHistory.length > 0) {
-                        filteredOrders = orderHistory.filter(order => order.status === 'completed');
-                        setOrders(filteredOrders);
-                        setIsLoading(false);
-                        return;
-                    }
-                    
-                    // Fetch from Firebase if no history in context
-                    const userOrders = await firebaseService.getOrdersForUser(userData.uid);
-                    filteredOrders = userOrders.filter(order => order.status === 'completed');
-                    setOrders(filteredOrders);
-                    
-                    // Update order history in context
-                    setOrderHistory(filteredOrders);
-                }
-            } catch (error) {
-                console.error(`Error fetching ${orderFilter} orders:`, error);
-            } finally {
-                setIsLoading(false);
+            // Initialize orders if not already done
+            if (!isInitialized) {
+                await initializeOrders(userData.uid);
+            }
+            
+            // Set the appropriate orders based on filter
+            if (orderFilter === 'current') {
+                setOrders(currentOrders);
+            } else {
+                setOrders(orderHistory);
             }
         };
 
-        fetchOrders();
-    }, [userData?.uid, orderFilter]);
+        loadOrders();
+    }, [userData?.uid, orderFilter, isInitialized, currentOrders, orderHistory]);
+
+    // Function to handle pull-to-refresh or manual refresh
+    const handleRefresh = async () => {
+        if (userData?.uid) {
+            await refreshOrders(userData.uid);
+        }
+    };
 
     const formatOrderForCard = (order: any) => {
         const date = new Date(order.createdAt.seconds * 1000).toLocaleDateString('en-US', {
@@ -129,15 +97,17 @@ const OrdersScreen = () => {
 
     const currentConfig = config[orderFilter];
 
-    if (isCurrentlyLoading) {
+    if (isLoadingOrders) {
         return (
             <SafeAreaView style={styles.container}>
                 <View style={styles.header}>
-                    <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-                        <Ionicons name="chevron-back" size={24} color="black" />
-                    </TouchableOpacity>
-                    <Text style={styles.headerTitle}>{currentConfig.title}</Text>
+                    <View>
+                        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+                            <Ionicons name="chevron-back" size={24} color="black" />
+                        </TouchableOpacity>
+                    </View>
                 </View>
+                <Text style={styles.headerTitle}>{currentConfig.title}</Text>
                 <View style={styles.loadingContainer}>
                     <Text style={styles.loadingText}>{currentConfig.loadingText}</Text>
                 </View>
@@ -148,13 +118,26 @@ const OrdersScreen = () => {
     return (
         <SafeAreaView style={styles.container}>
             <View style={styles.header}>
-                <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-                    <Ionicons name="chevron-back" size={24} color="black" />
-                </TouchableOpacity>
                 <Text style={styles.headerTitle}>{currentConfig.title}</Text>
+                <View>
+                    <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+                        <Ionicons name="chevron-back" size={24} color="black" />
+                    </TouchableOpacity>
+                </View>
+                
             </View>
-
-            <ScrollView style={styles.scrollView}>
+            <ScrollView 
+                style={styles.scrollView}
+                refreshControl={
+                    <RefreshControl
+                        refreshing={isLoadingOrders}
+                        onRefresh={handleRefresh}
+                        tintColor="#00bfff"
+                        title="Pull to refresh orders"
+                        titleColor="#00bfff"
+                    />
+                }
+            >
                 {orders.length === 0 ? (
                     <View style={styles.emptyState}>
                         <Ionicons name={currentConfig.emptyIcon} size={64} color="#ccc" />
@@ -194,18 +177,17 @@ const styles = StyleSheet.create({
     },
     header: {
         flexDirection: 'row',
-        alignItems: 'center',
+        justifyContent: 'flex-start',
         padding: 16,
+        marginBottom: 8,
         ...Platform.select({
             ios: {
                 justifyContent: 'flex-end',
             }
         }),
     },
-    backButton: {
-        marginRight: 16,
-    },
     headerTitle: {
+        textAlign: 'center',
         fontSize: 24,
         fontWeight: '400',
         fontFamily: 'TitanOne',
@@ -215,6 +197,9 @@ const styles = StyleSheet.create({
                 fontSize: 32,
             }
         }),
+    },
+    backButton: {
+        padding: 2
     },
     scrollView: {
         flex: 1,
