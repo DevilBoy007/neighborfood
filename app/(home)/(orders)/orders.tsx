@@ -26,13 +26,10 @@ const OrdersScreen = () => {
             
             try {
                 setIsLoading(true);
-                // Get all orders for the user
                 const userOrders = await firebaseService.getOrdersForUser(userData.uid);
                 
-                // Filter orders based on the filter parameter
                 let filteredOrders;
                 if (orderFilter === 'current') {
-                    // Filter active orders (not completed)
                     filteredOrders = userOrders.filter(order => 
                         order.status !== 'completed' && order.status !== 'cancelled'
                     );
@@ -43,7 +40,6 @@ const OrdersScreen = () => {
                         setCurrentOrder(filteredOrders[0]);
                     }
                 } else {
-                    // Filter only completed orders for history
                     filteredOrders = userOrders.filter(order => order.status === 'completed');
                     setOrders(filteredOrders);
                     setOrderHistory(filteredOrders);
@@ -77,9 +73,6 @@ const OrdersScreen = () => {
     };
 
     const handleOrderPress = (orderCardData: any) => {
-        if (orderFilter === 'current') {
-            console.log('order pressed:', orderCardData.originalOrder);
-        }
         router.setParams({ order: JSON.stringify(orderCardData.originalOrder) });
         router.push('./details');
     };
