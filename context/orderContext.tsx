@@ -41,16 +41,17 @@ type OrderData = {
 };
 
 type OrderContextType = {
-    currentOrder: OrderData | null;
+    currentOrders: OrderData[];
     orderHistory: OrderData[];
     selectedOrder: OrderData | null;
     isLoadingOrders: boolean;
-    setCurrentOrder: (order: OrderData | null) => void;
+    setCurrentOrders: (orders: OrderData[]) => void;
     setSelectedOrder: (order: OrderData | null) => void;
     setOrderHistory: (orders: OrderData[]) => void;
     addToOrderHistory: (order: OrderData) => void;
+    addToCurrentOrders: (order: OrderData) => void;
     updateOrderStatus: (orderId: string, status: OrderStatus) => void;
-    clearCurrentOrder: () => void;
+    clearCurrentOrders: () => void;
 };
 
 const OrderContext = createContext<OrderContextType | undefined>(undefined);
@@ -68,13 +69,13 @@ type OrderProviderProps = {
 };
 
 export const OrderProvider = ({ children }: OrderProviderProps) => {
-    const [currentOrder, setCurrentOrderState] = useState<OrderData | null>(null);
+    const [currentOrders, setCurrentOrdersState] = useState<OrderData[]>([]);
     const [orderHistory, setOrderHistoryState] = useState<OrderData[]>([]);
     const [selectedOrder, setSelectedOrderState] = useState<OrderData | null>(null);
     const [isLoadingOrders, setIsLoadingOrders] = useState(false);
 
-    const setCurrentOrder = (order: OrderData | null) => {
-        setCurrentOrderState(order);
+    const setCurrentOrders = (orders: OrderData[]) => {
+        setCurrentOrdersState(orders);
     };
 
     const setSelectedOrder = (order: OrderData | null) => {
@@ -87,6 +88,10 @@ export const OrderProvider = ({ children }: OrderProviderProps) => {
 
     const addToOrderHistory = (order: OrderData) => {
         setOrderHistoryState(prevOrders => [order, ...prevOrders]);
+    };
+
+    const addToCurrentOrders = (order: OrderData) => {
+        setCurrentOrdersState(prevOrders => [order, ...prevOrders]);
     };
 
     const updateOrderStatus = (orderId: string, status: OrderStatus) => {
@@ -104,36 +109,38 @@ export const OrderProvider = ({ children }: OrderProviderProps) => {
             );
         }
 
-        // Update current order if matching
-        if (currentOrder && currentOrder.id === orderId) {
-            setCurrentOrderState(prevOrder =>
-                prevOrder ? { ...prevOrder, status } : null
-            );
-        }
+        // Update current orders if matching
+        setCurrentOrdersState(prevOrders =>
+            prevOrders.map(order =>
+                order.id === orderId ? { ...order, status } : order
+            )
+        );
 
-        // If order is completed, generate a new order context
+        // If order is completed, remove from current orders
         if (status === 'completed') {
-            // Clear current order to reset the context
-            setCurrentOrderState(null);
+            setCurrentOrdersState(prevOrders =>
+                prevOrders.filter(order => order.id !== orderId)
+            );
         }
     };
 
-    const clearCurrentOrder = () => {
-        setCurrentOrderState(null);
+    const clearCurrentOrders = () => {
+        setCurrentOrdersState([]);
     };
 
     return (
         <OrderContext.Provider value={{
-            currentOrder,
+            currentOrders,
             orderHistory,
             selectedOrder,
             isLoadingOrders,
-            setCurrentOrder,
+            setCurrentOrders,
             setSelectedOrder,
             setOrderHistory,
             addToOrderHistory,
+            addToCurrentOrders,
             updateOrderStatus,
-            clearCurrentOrder,
+            clearCurrentOrders,
         }}>
             {children}
         </OrderContext.Provider>
