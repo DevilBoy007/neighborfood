@@ -7,7 +7,8 @@ export default function RootLayout() {
         <Stack.Screen options={{ headerShown: false }} />
         <Stack>
             <Stack.Screen name="index" options={{ headerShown: false }} />
-            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+            <Stack.Screen name="current" options={{ headerShown: false }} />
+            <Stack.Screen name="history" options={{ headerShown: false }} />
             <Stack.Screen name="details" options={{ headerShown: false }} />
         </Stack>
         </>
