@@ -182,7 +182,7 @@ const Checkout = () => {
         } finally {
             setIsPlacingOrder(false);
         }
-    // };
+    };
 
     if (shopCarts.length === 0) {
         return (
