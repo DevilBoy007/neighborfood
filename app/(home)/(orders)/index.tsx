@@ -20,13 +20,24 @@ const OrdersScreen = () => {
                 <View style={styles.tabContainer}>
                     <TouchableOpacity 
                         style={styles.tabButton}
-                        onPress={() => router.push('./orders?filter=current')}
+                        onPress={() => router.push('./orders?filter=placed')}
                     >
                         <View style={styles.tabIcon}>
-                            <Ionicons name="time-outline" size={32} color="#4CAF50" />
+                            <Ionicons name="bag-outline" size={32} color="#2196F3" />
                         </View>
-                        <Text style={styles.tabButtonText}>Current Orders</Text>
-                        <Text style={styles.tabButtonSubtext}>Track your active orders</Text>
+                        <Text style={styles.tabButtonText}>Orders Placed</Text>
+                        <Text style={styles.tabButtonSubtext}>Active orders you've placed</Text>
+                    </TouchableOpacity>
+                    
+                    <TouchableOpacity 
+                        style={styles.tabButton}
+                        onPress={() => router.push('./orders?filter=received')}
+                    >
+                        <View style={styles.tabIcon}>
+                            <Ionicons name="storefront-outline" size={32} color="#4CAF50" />
+                        </View>
+                        <Text style={styles.tabButtonText}>Orders Received</Text>
+                        <Text style={styles.tabButtonSubtext}>Orders for your shops</Text>
                     </TouchableOpacity>
                     
                     <TouchableOpacity 
@@ -37,7 +48,7 @@ const OrdersScreen = () => {
                             <Ionicons name="receipt-outline" size={32} color="#FF9800" />
                         </View>
                         <Text style={styles.tabButtonText}>Order History</Text>
-                        <Text style={styles.tabButtonSubtext}>View your past orders</Text>
+                        <Text style={styles.tabButtonSubtext}>View completed orders</Text>
                     </TouchableOpacity>
                 </View>
             </View>

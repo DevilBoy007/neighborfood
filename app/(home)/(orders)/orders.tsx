@@ -1,4 +1,3 @@
-import { v4 as uuidv4 } from 'uuid';
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, Platform, RefreshControl } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -10,10 +9,12 @@ import { useOrder } from '@/context/orderContext';
 
 const OrdersScreen = () => {
     const router = useRouter();
-    const { filter } = useLocalSearchParams<{ filter: 'current' | 'history' }>();
+    const { filter } = useLocalSearchParams<{ filter: 'placed' | 'received' | 'history' }>();
     const { userData } = useUser();
     const { 
-        currentOrders, 
+        currentOrders,
+        placedOrders,
+        receivedOrders, 
         orderHistory, 
         setSelectedOrder,
         isLoadingOrders,
@@ -23,30 +24,36 @@ const OrdersScreen = () => {
     } = useOrder();
     const [orders, setOrders] = useState<any[]>([]);
 
-    // Default to 'current' if no filter is provided
-    const orderFilter = filter || 'current';
+    const orderFilter = filter || 'placed';
 
     useEffect(() => {
         const loadOrders = async () => {
             if (!userData?.uid) return;
             
-            // Initialize orders if not already done
             if (!isInitialized) {
                 await initializeOrders(userData.uid);
             }
             
-            // Set the appropriate orders based on filter
-            if (orderFilter === 'current') {
-                setOrders(currentOrders);
+            if (orderFilter === 'placed') {
+                // Show only placed orders (orders the user has made as a customer)
+                const currentPlacedOrders = placedOrders.filter(order => 
+                    order.status !== 'completed' && order.status !== 'cancelled'
+                );
+                setOrders(currentPlacedOrders);
+            } else if (orderFilter === 'received') {
+                // Show only received orders (orders for user's shops)
+                const currentReceivedOrders = receivedOrders.filter(order => 
+                    order.status !== 'completed' && order.status !== 'cancelled'
+                );
+                setOrders(currentReceivedOrders);
             } else {
                 setOrders(orderHistory);
             }
         };
 
         loadOrders();
-    }, [userData?.uid, orderFilter, isInitialized, currentOrders, orderHistory]);
+    }, [userData?.uid, orderFilter, isInitialized, currentOrders, placedOrders, receivedOrders, orderHistory]);
 
-    // Function to handle pull-to-refresh or manual refresh
     const handleRefresh = async () => {
         if (userData?.uid) {
             await refreshOrders(userData.uid);
@@ -60,31 +67,41 @@ const OrdersScreen = () => {
             day: 'numeric'
         });
         
+        const isReceivedOrder = order.shopOwnerView || false;
+        
         return {
-            id: orderFilter === 'current' ? uuidv4() : order.id,
+            id: order.id,
             date,
             total: order.total.toFixed(2),
             shops: [order.shopName],
             items: order.items.length,
             status: order.status,
-            originalOrder: order
+            originalOrder: order,
+            orderType: isReceivedOrder ? 'received' : 'placed',
+            customerName: isReceivedOrder ? order.customerName : undefined,
+            shopInfo: isReceivedOrder ? order.shopInfo : undefined
         };
     };
 
     const handleOrderPress = (orderCardData: any) => {
-        // Set the selected order in context instead of using route params
         setSelectedOrder(orderCardData.originalOrder);
         router.push('./details');
     };
 
-    // Configuration based on filter type
     const config = {
-        current: {
-            title: 'current orders',
-            loadingText: 'Loading current orders...',
-            emptyIcon: 'time-outline' as const,
-            emptyText: 'No current orders',
-            emptySubtext: 'Your active orders will appear here'
+        placed: {
+            title: 'orders placed',
+            loadingText: 'Loading orders you placed...',
+            emptyIcon: 'bag-outline' as const,
+            emptyText: 'No orders placed',
+            emptySubtext: 'Orders you place as a customer will appear here'
+        },
+        received: {
+            title: 'orders received',
+            loadingText: 'Loading orders received...',
+            emptyIcon: 'storefront-outline' as const,
+            emptyText: 'No orders received',
+            emptySubtext: 'Orders for your shops will appear here'
         },
         history: {
             title: 'order history',
@@ -147,7 +164,13 @@ const OrdersScreen = () => {
                 ) : (
                     orders.map((order, index) => {
                         const formattedOrder = formatOrderForCard(order);
-                        return orderFilter === 'current' ? (
+                        return orderFilter === 'history' ? (
+                            <OrderCard
+                                key={order.docId || index}
+                                order={formattedOrder}
+                                onPress={() => handleOrderPress(formattedOrder)}
+                            />
+                        ) : (
                             <View key={order.docId || index} style={styles.orderContainer}>
                                 <OrderCard
                                     order={formattedOrder}
@@ -156,12 +179,6 @@ const OrdersScreen = () => {
                                 <View style={styles.statusContainer}>
                                 </View>
                             </View>
-                        ) : (
-                            <OrderCard
-                                key={index}
-                                order={formattedOrder}
-                                onPress={() => handleOrderPress(formattedOrder)}
-                            />
                         );
                     })
                 )}
