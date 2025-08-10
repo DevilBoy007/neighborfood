@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Image, ScrollView, Platform, ImageBackground, ImageSourcePropType } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useLocation } from '@/context/locationContext';
 
 import shopIcon from '../../assets/images/shop.png';
 import receiptIcon from '../../assets/images/receipt.png';
@@ -15,6 +16,8 @@ import manageItemIcon from '@/assets/images/manageItemsIcon.png';
 
 const MenuScreen = () => {
     const router = useRouter();
+    const { locationData } = useLocation();
+    
     const MenuButton = ({ icon, title, destination }: { icon: ImageSourcePropType | string, title: string, destination: string | null }) => {
         if (typeof icon !== 'string') {
             return (
@@ -38,7 +41,21 @@ const MenuScreen = () => {
         <>
         <View style={styles.container}>
             <View style={styles.header}>
-                
+                {locationData.area && !locationData.loading && (
+                    <Text style={styles.headerText}>
+                        📍 {locationData.area}
+                    </Text>
+                )}
+                {locationData.loading && (
+                    <Text style={styles.headerText}>
+                        📍 Loading location...
+                    </Text>
+                )}
+                {locationData.error && !locationData.loading && (
+                    <Text style={styles.headerText}>
+                        📍 Location unavailable
+                    </Text>
+                )}
             </View>
             <ScrollView contentContainerStyle={styles.scrollContent}>
                 <View style={styles.menuGrid}>
@@ -47,7 +64,7 @@ const MenuScreen = () => {
                     <MenuButton icon={manageItemIcon} title="manage items" destination="./(items)/ManageItems" />
                     <MenuButton icon={receiptIcon} title="orders" destination={"./(orders)"}/>
                     <MenuButton icon={contactUsIcon} title="contact us" destination={"./(contact)/ContactUs"}/>
-                    <MenuButton icon={dashboardIcon} title="dashboard" />
+                    <MenuButton icon={dashboardIcon} title="dashboard" destination={null} />
                 </View>
             </ScrollView>
         </View>

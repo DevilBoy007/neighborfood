@@ -1,33 +1,11 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import * as Location from 'expo-location';
 import { Platform, NativeModules } from 'react-native';
-import { useGoogleMaps } from '@/components/GoogleMapsLoader';
-
-// Define the Google Maps Geocoder type for web
-declare global {
-  interface Window {
-    google?: {
-      maps: {
-        Geocoder: new () => {
-          geocode(request: { location: { lat: number, lng: number } }): Promise<{
-            results: Array<{
-              address_components: Array<{
-                short_name: string;
-                long_name: string;
-                types: string[];
-              }>;
-              formatted_address: string;
-            }>;
-          }>;
-        };
-      };
-    };
-  }
-}
 
 type LocationData = {
     coords?: Location.LocationObjectCoords | null;
     zipCode?: string | null;
+    area?: string | null;
     loading: boolean;
     error?: string | null;
     usesImperialSystem: boolean;
@@ -64,40 +42,62 @@ const usesImperialSystem = (): boolean => {
     return locale.includes('us') || locale.includes('gb') || locale.includes('uk');
 };
 
-// Update web reverse geocoding to use the shared Google Maps instance
-const webReverseGeocode = async (latitude: number, longitude: number): Promise<string | null> => {
+// Reverse geocoding using Google Maps Geocoding API with address descriptors
+const reverseGeocodeWithDescriptors = async (latitude: number, longitude: number): Promise<{zipCode: string | null, area: string | null}> => {
   try {
-    // Check if the Google Maps API is loaded
-    if (Platform.OS === 'web' && window.google?.maps) {
-      const geocoder = new window.google.maps.Geocoder();
-      
-      const response = await geocoder.geocode({
-        location: { lat: latitude, lng: longitude }
-      });
-      
-      if (response.results && response.results.length > 0) {
-        // Extract postal code from address components
-        for (const result of response.results) {
+    // Use the Geocoding API directly to get address descriptors
+    const apiKey = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY;
+    if (!apiKey) {
+      console.warn('Google Maps API key not found');
+      return { zipCode: null, area: null };
+    }
+
+    const response = await fetch(
+      `https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&extra_computations=ADDRESS_DESCRIPTORS&key=${apiKey}`
+    );
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    
+    let zipCode = null;
+    let area = null;
+    
+    if (data.results && data.results.length > 0) {
+      // Extract postal code from address components
+      for (const result of data.results) {
+        if (result.address_components) {
           for (const component of result.address_components) {
             if (component.types.includes('postal_code')) {
-              return component.short_name;
+              zipCode = component.short_name;
+              break;
             }
           }
         }
+        if (zipCode) break;
+      }
+      
+      // Extract area (neighborhood) from address descriptors
+      if (data.address_descriptor?.areas && data.address_descriptor.areas.length > 0) {
+        // Use the first area which should be the most specific/smallest area
+        area = data.address_descriptor.areas[0].display_name?.text || null;
       }
     }
-    return null;
+    
+    return { zipCode, area };
   } catch (error) {
-    console.error('Error in web reverse geocoding:', error);
-    return null;
+    console.error('Error in reverse geocoding with descriptors:', error);
+    return { zipCode: null, area: null };
   }
 };
 
 export const LocationProvider: React.FC<{children: React.ReactNode}> = ({ children }) => {
-    const { isLoaded } = useGoogleMaps();
     const [locationData, setLocationData] = useState<LocationData>({
         coords: null,
         zipCode: null,
+        area: null,
         loading: true,
         error: null,
         usesImperialSystem: usesImperialSystem(),
@@ -128,25 +128,17 @@ export const LocationProvider: React.FC<{children: React.ReactNode}> = ({ childr
     const updateLocation = async (coords: Location.LocationObjectCoords) => {
         try {
           let zipCode = null;
+          let area = null;
 
-          // Handle reverse geocoding differently based on platform
-          if (Platform.OS === 'web') {
-            // Only attempt web geocoding if Google Maps is loaded
-            if (isLoaded) {
-              zipCode = await webReverseGeocode(coords.latitude, coords.longitude);
-            }
-          } else {
-            // Use Expo Location for native platforms
-            const reverseGeocode = await Location.reverseGeocodeAsync({
-                latitude: coords.latitude,
-                longitude: coords.longitude,
-            });
-            zipCode = reverseGeocode[0]?.postalCode || null;
-          }
+          // Use Google Maps Geocoding API with address descriptors for all platforms
+          const result = await reverseGeocodeWithDescriptors(coords.latitude, coords.longitude);
+          zipCode = result.zipCode;
+          area = result.area;
           
           setLocationData({
               coords,
               zipCode,
+              area,
               loading: false,
               error: null,
               usesImperialSystem: usesImperialSystem(),
@@ -170,6 +162,7 @@ export const LocationProvider: React.FC<{children: React.ReactNode}> = ({ childr
             setLocationData({
             coords: null,
             zipCode: null,
+            area: null,
             loading: false,
             error: 'Permission to access location was denied',
             usesImperialSystem: usesImperialSystem(),
@@ -186,6 +179,7 @@ export const LocationProvider: React.FC<{children: React.ReactNode}> = ({ childr
         setLocationData({
             coords: null,
             zipCode: null,
+            area: null,
             loading: false,
             error: 'Failed to get current location',
             usesImperialSystem: usesImperialSystem(),
@@ -193,18 +187,13 @@ export const LocationProvider: React.FC<{children: React.ReactNode}> = ({ childr
         }
     };
 
-    // Update initial location fetch to consider Google Maps loading status
+    // Initial location fetch
     useEffect(() => {
-        if (Platform.OS === 'web' && !isLoaded) {
-            // Wait for Google Maps to load before attempting to get location on web
-            return;
-        }
-        
         const getLocation = async () => {
             await fetchCurrentLocation();
         };
         getLocation();
-    }, [isLoaded]);
+    }, []);
 
     return (
         <LocationContext.Provider value={{ 
