@@ -33,33 +33,12 @@ const MenuScreen = () => {
             )
         }
     };
-    const communityNeedsList = [
-        { name: 'tomatoes', image: tomatoImage },
-        { name: 'dill', image: dillImage },
-        { name: 'bell peppers', image: bellPepperImage },
-    ];
     
     return (
         <>
         <View style={styles.container}>
             <View style={styles.header}>
-                <Text style={styles.headerText}> <Text style={styles.boldText}>community needs</Text> | <Text style={styles.italicText}>you're in <TouchableOpacity><Text style={[styles.link, styles.italicText, styles.underlineText]}>Fountain Square, Indianapolis</Text></TouchableOpacity></Text></Text>
-                <View style={styles.communityNeedsContainer}>
-                    {communityNeedsList.map((item, index) => (
-                        <TouchableOpacity key={index} style={styles.communityNeedButton}>
-                        {
-                            Platform.select({
-                                ios: 
-                                <Text style={styles.communityNeedText}>{item.name}</Text>,
-                                web: 
-                                <ImageBackground source={item.image} style={{ width: 150, height: 150 }} resizeMode='cover'>
-                                    <Text style={styles.communityNeedText}>{item.name}</Text>
-                                </ImageBackground>
-                            })
-                        }
-                        </TouchableOpacity>
-                    ))}
-                </View>
+                
             </View>
             <ScrollView contentContainerStyle={styles.scrollContent}>
                 <View style={styles.menuGrid}>
@@ -79,7 +58,7 @@ const MenuScreen = () => {
 const styles = StyleSheet.create({
     container: {
         height: '100%',
-        paddingTop: Platform.OS === ('ios' || 'android') ? 70 : 0,
+        paddingTop: Platform.OS === 'web' ? 0 : 70,
         flex: 1,
         backgroundColor: '#B7FFB0',
     },
@@ -111,43 +90,6 @@ const styles = StyleSheet.create({
             web: {
                 fontSize: 16,
                 marginBottom: 0,
-            },
-        }),
-    },
-    communityNeedsContainer: {
-        flexDirection: 'row',
-        justifyContent: 'space-around',
-        padding: 10,
-        ...Platform.select({
-            ios: {
-                borderColor: 'black',
-                borderWidth: 1,
-                borderRadius: 3,
-            },
-            web: {
-                marginBottom: 0,
-                marginLeft: 20,
-            },
-        }),
-    },
-    communityNeedButton: {
-        backgroundColor: '#00bfff',
-        padding: 5,
-        borderRadius: 5,
-        ...Platform.select({
-            web: {
-                marginHorizontal: 5,
-            },
-        }),
-    },
-    communityNeedText: {
-        color: 'black',
-        fontFamily: 'TitanOne',
-        fontSize: 12,
-        textAlign: 'center',
-        ...Platform.select({
-            web: {
-                fontSize: 14,
             },
         }),
     },
