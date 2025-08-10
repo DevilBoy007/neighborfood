@@ -114,7 +114,7 @@ export const OrderProvider = ({ children }: OrderProviderProps) => {
             console.log('Initializing orders for user:', userId);
             
             // Fetch all orders for the user
-            const userOrders = await firebaseService.getOrdersForUser(userId);
+            const userOrders = await firebaseService.getOrdersFromUser(userId);
             
             // Separate current orders from history
             const currentOrdersData = userOrders.filter(order => 
@@ -147,7 +147,7 @@ export const OrderProvider = ({ children }: OrderProviderProps) => {
             console.log('Refreshing orders for user:', userId);
             
             // Re-fetch all orders
-            const userOrders = await firebaseService.getOrdersForUser(userId);
+            const userOrders = await firebaseService.getOrdersFromUser(userId);
             
             // Separate current orders from history
             const currentOrdersData = userOrders.filter(order => 

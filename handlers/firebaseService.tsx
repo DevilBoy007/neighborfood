@@ -731,7 +731,7 @@ class FirebaseService {
         }
     }
 
-    async getOrdersForUser(userId: string): Promise<any[]> {
+    async getOrdersFromUser(userId: string): Promise<any[]> {
         try {
             if (!this.db) {
                 await this.connect();
