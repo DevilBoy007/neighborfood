@@ -89,12 +89,6 @@ const styles = StyleSheet.create({
         flex: 1,
         padding: 20,
     },
-    subtitle: {
-        fontSize: 16,
-        color: '#666',
-        marginBottom: 30,
-        textAlign: 'center',
-    },
     tabContainer: {
         gap: 20,
     },
@@ -120,11 +114,13 @@ const styles = StyleSheet.create({
         fontWeight: '600',
         color: '#333',
         marginBottom: 4,
+        fontFamily: 'TextMeOne',
     },
     tabButtonSubtext: {
         fontSize: 14,
         color: '#666',
         textAlign: 'center',
+        fontFamily: 'TextMeOne',
     },
 });
 

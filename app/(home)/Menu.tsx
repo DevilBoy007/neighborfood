@@ -198,6 +198,7 @@ const styles = StyleSheet.create({
     },
     menuButtonText: {
         fontSize: 12,
+        fontFamily: 'TextMeOne',
         color: '#888',
         ...Platform.select({
             web: {
