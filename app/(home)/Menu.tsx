@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Image, ScrollView, Platform, ImageBackground, ImageSourcePropType } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Image, ScrollView, Platform, ImageSourcePropType } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useLocation } from '@/context/locationContext';
 
@@ -8,9 +8,6 @@ import receiptIcon from '../../assets/images/receipt.png';
 import contactUsIcon from '../../assets/images/contact.png';
 import dashboardIcon from '../../assets/images/dashboard.png';
 
-import tomatoImage from '../../assets/images/tomatoes.png';
-import dillImage from '../../assets/images/dill.jpeg';
-import bellPepperImage from '../../assets/images/bellPeppers.jpeg';
 import manageItemIcon from '@/assets/images/manageItemsIcon.png';
 
 
@@ -41,21 +38,24 @@ const MenuScreen = () => {
         <>
         <View style={styles.container}>
             <View style={styles.header}>
-                {locationData.area && !locationData.loading && (
-                    <Text style={styles.headerText}>
-                        📍 {locationData.area}
-                    </Text>
-                )}
-                {locationData.loading && (
-                    <Text style={styles.headerText}>
-                        📍 Loading location...
-                    </Text>
-                )}
-                {locationData.error && !locationData.loading && (
-                    <Text style={styles.headerText}>
-                        📍 Location unavailable
-                    </Text>
-                )}
+                <View style={styles.neighborhood}>
+                    {locationData.area && !locationData.loading && (
+                        <Text style={styles.headerText}>
+                            📍 {locationData.area}
+                        </Text>
+                    )}
+                    {locationData.loading && (
+                        <Text style={styles.headerText}>
+                            📍 Loading location...
+                        </Text>
+                    )}
+                    {locationData.error && !locationData.loading && (
+                        <Text style={styles.headerText}>
+                            📍 Location unavailable
+                        </Text>
+                    )}
+                </View>
+                
             </View>
             <ScrollView contentContainerStyle={styles.scrollContent}>
                 <View style={styles.menuGrid}>
@@ -101,11 +101,11 @@ const styles = StyleSheet.create({
         }),
     },
     headerText: {
-        fontSize: 12,
+        fontSize: 18,
         marginBottom: 10,
         ...Platform.select({
             web: {
-                fontSize: 16,
+                fontSize: 32,
                 marginBottom: 0,
             },
         }),
@@ -114,6 +114,15 @@ const styles = StyleSheet.create({
         width: 50,
         height: 50,
         borderRadius: 25,
+    },
+    neighborhood: {
+        flex: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding : Platform.OS === 'web' ? 20 : 0,
+        borderColor: 'black',
+        borderWidth: 1,
+        borderRadius: 10,
     },
     menuGrid: {
         flexBasis: '50%',
