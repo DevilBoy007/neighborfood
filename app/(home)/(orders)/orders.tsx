@@ -12,7 +12,6 @@ const OrdersScreen = () => {
     const { filter } = useLocalSearchParams<{ filter: 'placed' | 'received' | 'history' }>();
     const { userData } = useUser();
     const { 
-        currentOrders,
         placedOrders,
         receivedOrders, 
         orderHistory, 
@@ -33,7 +32,6 @@ const OrdersScreen = () => {
             if (!isInitialized) {
                 await initializeOrders(userData.uid);
             }
-            
             if (orderFilter === 'placed') {
                 // Show only placed orders (orders the user has made as a customer)
                 const currentPlacedOrders = placedOrders.filter(order => 
@@ -52,7 +50,7 @@ const OrdersScreen = () => {
         };
 
         loadOrders();
-    }, [userData?.uid, orderFilter, isInitialized, currentOrders, placedOrders, receivedOrders, orderHistory]);
+    }, [userData?.uid, orderFilter, isInitialized, placedOrders, receivedOrders, orderHistory]);
 
     const handleRefresh = async () => {
         if (userData?.uid) {

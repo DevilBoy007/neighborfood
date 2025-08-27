@@ -29,7 +29,6 @@ type OrderData = {
     subtotal: number;
     tax: number;
     deliveryFee: number;
-    tip: number;
     total: number;
     status: OrderStatus;
     createdAt: { seconds: number; nanoseconds: number };
@@ -46,23 +45,18 @@ type OrderContextType = {
     placedOrders: OrderData[];
     // Orders received by user's shops (as shop owner)
     receivedOrders: OrderData[];
-    // Combined orders for backward compatibility
-    currentOrders: OrderData[];
     orderHistory: OrderData[];
     selectedOrder: OrderData | null;
     isLoadingOrders: boolean;
     isInitialized: boolean;
     setPlacedOrders: (orders: OrderData[]) => void;
     setReceivedOrders: (orders: OrderData[]) => void;
-    setCurrentOrders: (orders: OrderData[]) => void;
     setSelectedOrder: (order: OrderData | null) => void;
     setOrderHistory: (orders: OrderData[]) => void;
     addToOrderHistory: (order: OrderData) => void;
-    addToCurrentOrders: (order: OrderData) => void;
     addToPlacedOrders: (order: OrderData) => void;
     addToReceivedOrders: (order: OrderData) => void;
     updateOrderStatus: (orderId: string, status: OrderStatus) => void;
-    clearCurrentOrders: () => void;
     initializeOrders: (userId: string) => Promise<void>;
     refreshOrders: (userId: string) => Promise<void>;
     resetOrderContext: () => void;
@@ -83,12 +77,8 @@ type OrderProviderProps = {
 };
 
 export const OrderProvider = ({ children }: OrderProviderProps) => {
-    // New separated order states
     const [placedOrders, setPlacedOrdersState] = useState<OrderData[]>([]);
     const [receivedOrders, setReceivedOrdersState] = useState<OrderData[]>([]);
-    
-    // Legacy combined states (for backward compatibility)
-    const [currentOrders, setCurrentOrdersState] = useState<OrderData[]>([]);
     const [orderHistory, setOrderHistoryState] = useState<OrderData[]>([]);
     
     const [selectedOrder, setSelectedOrderState] = useState<OrderData | null>(null);
@@ -98,36 +88,10 @@ export const OrderProvider = ({ children }: OrderProviderProps) => {
     // New setters for placed and received orders
     const setPlacedOrders = (orders: OrderData[]) => {
         setPlacedOrdersState(orders);
-        // Update currentOrders for backward compatibility (only current placed orders)
-        const currentPlacedOrders = orders.filter(order => 
-            order.status !== 'completed' && order.status !== 'cancelled'
-        );
-        setCurrentOrdersState(prevOrders => {
-            // Combine with current received orders
-            const currentReceived = receivedOrders.filter(order => 
-                order.status !== 'completed' && order.status !== 'cancelled'
-            );
-            return [...currentPlacedOrders, ...currentReceived];
-        });
     };
 
     const setReceivedOrders = (orders: OrderData[]) => {
         setReceivedOrdersState(orders);
-        // Update currentOrders for backward compatibility (only current received orders)
-        const currentReceivedOrders = orders.filter(order => 
-            order.status !== 'completed' && order.status !== 'cancelled'
-        );
-        setCurrentOrdersState(prevOrders => {
-            // Combine with current placed orders
-            const currentPlaced = placedOrders.filter(order => 
-                order.status !== 'completed' && order.status !== 'cancelled'
-            );
-            return [...currentPlaced, ...currentReceivedOrders];
-        });
-    };
-
-    const setCurrentOrders = (orders: OrderData[]) => {
-        setCurrentOrdersState(orders);
     };
 
     const setSelectedOrder = (order: OrderData | null) => {
@@ -140,10 +104,6 @@ export const OrderProvider = ({ children }: OrderProviderProps) => {
 
     const addToOrderHistory = (order: OrderData) => {
         setOrderHistoryState(prevOrders => [order, ...prevOrders]);
-    };
-
-    const addToCurrentOrders = (order: OrderData) => {
-        setCurrentOrdersState(prevOrders => [order, ...prevOrders]);
     };
 
     const addToPlacedOrders = (order: OrderData) => {
@@ -186,8 +146,6 @@ export const OrderProvider = ({ children }: OrderProviderProps) => {
                 order.status === 'completed' || order.status === 'cancelled'
             );
             
-            // Update legacy state for backward compatibility
-            setCurrentOrdersState(currentOrdersData);
             setOrderHistoryState(orderHistoryData);
             setIsInitialized(true);
             
@@ -217,20 +175,13 @@ export const OrderProvider = ({ children }: OrderProviderProps) => {
             // Set received orders  
             setReceivedOrdersState(userReceivedOrders);
             
-            // Separate current orders from history (from all orders)
-            const currentOrdersData = allOrders.filter(order => 
-                order.status !== 'completed' && order.status !== 'cancelled'
-            );
-            
             const orderHistoryData = allOrders.filter(order => 
                 order.status === 'completed' || order.status === 'cancelled'
             );
             
-            // Update legacy state for backward compatibility
-            setCurrentOrdersState(currentOrdersData);
             setOrderHistoryState(orderHistoryData);
             
-            console.log(`Refreshed: ${userPlacedOrders.length} placed orders, ${userReceivedOrders.length} received orders, ${currentOrdersData.length} current orders, ${orderHistoryData.length} historical orders`);
+            console.log(`Refreshed: ${userPlacedOrders.length} placed orders, ${userReceivedOrders.length} received orders, ${orderHistoryData.length} historical orders`);
             
         } catch (error) {
             console.error('Error refreshing orders:', error);
@@ -269,10 +220,6 @@ export const OrderProvider = ({ children }: OrderProviderProps) => {
         }
     };
 
-    const clearCurrentOrders = () => {
-        setCurrentOrdersState([]);
-    };
-
     const resetOrderContext = () => {
         setPlacedOrdersState([]);
         setReceivedOrdersState([]);
@@ -288,22 +235,18 @@ export const OrderProvider = ({ children }: OrderProviderProps) => {
         <OrderContext.Provider value={{
             placedOrders,
             receivedOrders,
-            currentOrders,
             orderHistory,
             selectedOrder,
             isLoadingOrders,
             isInitialized,
             setPlacedOrders,
             setReceivedOrders,
-            setCurrentOrders,
             setSelectedOrder,
             setOrderHistory,
             addToOrderHistory,
-            addToCurrentOrders,
             addToPlacedOrders,
             addToReceivedOrders,
             updateOrderStatus,
-            clearCurrentOrders,
             initializeOrders,
             refreshOrders,
             resetOrderContext,
