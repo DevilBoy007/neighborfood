@@ -2,8 +2,11 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
+import { useOrder } from '@/context/orderContext'
+
 const OrderCard = ({ order, onPress }) => {
     const { date, total, shops, items } = order;
+    const { setSelectedOrder } = useOrder()
 
     const getStatusColor = (status: string) => {
         switch (status) {
@@ -39,6 +42,12 @@ const OrderCard = ({ order, onPress }) => {
         }
     };
 
+    const handleStatusPress = (order) => {
+        alert(`ORDER TOTAL: $${order.total}`)
+        setSelectedOrder(order)
+        console.log('selected order: ', order)
+    }
+
     return (
         <>
             <TouchableOpacity style={styles.orderCard} onPress={onPress}>
@@ -63,7 +72,7 @@ const OrderCard = ({ order, onPress }) => {
                     <Text style={styles.itemsText}>items: {items}</Text>
                 </View>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.statusContainer}>
+            <TouchableOpacity style={styles.statusContainer} onPress={()=>{handleStatusPress(order)}}>
                 <View style={{ backgroundColor: getStatusColor(order.status) }}>
                     <Text style={styles.statusText}>{getStatusText(order.status)}</Text>
                 </View>
