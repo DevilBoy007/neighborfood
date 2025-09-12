@@ -6,7 +6,7 @@ import { useOrder } from '@/context/orderContext'
 
 const OrderCard = ({ order, onPress }) => {
     const { date, total, shops, items } = order;
-    const { setSelectedOrder } = useOrder()
+    const { selectedOrder, setSelectedOrder } = useOrder()
 
     const getStatusColor = (status: string) => {
         switch (status) {
@@ -45,7 +45,7 @@ const OrderCard = ({ order, onPress }) => {
     const handleStatusPress = (order) => {
         alert(`ORDER TOTAL: $${order.total}`)
         setSelectedOrder(order)
-        console.log('selected order: ', order)
+        console.log('selected order: ', selectedOrder)
     }
 
     return (
