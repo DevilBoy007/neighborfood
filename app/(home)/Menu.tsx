@@ -3,12 +3,12 @@ import { View, Text, TouchableOpacity, StyleSheet, Image, ScrollView, Platform, 
 import { useRouter } from 'expo-router';
 import { useLocation } from '@/context/locationContext';
 
-import shopIcon from '../../assets/images/shop.png';
-import receiptIcon from '../../assets/images/receipt.png';
-import contactUsIcon from '../../assets/images/contact.png';
-import dashboardIcon from '../../assets/images/dashboard.png';
-
+import shopIcon from '@/assets/images/shop.png';
+import receiptIcon from '@/assets/images/receipt.png';
+import contactUsIcon from '@/assets/images/contact.png';
+import dashboardIcon from '@/assets/images/dashboard.png';
 import manageItemIcon from '@/assets/images/manageItemsIcon.png';
+
 
 
 const MenuScreen = () => {
