@@ -3,12 +3,12 @@ import { View, Text, TouchableOpacity, StyleSheet, Image, ScrollView, Platform, 
 import { useRouter } from 'expo-router';
 import { useLocation } from '@/context/locationContext';
 
-import shopIcon from '../../assets/images/shop.png';
-import receiptIcon from '../../assets/images/receipt.png';
-import contactUsIcon from '../../assets/images/contact.png';
-import dashboardIcon from '../../assets/images/dashboard.png';
-
+import shopIcon from '@/assets/images/shop.png';
+import receiptIcon from '@/assets/images/receipt.png';
+import contactUsIcon from '@/assets/images/contact.png';
+import dashboardIcon from '@/assets/images/dashboard.png';
 import manageItemIcon from '@/assets/images/manageItemsIcon.png';
+
 
 
 const MenuScreen = () => {
@@ -38,6 +38,7 @@ const MenuScreen = () => {
         <>
         <View style={styles.container}>
             <View style={styles.header}>
+                <Text style={styles.title}>tiles</Text>
                 <View style={styles.neighborhood}>
                     {locationData.area && !locationData.loading && (
                         <Text style={styles.headerText}>
@@ -90,19 +91,20 @@ const styles = StyleSheet.create({
     },
     header: {
         padding: 10,
-        paddingTop: 40,
-        ...Platform.select({
-            web: {
-                paddingTop: 25,
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-            },
-        }),
+        paddingTop: Platform.OS === 'web' ? 50 : 0,
+        alignItems: 'center',
+        justifyContent: 'space-between',
+    },
+    title: {
+        fontSize: Platform.select({ ios: 30, web: 80 }),
+        fontWeight: 'bold',
+        fontFamily: 'TitanOne',
+        color: '#fff',
+        paddingBottom: 10,
     },
     headerText: {
         fontSize: 18,
-        marginBottom: 10,
+        fontFamily: 'TextMeOne',
         ...Platform.select({
             web: {
                 fontSize: 32,
@@ -110,16 +112,12 @@ const styles = StyleSheet.create({
             },
         }),
     },
-    profileImage: {
-        width: 50,
-        height: 50,
-        borderRadius: 25,
-    },
     neighborhood: {
         flex: 1,
         alignItems: 'center',
         justifyContent: 'center',
-        padding : Platform.OS === 'web' ? 20 : 0,
+        padding: Platform.OS === 'web' ? 20 : 0,
+        paddingHorizontal: Platform.OS === 'web' ? 40 : 5,
         borderColor: 'black',
         borderWidth: 1,
         borderRadius: 10,
@@ -132,7 +130,7 @@ const styles = StyleSheet.create({
         padding: 10,
         ...Platform.select({
             web: {
-                maxWidth: 800,
+                maxWidth: 900,
                 marginHorizontal: 'auto',
             },
         }),
