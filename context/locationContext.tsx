@@ -83,6 +83,7 @@ const reverseGeocodeWithDescriptors = async (latitude: number, longitude: number
       if (data.address_descriptor?.areas && data.address_descriptor.areas.length > 0) {
         // Use the first area which should be the most specific/smallest area
         area = data.address_descriptor.areas[0].display_name?.text || null;
+        console.log('Extracted area from address descriptors:', area);
       }
     }
     
