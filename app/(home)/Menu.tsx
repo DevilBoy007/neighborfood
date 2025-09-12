@@ -113,7 +113,6 @@ const styles = StyleSheet.create({
         }),
     },
     neighborhood: {
-        flex: 1,
         alignItems: 'center',
         justifyContent: 'center',
         padding: Platform.OS === 'web' ? 20 : 0,
@@ -121,6 +120,15 @@ const styles = StyleSheet.create({
         borderColor: 'black',
         borderWidth: 1,
         borderRadius: 10,
+        minHeight: Platform.OS === 'web' ? 80 : 50,
+        ...Platform.select({
+            ios: {
+                marginTop: 10,
+            },
+            web: {
+                flex: 1,
+            },
+        }),
     },
     menuGrid: {
         flexBasis: '50%',
