@@ -38,6 +38,7 @@ const MenuScreen = () => {
         <>
         <View style={styles.container}>
             <View style={styles.header}>
+                <Text style={styles.title}>tiles</Text>
                 <View style={styles.neighborhood}>
                     {locationData.area && !locationData.loading && (
                         <Text style={styles.headerText}>
@@ -94,6 +95,13 @@ const styles = StyleSheet.create({
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'space-between',
+    },
+    title: {
+        fontSize: Platform.select({ ios: 30, web: 80 }),
+        fontWeight: 'bold',
+        fontFamily: 'TitanOne',
+        color: '#fff',
+        paddingBottom: 10,
     },
     headerText: {
         fontSize: 18,
