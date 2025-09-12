@@ -76,7 +76,7 @@ const OrdersScreen = () => {
             status: order.status,
             originalOrder: order,
             orderType: isReceivedOrder ? 'received' : 'placed',
-            customerName: isReceivedOrder ? order.customerName : undefined,
+            customerId: isReceivedOrder ? order.userId : userData.uid,
             shopInfo: isReceivedOrder ? order.shopInfo : undefined
         };
     };
