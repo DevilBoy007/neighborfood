@@ -68,6 +68,19 @@ class FirebaseService {
         return FirebaseService.instance;
     }
 
+    disconnect() {
+        try {
+            this.app = null;
+            this.auth = null;
+            this.db = null;
+            console.log('Disconnected from Firebase');
+            return true;
+        } catch (error) {
+            console.error('Error disconnecting from Firebase:', error);
+            throw error;
+        }
+    }
+
     async connect() {
         try {
             // Check if Firebase is already initialized
@@ -217,6 +230,7 @@ class FirebaseService {
             }
         }
     }
+
     async getDocument(collectionPath: string, docId: string) {
         try {
             if (!this.db) {
@@ -609,19 +623,6 @@ class FirebaseService {
         } catch (error) {
             console.error("Error starting upload", error);
             if (errorCallback) errorCallback(error);
-            throw error;
-        }
-    }
-
-    disconnect() {
-        try {
-            this.app = null;
-            this.auth = null;
-            this.db = null;
-            console.log('Disconnected from Firebase');
-            return true;
-        } catch (error) {
-            console.error('Error disconnecting from Firebase:', error);
             throw error;
         }
     }
