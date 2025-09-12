@@ -1,12 +1,29 @@
-import React from 'react';
+import React, { useEffect, useState} from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { useOrder } from '@/context/orderContext'
+import firebaseService from '@/handlers/firebaseService'
+import { useUser } from '@/context/userContext';
 
 const OrderCard = ({ order, onPress }) => {
     const { date, total, shops, items } = order;
     const { selectedOrder, setSelectedOrder } = useOrder()
+    const { userData } = useUser();
+
+    const [customerName, setCustomerName] = useState<string>('unknown');
+
+    useEffect(() => {
+        let isMounted = true;
+        if (order.customerId === userData?.uid) {
+            setCustomerName('you');
+            return;
+        }
+        firebaseService.getUserById(order.customerId).then((customer) => {
+            if (isMounted) setCustomerName(customer?.username || 'unknown');
+        });
+        return () => { isMounted = false; };
+    }, [order.customerId]);
 
     const getStatusColor = (status: string) => {
         switch (status) {
@@ -57,6 +74,10 @@ const OrderCard = ({ order, onPress }) => {
                 </View>
 
                 <View style={styles.orderDetails}>
+                    <View style={styles.detailRow}>
+                        <Text style={[styles.detailLabel, styles.itemsText]}>placed by</Text>
+                        <Text style={[styles.detailValue, styles.itemsText]}>{customerName}</Text>
+                    </View>
                     <View style={styles.detailRow}>
                         <Text style={styles.detailLabel}>total:</Text>
                         <Text style={styles.detailValue}>${total}</Text>
