@@ -90,19 +90,15 @@ const styles = StyleSheet.create({
     },
     header: {
         padding: 10,
-        paddingTop: 40,
-        ...Platform.select({
-            web: {
-                paddingTop: 25,
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-            },
-        }),
+        paddingTop: 50,
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'space-between',
     },
     headerText: {
         fontSize: 18,
         marginBottom: 10,
+        fontFamily: 'TextMeOne',
         ...Platform.select({
             web: {
                 fontSize: 32,
@@ -119,7 +115,7 @@ const styles = StyleSheet.create({
         flex: 1,
         alignItems: 'center',
         justifyContent: 'center',
-        padding : Platform.OS === 'web' ? 20 : 0,
+        padding: 10,
         borderColor: 'black',
         borderWidth: 1,
         borderRadius: 10,
