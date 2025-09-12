@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useOrder } from '@/context/orderContext';
+import { useOrderStatus } from '@/hooks/useOrderStatus';
 
 const { height } = Dimensions.get('window');
 
@@ -37,6 +38,7 @@ const ShopSection = ({ shop, items }: { shop: string; items: any[] }) => (
 const OrderDetailScreen = () => {
     const router = useRouter();
     const { selectedOrder, setSelectedOrder } = useOrder();
+    const { getStatusColor, getStatusText } = useOrderStatus();
     const slideAnim = useRef(new Animated.Value(height)).current;
     const fadeAnim = useRef(new Animated.Value(0)).current;
 
@@ -152,10 +154,9 @@ const OrderDetailScreen = () => {
                     </Text>
                     
                     <View style={styles.statusSection}>
-                        <Text style={styles.statusLabel}>Status:</Text>
-                        <Text style={styles.statusValue}>
-                            {formattedOrder.status}
-                        </Text>
+                        <View style={[styles.statusBadge, { backgroundColor: getStatusColor(formattedOrder.status) }]}>
+                            <Text style={styles.statusText}>{getStatusText(formattedOrder.status)}</Text>
+                        </View>
                     </View>
                 </View>
             </Animated.ScrollView>
@@ -288,12 +289,30 @@ const styles = StyleSheet.create({
         textAlign: 'center',
     },
     statusSection: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
+        alignItems: 'flex-end',
         marginTop: 12,
         paddingVertical: 8,
         borderTopWidth: 1,
         borderTopColor: '#eee',
+    },
+    statusBadge: {
+        borderRadius: 12,
+        shadowColor: '#000',
+        shadowOffset: {
+            width: 0,
+            height: 2,
+        },
+        shadowOpacity: 0.5,
+        shadowRadius: 4,
+        elevation: 3,
+    },
+    statusText: {
+        color: '#fff',
+        fontSize: 15,
+        fontWeight: '600',
+        textAlign: 'center',
+        paddingVertical: 12,
+        paddingHorizontal: 16,
     },
     statusLabel: {
         fontSize: 16,
