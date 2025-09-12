@@ -91,8 +91,7 @@ const styles = StyleSheet.create({
     },
     header: {
         padding: 10,
-        paddingTop: 50,
-        flexDirection: 'column',
+        paddingTop: Platform.OS === 'web' ? 50 : 0,
         alignItems: 'center',
         justifyContent: 'space-between',
     },
@@ -105,7 +104,6 @@ const styles = StyleSheet.create({
     },
     headerText: {
         fontSize: 18,
-        marginBottom: 10,
         fontFamily: 'TextMeOne',
         ...Platform.select({
             web: {
@@ -114,16 +112,12 @@ const styles = StyleSheet.create({
             },
         }),
     },
-    profileImage: {
-        width: 50,
-        height: 50,
-        borderRadius: 25,
-    },
     neighborhood: {
         flex: 1,
         alignItems: 'center',
         justifyContent: 'center',
-        padding: 10,
+        padding: Platform.OS === 'web' ? 20 : 0,
+        paddingHorizontal: Platform.OS === 'web' ? 40 : 5,
         borderColor: 'black',
         borderWidth: 1,
         borderRadius: 10,
