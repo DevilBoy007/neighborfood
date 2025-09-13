@@ -10,7 +10,7 @@ import type { OrderData } from '@/context/orderContext';
 
 const OrderCard = ({ order, onPress }) => {
     const { date, total, shops, items } = order;
-    const { selectedOrder, setSelectedOrder } = useOrder()
+    const { allOrders, selectedOrder, setSelectedOrder } = useOrder()
     const { userData } = useUser();
     const { getStatusColor, getStatusText } = useOrderStatus();
 
@@ -30,8 +30,9 @@ const OrderCard = ({ order, onPress }) => {
 
     const handleStatusPress = (order: OrderData) => {
         alert(`ORDER TOTAL: $${order.total}`)
-        setSelectedOrder(order)
-        console.log('selected order: ', selectedOrder)
+        const orderToSet = allOrders.find(o => o.id === order.id) || null;
+        setSelectedOrder(orderToSet);
+        console.log('selected order: ', orderToSet)
     }
 
     return (
