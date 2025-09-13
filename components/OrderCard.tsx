@@ -6,6 +6,7 @@ import { useOrder } from '@/context/orderContext'
 import firebaseService from '@/handlers/firebaseService'
 import { useUser } from '@/context/userContext';
 import { useOrderStatus } from '@/hooks/useOrderStatus';
+import type { OrderData } from '@/context/orderContext';
 
 const OrderCard = ({ order, onPress }) => {
     const { date, total, shops, items } = order;
@@ -27,7 +28,7 @@ const OrderCard = ({ order, onPress }) => {
         return () => { isMounted = false; };
     }, [order.customerId]);
 
-    const handleStatusPress = (order) => {
+    const handleStatusPress = (order: OrderData) => {
         alert(`ORDER TOTAL: $${order.total}`)
         setSelectedOrder(order)
         console.log('selected order: ', selectedOrder)

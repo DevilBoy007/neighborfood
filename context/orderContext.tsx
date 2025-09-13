@@ -19,7 +19,7 @@ type OrderStatus =
     | 'completed' 
     | 'cancelled';
 
-type OrderData = {
+export type OrderData = {
     id: string;
     userId: string;
     shopId: string;
