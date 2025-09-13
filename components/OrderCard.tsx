@@ -170,7 +170,6 @@ const styles = StyleSheet.create({
         fontWeight: '600',
         textAlign: 'center',
         paddingVertical: 12,
-        fontFamily: 'TextMeOne',
     },
 });
 
