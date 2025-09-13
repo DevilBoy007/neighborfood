@@ -6,15 +6,16 @@ import { useOrder } from '@/context/orderContext'
 import firebaseService from '@/handlers/firebaseService'
 import { useUser } from '@/context/userContext';
 import { useOrderStatus } from '@/hooks/useOrderStatus';
-import type { OrderData } from '@/context/orderContext';
+import type { OrderData, OrderStatus } from '@/context/orderContext';
 
 const OrderCard = ({ order, onPress }) => {
     const { date, total, shops, items } = order;
-    const { allOrders, selectedOrder, setSelectedOrder } = useOrder()
+    const { allOrders, selectedOrder, setSelectedOrder, updateOrderStatus } = useOrder()
     const { userData } = useUser();
-    const { getStatusColor, getStatusText } = useOrderStatus();
+    const { getStatusColor, getStatusText, buildStatusButtons } = useOrderStatus();
 
     const [customerName, setCustomerName] = useState<string>('unknown');
+    const [isPressed, setIsPressed] = useState(false);
 
     useEffect(() => {
         let isMounted = true;
@@ -28,11 +29,11 @@ const OrderCard = ({ order, onPress }) => {
         return () => { isMounted = false; };
     }, [order.customerId]);
 
-    const handleStatusPress = (order: OrderData) => {
-        alert(`ORDER TOTAL: $${order.total}`)
+    const handleStatusPress = (order) => {
         const orderToSet = allOrders.find(o => o.id === order.id) || null;
         setSelectedOrder(orderToSet);
-        console.log('selected order: ', orderToSet)
+        setIsPressed(prev => !prev);
+        console.log('selected order received?: ', orderToSet.shopOwnerView || false)
     }
 
     return (
@@ -63,11 +64,30 @@ const OrderCard = ({ order, onPress }) => {
                     <Text style={styles.itemsText}>items: {items}</Text>
                 </View>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.statusContainer} onPress={()=>{handleStatusPress(order)}}>
-                <View style={{ backgroundColor: getStatusColor(order.status) }}>
-                    <Text style={styles.statusText}>{getStatusText(order.status)}</Text>
-                </View>
-            </TouchableOpacity>
+            <View style={styles.statusMetaContainer}>
+                { isPressed && (
+                    <View>
+                        {buildStatusButtons(order.status, order.shopOwnerView || false, (newStatus) => {
+                            updateOrderStatus(order.id, newStatus as OrderStatus);
+                            setIsPressed(false);
+                        }).map((button) => (
+                            <TouchableOpacity key={button.key} onPress={button.onPress}>
+                                <View style={{ backgroundColor: button.color }}>
+                                    <Text style={styles.statusText}>{button.label}</Text>
+                                </View>
+                            </TouchableOpacity>
+                        ))}
+                    </View>
+                )}
+                <TouchableOpacity
+                    style={styles.activeStatusContainer}
+                    onPress={handleStatusPress.bind(this, order)}
+                >
+                    <View style={[{ backgroundColor: getStatusColor(order.status) }, isPressed && { backgroundColor: '#000' }]}>
+                        <Text style={styles.statusText}>{isPressed ? 'close' : getStatusText(order.status)}</Text>
+                    </View>
+                </TouchableOpacity>
+            </View>
         </>
     );
 };
@@ -126,7 +146,10 @@ const styles = StyleSheet.create({
         marginTop: 8,
         fontFamily: 'TextMeOne',
     },
-    statusContainer: {
+    statusMetaContainer: {
+        zIndex: -2,
+    },
+    activeStatusContainer: {
         zIndex: -1,
         marginBottom: 16,
 
@@ -147,6 +170,7 @@ const styles = StyleSheet.create({
         fontWeight: '600',
         textAlign: 'center',
         paddingVertical: 12,
+        fontFamily: 'TextMeOne',
     },
 });
 

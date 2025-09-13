@@ -15,7 +15,6 @@ type OrderStatus =
     | 'preparing' 
     | 'ready' 
     | 'in-delivery' 
-    | 'delivered' 
     | 'completed' 
     | 'cancelled';
 
