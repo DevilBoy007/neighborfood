@@ -83,8 +83,8 @@ const OrderCard = ({ order, onPress }) => {
                     style={styles.activeStatusContainer}
                     onPress={handleStatusPress.bind(this, order)}
                 >
-                    <View style={[{ backgroundColor: getStatusColor(order.status) }, isPressed && { backgroundColor: '#000' }]}>
-                        <Text style={styles.statusText}>{isPressed ? 'close' : getStatusText(order.status)}</Text>
+                    <View style={[{ backgroundColor: getStatusColor(order.status) }, isPressed && { backgroundColor: 'rgba(0, 0, 0, 0.2)' }]}>
+                        <Text style={styles.statusText}>{isPressed ? 'Close' : getStatusText(order.status)}</Text>
                     </View>
                 </TouchableOpacity>
             </View>
