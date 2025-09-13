@@ -54,7 +54,8 @@
     "react-native-toast-message": "^2.3.0",
     "react-native-web": "^0.20.0",
     "react-native-web-maps": "^0.3.0",
-    "react-navigation": "^5.0.0"
+    "react-navigation": "^5.0.0",
+    "uuid": "^11.1.0"
   },
   "devDependencies": {
     "@babel/core": "^7.20.0",

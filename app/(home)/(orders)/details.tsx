@@ -13,10 +13,12 @@ import {
     Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useOrder } from '@/context/orderContext';
+import { useOrderStatus } from '@/hooks/useOrderStatus';
 
 const { height } = Dimensions.get('window');
 
-const ShopSection = ({ shop, items }) => (
+const ShopSection = ({ shop, items }: { shop: string; items: any[] }) => (
     <View style={styles.shopSection}>
         <Text style={styles.shopName}>{shop}</Text>
         {items.map((item, index) => (
@@ -25,16 +27,18 @@ const ShopSection = ({ shop, items }) => (
                     <Text style={styles.itemText}>
                         {item.name} x {item.quantity}
                     </Text>
-                    <Text style={styles.itemPrice}>@ ${item.price}</Text>
+                    <Text style={styles.itemPrice}>@ ${item.price.toFixed(2)}</Text>
                 </View>
-                <Text style={styles.itemTotal}>${item.total.toFixed(2)}</Text>
+                <Text style={styles.itemTotal}>${(item.price * item.quantity).toFixed(2)}</Text>
             </View>
         ))}
     </View>
 );
 
-const OrderDetailScreen = ({ navigation, route }) => {
+const OrderDetailScreen = () => {
     const router = useRouter();
+    const { selectedOrder, setSelectedOrder } = useOrder();
+    const { getStatusColor, getStatusText } = useOrderStatus();
     const slideAnim = useRef(new Animated.Value(height)).current;
     const fadeAnim = useRef(new Animated.Value(0)).current;
 
@@ -51,33 +55,52 @@ const OrderDetailScreen = ({ navigation, route }) => {
                 useNativeDriver: true,
             })
         ]).start();
-    }, []);
 
-    // Mock data (in a real app, you'd get this from route.params)
-    const orderData = {
-        date: 'Wed, Nov 27',
-        shops: [
-            {
-                name: "Ann's Apples",
-                items: [
-                    { name: 'Apples', quantity: 5, price: 0.33, total: 1.65 },
-                    { name: 'Basil', quantity: 1, price: 0.10, total: 0.10 },
-                    { name: 'Potatoes', quantity: 3, price: 0.67, total: 2.01 },
-                    { name: 'Zucchini', quantity: 2, price: 0.40, total: 0.80 },
-                ]
-            },
-            {
-                name: "Bakr's Bread",
-                items: [
-                    { name: 'Bread', quantity: 2, price: 3, total: 6 },
-                    { name: 'Beef (NY Strip)', quantity: 1, price: 9, total: 9 },
-                    { name: 'Beef (Filet)', quantity: 1, price: 12, total: 12 },
-                ]
-            }
-        ],
-        total: 31.56,
-        itemCount: 15
+        // Clear selected order when component unmounts
+        return () => {
+            setSelectedOrder(null);
+        };
+    }, [selectedOrder]);
+
+    const formatOrderData = (order: any) => {
+        if (!order) return null;
+        
+        const date = new Date(order.createdAt.seconds * 1000).toLocaleDateString('en-US', {
+            weekday: 'short',
+            month: 'short',
+            day: 'numeric'
+        });
+        
+        return {
+            date,
+            shopName: order.shopName,
+            items: order.items,
+            total: order.total,
+            status: order.status,
+            deliveryOption: order.deliveryOption,
+            deliveryAddress: order.deliveryAddress
+        };
     };
+
+    const formattedOrder = formatOrderData(selectedOrder);
+
+    if (!formattedOrder) {
+        return (
+            <SafeAreaView style={styles.container}>
+                <View style={styles.header}>
+                    <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+                        <Ionicons name="chevron-back" size={24} color="black" />
+                    </TouchableOpacity>
+                    <Text style={styles.headerTitle}>order details</Text>
+                </View>
+                <View style={styles.loadingContainer}>
+                    <Text style={styles.loadingText}>
+                        {selectedOrder ? 'Loading order details...' : 'No order selected'}
+                    </Text>
+                </View>
+            </SafeAreaView>
+        );
+    }
 
     return (
         <SafeAreaView style={styles.container}>
@@ -102,7 +125,7 @@ const OrderDetailScreen = ({ navigation, route }) => {
                 >
                     <Ionicons name="chevron-back" size={24} color="black" />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>order history</Text>
+                <Text style={styles.headerTitle}>order details</Text>
             </View>
 
             <Animated.ScrollView
@@ -114,27 +137,27 @@ const OrderDetailScreen = ({ navigation, route }) => {
                     }
                 ]}
             >
-                <Text style={styles.dateText}>{orderData.date}</Text>
+                <Text style={styles.dateText}>{formattedOrder.date}</Text>
 
                 <View style={styles.orderContent}>
-                    {orderData.shops.map((shop, index) => (
-                        <ShopSection
-                            key={index}
-                            shop={shop.name}
-                            items={shop.items}
-                        />
-                    ))}
+                    <ShopSection shop={formattedOrder.shopName} items={formattedOrder.items} />
 
                     <View style={styles.divider} />
 
                     <View style={styles.totalSection}>
                         <Text style={styles.totalLabel}>total:</Text>
-                        <Text style={styles.totalAmount}>${orderData.total}</Text>
+                        <Text style={styles.totalAmount}>${formattedOrder.total.toFixed(2)}</Text>
                     </View>
 
                     <Text style={styles.itemCount}>
-                        items: {orderData.itemCount}
+                        items: {formattedOrder.items.length}
                     </Text>
+                    
+                    <View style={styles.statusSection}>
+                        <View style={[styles.statusBadge, { backgroundColor: getStatusColor(formattedOrder.status) }]}>
+                            <Text style={styles.statusText}>{getStatusText(formattedOrder.status)}</Text>
+                        </View>
+                    </View>
                 </View>
             </Animated.ScrollView>
         </SafeAreaView>
@@ -253,6 +276,53 @@ const styles = StyleSheet.create({
         fontSize: 14,
         color: '#999',
         fontFamily: 'TextMeOne',
+    },
+    loadingContainer: {
+        flex: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingTop: 100,
+    },
+    loadingText: {
+        fontSize: 16,
+        color: '#666',
+        textAlign: 'center',
+    },
+    statusSection: {
+        alignItems: 'flex-end',
+        marginTop: 12,
+        paddingVertical: 8,
+        borderTopWidth: 1,
+        borderTopColor: '#eee',
+    },
+    statusBadge: {
+        borderRadius: 12,
+        shadowColor: '#000',
+        shadowOffset: {
+            width: 0,
+            height: 2,
+        },
+        shadowOpacity: 0.5,
+        shadowRadius: 4,
+        elevation: 3,
+    },
+    statusText: {
+        color: '#fff',
+        fontSize: 15,
+        fontWeight: '600',
+        textAlign: 'center',
+        paddingVertical: 12,
+        paddingHorizontal: 16,
+    },
+    statusLabel: {
+        fontSize: 16,
+        fontFamily: 'TextMeOne',
+        color: '#666',
+    },
+    statusValue: {
+        fontSize: 16,
+        fontFamily: 'TextMeOne',
+        fontWeight: '600',
     },
 });
 

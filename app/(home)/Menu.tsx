@@ -1,20 +1,20 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Image, ScrollView, Platform, ImageBackground, ImageSourcePropType } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Image, ScrollView, Platform, ImageSourcePropType } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useLocation } from '@/context/locationContext';
 
-import shopIcon from '../../assets/images/shop.png';
-import receiptIcon from '../../assets/images/receipt.png';
-import contactUsIcon from '../../assets/images/contact.png';
-import dashboardIcon from '../../assets/images/dashboard.png';
-
-import tomatoImage from '../../assets/images/tomatoes.png';
-import dillImage from '../../assets/images/dill.jpeg';
-import bellPepperImage from '../../assets/images/bellPeppers.jpeg';
+import shopIcon from '@/assets/images/shop.png';
+import receiptIcon from '@/assets/images/receipt.png';
+import contactUsIcon from '@/assets/images/contact.png';
+import dashboardIcon from '@/assets/images/dashboard.png';
 import manageItemIcon from '@/assets/images/manageItemsIcon.png';
+
 
 
 const MenuScreen = () => {
     const router = useRouter();
+    const { locationData } = useLocation();
+    
     const MenuButton = ({ icon, title, destination }: { icon: ImageSourcePropType | string, title: string, destination: string | null }) => {
         if (typeof icon !== 'string') {
             return (
@@ -33,42 +33,39 @@ const MenuScreen = () => {
             )
         }
     };
-    const communityNeedsList = [
-        { name: 'tomatoes', image: tomatoImage },
-        { name: 'dill', image: dillImage },
-        { name: 'bell peppers', image: bellPepperImage },
-    ];
     
     return (
         <>
         <View style={styles.container}>
             <View style={styles.header}>
-                <Text style={styles.headerText}> <Text style={styles.boldText}>community needs</Text> | <Text style={styles.italicText}>you're in <TouchableOpacity><Text style={[styles.link, styles.italicText, styles.underlineText]}>Fountain Square, Indianapolis</Text></TouchableOpacity></Text></Text>
-                <View style={styles.communityNeedsContainer}>
-                    {communityNeedsList.map((item, index) => (
-                        <TouchableOpacity key={index} style={styles.communityNeedButton}>
-                        {
-                            Platform.select({
-                                ios: 
-                                <Text style={styles.communityNeedText}>{item.name}</Text>,
-                                web: 
-                                <ImageBackground source={item.image} style={{ width: 150, height: 150 }} resizeMode='cover'>
-                                    <Text style={styles.communityNeedText}>{item.name}</Text>
-                                </ImageBackground>
-                            })
-                        }
-                        </TouchableOpacity>
-                    ))}
+                <Text style={styles.title}>tiles</Text>
+                <View style={styles.neighborhood}>
+                    {locationData.area && !locationData.loading && (
+                        <Text style={styles.headerText}>
+                            📍 {locationData.area}
+                        </Text>
+                    )}
+                    {locationData.loading && (
+                        <Text style={styles.headerText}>
+                            📍 Loading location...
+                        </Text>
+                    )}
+                    {locationData.error && !locationData.loading && (
+                        <Text style={styles.headerText}>
+                            📍 Location unavailable
+                        </Text>
+                    )}
                 </View>
+                
             </View>
             <ScrollView contentContainerStyle={styles.scrollContent}>
                 <View style={styles.menuGrid}>
                     <MenuButton icon="+" title="add item" destination="./(items)/AddItem"/>
                     <MenuButton icon={shopIcon} title="manage shops" destination={"./(shops)/Shops"}/>
                     <MenuButton icon={manageItemIcon} title="manage items" destination="./(items)/ManageItems" />
-                    <MenuButton icon={receiptIcon} title="order history" destination={"./(orders)/OrderHistory"}/>
+                    <MenuButton icon={receiptIcon} title="orders" destination={"./(orders)"}/>
                     <MenuButton icon={contactUsIcon} title="contact us" destination={"./(contact)/ContactUs"}/>
-                    <MenuButton icon={dashboardIcon} title="dashboard" />
+                    <MenuButton icon={dashboardIcon} title="dashboard" destination={null} />
                 </View>
             </ScrollView>
         </View>
@@ -79,7 +76,7 @@ const MenuScreen = () => {
 const styles = StyleSheet.create({
     container: {
         height: '100%',
-        paddingTop: Platform.OS === ('ios' || 'android') ? 70 : 0,
+        paddingTop: Platform.OS === 'web' ? 0 : 70,
         flex: 1,
         backgroundColor: '#B7FFB0',
     },
@@ -94,67 +91,44 @@ const styles = StyleSheet.create({
     },
     header: {
         padding: 10,
-        paddingTop: 40,
-        ...Platform.select({
-            web: {
-                paddingTop: 25,
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-            },
-        }),
+        paddingTop: Platform.OS === 'web' ? 50 : 0,
+        alignItems: 'center',
+        justifyContent: 'space-between',
+    },
+    title: {
+        fontSize: Platform.select({ ios: 30, web: 80 }),
+        fontWeight: 'bold',
+        fontFamily: 'TitanOne',
+        color: '#fff',
+        paddingBottom: 10,
     },
     headerText: {
-        fontSize: 12,
-        marginBottom: 10,
+        fontSize: 18,
+        fontFamily: 'TextMeOne',
         ...Platform.select({
             web: {
-                fontSize: 16,
+                fontSize: 32,
                 marginBottom: 0,
             },
         }),
     },
-    communityNeedsContainer: {
-        flexDirection: 'row',
-        justifyContent: 'space-around',
-        padding: 10,
+    neighborhood: {
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: Platform.OS === 'web' ? 20 : 0,
+        paddingHorizontal: Platform.OS === 'web' ? 40 : 5,
+        borderColor: 'black',
+        borderWidth: 1,
+        borderRadius: 10,
+        minHeight: Platform.OS === 'web' ? 80 : 50,
         ...Platform.select({
             ios: {
-                borderColor: 'black',
-                borderWidth: 1,
-                borderRadius: 3,
+                marginTop: 10,
             },
             web: {
-                marginBottom: 0,
-                marginLeft: 20,
+                flex: 1,
             },
         }),
-    },
-    communityNeedButton: {
-        backgroundColor: '#00bfff',
-        padding: 5,
-        borderRadius: 5,
-        ...Platform.select({
-            web: {
-                marginHorizontal: 5,
-            },
-        }),
-    },
-    communityNeedText: {
-        color: 'black',
-        fontFamily: 'TitanOne',
-        fontSize: 12,
-        textAlign: 'center',
-        ...Platform.select({
-            web: {
-                fontSize: 14,
-            },
-        }),
-    },
-    profileImage: {
-        width: 50,
-        height: 50,
-        borderRadius: 25,
     },
     menuGrid: {
         flexBasis: '50%',
@@ -164,7 +138,7 @@ const styles = StyleSheet.create({
         padding: 10,
         ...Platform.select({
             web: {
-                maxWidth: 800,
+                maxWidth: 900,
                 marginHorizontal: 'auto',
             },
         }),
@@ -198,6 +172,7 @@ const styles = StyleSheet.create({
     },
     menuButtonText: {
         fontSize: 12,
+        fontFamily: 'TextMeOne',
         color: '#888',
         ...Platform.select({
             web: {

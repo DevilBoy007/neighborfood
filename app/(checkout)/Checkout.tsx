@@ -12,10 +12,10 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import Toast from 'react-native-toast-message';
+import { v4 as uuidv4 } from 'uuid';
 import { useCart } from '@/context/cartContext';
 import { useUser } from '@/context/userContext';
 import { useOrder } from '@/context/orderContext';
-import { useLocation } from '@/context/locationContext';
 import firebaseService from '@/handlers/firebaseService';
 
 type DeliveryOption = 'pickup' | 'delivery';
@@ -25,11 +25,10 @@ const Checkout = () => {
     const router = useRouter();
     const { shopCarts, clearCart, calculateTotalSubtotal } = useCart();
     const { userData } = useUser();
-    const { addToOrderHistory } = useOrder();
-    const { locationData } = useLocation();
+    const { addToOrderHistory, addToCurrentOrders, refreshOrders } = useOrder();
     
     const [shopDeliveryOptions, setShopDeliveryOptions] = useState<Record<string, DeliveryOption>>({});
-    const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('apple_pay');
+    const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('card');
     const [deliveryAddress, setDeliveryAddress] = useState('');
     const [contactPhone, setContactPhone] = useState('');
     const [specialInstructions, setSpecialInstructions] = useState('');
@@ -77,7 +76,7 @@ const Checkout = () => {
                 type: 'error',
                 text1: 'Error',
                 text2: 'Please log in to place an order',
-				visibilityTime: 3000
+				visibilityTime: 3000,
             });
             return;
         }
@@ -115,26 +114,26 @@ const Checkout = () => {
         }
 
         setIsPlacingOrder(true);
-
+        const orderId = uuidv4();
         try {
             // Create orders for each shop
             const orderPromises = shopCarts.map(async (shopCart) => {
                 const deliveryOption = shopDeliveryOptions[shopCart.shopId];
                 const orderData = {
+                    id: orderId,
                     userId: userData.uid,
                     shopId: shopCart.shopId,
                     shopName: shopCart.shopName,
                     shopPhotoURL: shopCart.shopPhotoURL || '',
                     items: shopCart.items.map(item => ({
                         ...item,
-                        specialInstructions: specialInstructions
                     })),
                     subtotal: shopCart.subtotal,
                     tax: shopCart.subtotal * 0.08,
                     deliveryFee: deliveryOption === 'delivery' ? 3.99 : 0,
-                    tip: 0, // Can be added later
+                    tip: 0, // TODO: implement later
                     total: shopCart.subtotal + (shopCart.subtotal * 0.08) + (deliveryOption === 'delivery' ? 3.99 : 0),
-                    status: 'pending',
+                    status: 'pending' as const,
                     createdAt: new Date(),
                     estimatedDeliveryTime: new Date(Date.now() + 45 * 60 * 1000), // 45 minutes from now
                     paymentMethod,
@@ -143,26 +142,26 @@ const Checkout = () => {
                     deliveryOption,
                     specialInstructions
                 };
-
-                const orderId = await firebaseService.addDocument('orders', orderData, null);
+;                
+                await firebaseService.addDocument('orders', orderData, null);
                 
-                return {
-                    id: orderId,
-                    ...orderData
-                };
+                return orderData;
             });
 
             const createdOrders = await Promise.all(orderPromises);
-            createdOrders.forEach(order => {
-                addToOrderHistory(order);
-            });
-
+            
+            // Refresh orders to get the newly created orders from Firebase
+            if (userData?.uid) {
+                await refreshOrders(userData.uid);
+            }
+            
             clearCart();
 
             Toast.show({
                 type: 'success',
                 text1: 'Order Placed!',
-                text2: `Your order${createdOrders.length > 1 ? 's have' : ' has'} been placed successfully. You'll receive updates on the status.`
+                text2: `Your order${createdOrders.length > 1 ? 's have' : ' has'} been placed successfully. You'll receive updates on the status.`,
+                visibilityTime: 3000
             });
 
             // Navigate to success page, then to menu, then to orders
@@ -170,7 +169,7 @@ const Checkout = () => {
             setTimeout(() => {
                 router.navigate('/(home)/Menu');
                 setTimeout(() => {
-                    router.navigate('/(home)/(orders)/OrderHistory');
+                    router.navigate('/(home)/(orders)');
                 }, 100);
             }, Platform.OS === 'web' ? 2100 : 2000);
 
@@ -305,6 +304,7 @@ const Checkout = () => {
                             value={deliveryAddress}
                             onChangeText={setDeliveryAddress}
                             placeholder="Enter your delivery address"
+                            placeholderTextColor={'#ddd'}
                             multiline
                         />
                     </View>
@@ -318,6 +318,7 @@ const Checkout = () => {
                         value={contactPhone}
                         onChangeText={setContactPhone}
                         placeholder="Enter your phone number"
+                        placeholderTextColor={'#ddd'}
                         keyboardType="phone-pad"
                     />
                 </View>
@@ -358,6 +359,7 @@ const Checkout = () => {
                         value={specialInstructions}
                         onChangeText={setSpecialInstructions}
                         placeholder="Any special requests or instructions..."
+                        placeholderTextColor={'#ddd'}
                         multiline
                         numberOfLines={3}
                     />

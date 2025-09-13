@@ -68,6 +68,19 @@ class FirebaseService {
         return FirebaseService.instance;
     }
 
+    disconnect() {
+        try {
+            this.app = null;
+            this.auth = null;
+            this.db = null;
+            console.log('Disconnected from Firebase');
+            return true;
+        } catch (error) {
+            console.error('Error disconnecting from Firebase:', error);
+            throw error;
+        }
+    }
+
     async connect() {
         try {
             // Check if Firebase is already initialized
@@ -217,6 +230,7 @@ class FirebaseService {
             }
         }
     }
+
     async getDocument(collectionPath: string, docId: string) {
         try {
             if (!this.db) {
@@ -613,19 +627,6 @@ class FirebaseService {
         }
     }
 
-    disconnect() {
-        try {
-            this.app = null;
-            this.auth = null;
-            this.db = null;
-            console.log('Disconnected from Firebase');
-            return true;
-        } catch (error) {
-            console.error('Error disconnecting from Firebase:', error);
-            throw error;
-        }
-    }
-
     async createItemForShop(shopId: string, itemData: object): Promise<string> {
         try {
             if (!this.db) {
@@ -731,7 +732,7 @@ class FirebaseService {
         }
     }
 
-    async getOrdersForUser(userId: string): Promise<any[]> {
+    async getOrdersFromUser(userId: string): Promise<any[]> {
         try {
             if (!this.db) {
                 await this.connect();
@@ -793,6 +794,112 @@ class FirebaseService {
             console.error("Error updating order status: ", error);
             throw error;
         }
+    }
+
+    /**
+     * Comprehensive method to get all orders for a user
+     * Returns both orders placed by the user (as customer) and orders received (as shop owner)
+     */
+    async getOrdersForUser(userId: string): Promise<{
+        placedOrders: any[];
+        receivedOrders: any[];
+        allOrders: any[];
+    }> {
+        try {
+            if (!this.db) {
+                await this.connect();
+                if (!this.db) {
+                    throw new Error('Error connecting to Firestore');
+                }
+            }
+
+            // Get orders placed by the user (as customer)
+            const placedOrders = await this.getOrdersFromUser(userId);
+
+            // Get orders received by the user's shops (as shop owner)
+            const receivedOrders = await this.getOrdersForUserShops(userId);
+
+            // Combine and sort all orders by creation date
+            const allOrders = [...placedOrders, ...receivedOrders].sort((a, b) => {
+                const aTime = a.createdAt?.seconds || 0;
+                const bTime = b.createdAt?.seconds || 0;
+                return bTime - aTime;
+            });
+
+            return {
+                placedOrders,
+                receivedOrders,
+                allOrders
+            };
+        } catch (error) {
+            console.error("Error fetching comprehensive orders for user:", error);
+            throw error;
+        }
+    }
+
+    /**
+     * Get all orders for shops owned by a user
+     */
+    async getOrdersForUserShops(userId: string): Promise<any[]> {
+        try {
+            if (!this.db) {
+                await this.connect();
+                if (!this.db) {
+                    throw new Error('Error connecting to Firestore');
+                }
+            }
+
+            // First, get all shops owned by the user
+            const userShops = await this.getShopsForUser(userId);
+            const shopIds = userShops.map(shop => shop.id);
+
+            if (shopIds.length === 0) {
+                return []; // User has no shops
+            }
+
+            // Get orders for all user's shops
+            const allShopOrders: any[] = [];
+            
+            // Use Promise.all to fetch orders for all shops in parallel
+            const orderPromises = shopIds.map(shopId => this.getOrdersForShop(shopId));
+            const shopOrdersArrays = await Promise.all(orderPromises);
+            
+            // Flatten the arrays and add shop information
+            shopOrdersArrays.forEach((shopOrders, index) => {
+                const shopInfo = userShops[index];
+                shopOrders.forEach(order => {
+                    allShopOrders.push({
+                        ...order,
+                        shopOwnerView: true, // Flag to indicate this is from shop owner perspective
+                        shopInfo: {
+                            id: shopInfo.id,
+                            name: shopInfo.name,
+                            // Add other shop details as needed
+                        }
+                    });
+                });
+            });
+
+            // Sort by creation date, newest first
+            return allShopOrders.sort((a, b) => {
+                const aTime = a.createdAt?.seconds || 0;
+                const bTime = b.createdAt?.seconds || 0;
+                return bTime - aTime;
+            });
+
+        } catch (error) {
+            console.error("Error fetching orders for user shops:", error);
+            throw error;
+        }
+    }
+
+    /**
+     * Legacy method - kept for backward compatibility
+     * Now calls the new comprehensive method and returns only placed orders
+     */
+    async getOrdersFromUserLegacy(userId: string): Promise<any[]> {
+        const { placedOrders } = await this.getOrdersForUser(userId);
+        return placedOrders;
     }
 }
 
