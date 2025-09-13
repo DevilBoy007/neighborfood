@@ -204,26 +204,11 @@ export const OrderProvider = ({ children }: OrderProviderProps) => {
                 prevOrder ? { ...prevOrder, status } : null
             );
         }
-
-        // Update current orders if matching
-        setCurrentOrdersState(prevOrders =>
-            prevOrders.map(order =>
-                order.id === orderId ? { ...order, status } : order
-            )
-        );
-
-        // If order is completed, remove from current orders
-        if (status === 'completed') {
-            setCurrentOrdersState(prevOrders =>
-                prevOrders.filter(order => order.id !== orderId)
-            );
-        }
-    };
+    }
 
     const resetOrderContext = () => {
         setPlacedOrdersState([]);
         setReceivedOrdersState([]);
-        setCurrentOrdersState([]);
         setOrderHistoryState([]);
         setSelectedOrderState(null);
         setIsLoadingOrders(false);
