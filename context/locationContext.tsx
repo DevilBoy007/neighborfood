@@ -190,10 +190,16 @@ export const LocationProvider: React.FC<{children: React.ReactNode}> = ({ childr
 
     // Initial location fetch
     useEffect(() => {
+        let didCancel = false;
         const getLocation = async () => {
-            await fetchCurrentLocation();
+            if (!didCancel) {
+                await fetchCurrentLocation();
+            }
         };
         getLocation();
+        return () => {
+            didCancel = true;
+        };
     }, []);
 
     return (
