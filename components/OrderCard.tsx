@@ -30,10 +30,11 @@ const OrderCard = ({ order, onPress }) => {
     }, [order.customerId]);
 
     const handleStatusPress = (order) => {
-        const orderToSet = allOrders.find(o => o.id === order.id) || null;
+        console.log(order)
+        const orderToSet = allOrders.find(o => (o.id === order.id && o.shopName === order.shops[0])) || null;
         setSelectedOrder(orderToSet);
         setIsPressed(prev => !prev);
-        console.log('selected order received?: ', orderToSet.shopOwnerView || false)
+        console.log('selected order:', orderToSet)
     }
 
     return (
@@ -68,7 +69,7 @@ const OrderCard = ({ order, onPress }) => {
                 { isPressed && (
                     <View>
                         {buildStatusButtons(order.status, order.shopOwnerView || false, (newStatus) => {
-                            updateOrderStatus(order.id, newStatus as OrderStatus);
+                            updateOrderStatus(selectedOrder.id, selectedOrder.shopId, newStatus as OrderStatus);
                             setIsPressed(false);
                         }).map((button) => (
                             <TouchableOpacity key={button.key} onPress={button.onPress}>

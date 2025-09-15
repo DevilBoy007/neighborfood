@@ -10,7 +10,7 @@ type OrderItem = {
     photoURL?: string;
 };
 
-type OrderStatus = 
+export type OrderStatus = 
     | 'pending' 
     | 'preparing' 
     | 'ready' 
@@ -56,7 +56,7 @@ type OrderContextType = {
     addToOrderHistory: (order: OrderData) => void;
     addToPlacedOrders: (order: OrderData) => void;
     addToReceivedOrders: (order: OrderData) => void;
-    updateOrderStatus: (orderId: string, status: OrderStatus) => void;
+    updateOrderStatus: (orderId: string, shopId: string, status: OrderStatus) => void;
     initializeOrders: (userId: string) => Promise<void>;
     refreshOrders: (userId: string) => Promise<void>;
     resetOrderContext: () => void;
@@ -214,19 +214,56 @@ export const OrderProvider = ({ children }: OrderProviderProps) => {
         }
     };
 
-    const updateOrderStatus = (orderId: string, status: OrderStatus) => {
-        // Update in order history
-        setOrderHistoryState(prevOrders => 
-        prevOrders.map(order => 
-            order.id === orderId ? { ...order, status } : order
-        )
-        );
+    const updateOrderStatus = async (orderId: string, shopId: string, status: OrderStatus) => {
+        try {
+            // Find the order to get shopId
+            const order = allOrders.find(o => (o.id === orderId && o.shopId === shopId));
+            if (!order) {
+                console.error('Order not found:', orderId);
+                return;
+            }
 
-        // Update selected order if matching
-        if (selectedOrder && selectedOrder.id === orderId) {
-            setSelectedOrderState(prevOrder =>
-                prevOrder ? { ...prevOrder, status } : null
+            // Update in Firebase
+            await firebaseService.updateOrderStatus(orderId, order.shopId, status);
+
+            // Update in placed orders
+            setPlacedOrdersState(prevOrders => 
+                prevOrders.map(order => 
+                    (order.id === orderId && order.shopId === shopId) ? { ...order, status } : order
+                )
             );
+
+            // Update in received orders
+            setReceivedOrdersState(prevOrders => 
+                prevOrders.map(order => 
+                    (order.id === orderId && order.shopId === shopId) ? { ...order, status } : order
+                )
+            );
+
+            // Update in order history
+            setOrderHistoryState(prevOrders => 
+                prevOrders.map(order => 
+                    (order.id === orderId && order.shopId === shopId) ? { ...order, status } : order
+                )
+            );
+
+            // Update in all orders
+            setAllOrdersState(prevOrders => 
+                prevOrders.map(order => 
+                    (order.id === orderId && order.shopId === shopId) ? { ...order, status } : order
+                )
+            );
+
+            // Update selected order if matching
+            if (selectedOrder && selectedOrder.id === orderId && selectedOrder.shopId === shopId) {
+                setSelectedOrderState(prevOrder =>
+                    prevOrder ? { ...prevOrder, status } : null
+                );
+            }
+
+            console.log('Order status updated successfully:', orderId, status);
+        } catch (error) {
+            console.error('Error updating order status:', error);
         }
     }
 

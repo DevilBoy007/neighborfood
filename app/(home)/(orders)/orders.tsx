@@ -78,7 +78,6 @@ const OrdersScreen = () => {
             shopOwnerView: isReceivedOrder,
             orderType: isReceivedOrder ? 'received' : 'placed',
             customerId: isReceivedOrder ? order.userId : userData.uid,
-            shopInfo: isReceivedOrder ? order.shopInfo : undefined
         };
     };
 
