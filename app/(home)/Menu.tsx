@@ -42,7 +42,7 @@ const MenuScreen = () => {
                 <View style={styles.neighborhood}>
                     {locationData.area && !locationData.loading && (
                         <Text style={styles.headerText}>
-                            📍 {locationData.area}
+                            📍 neighborhood: {locationData.area}
                         </Text>
                     )}
                     {locationData.loading && (
