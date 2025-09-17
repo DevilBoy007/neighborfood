@@ -7,7 +7,8 @@ import { useOrder } from '@/context/orderContext'
 import firebaseService from '@/handlers/firebaseService'
 import { useUser } from '@/context/userContext';
 import { useOrderStatus } from '@/hooks/useOrderStatus';
-import type { OrderData, OrderStatus } from '@/context/orderContext';
+import type { OrderStatus } from '@/context/orderContext';
+import { SoundTouchableOpacity } from '@/components/SoundTouchableOpacity';
 
 const OrderCard = ({ order, onPress }) => {
     const router = useRouter();
@@ -41,7 +42,7 @@ const OrderCard = ({ order, onPress }) => {
 
     return (
         <>
-            <TouchableOpacity style={styles.orderCard} onPress={onPress}>
+            <SoundTouchableOpacity style={styles.orderCard} onPress={onPress}>
                 <View style={styles.orderHeader}>
                     <Text style={styles.dateText}>{date}</Text>
                     <Ionicons name="chevron-forward" size={24} color="black" />
@@ -66,7 +67,7 @@ const OrderCard = ({ order, onPress }) => {
 
                     <Text style={styles.itemsText}>items: {items}</Text>
                 </View>
-            </TouchableOpacity>
+            </SoundTouchableOpacity>
             <View style={styles.statusMetaContainer}>
                 { isPressed && (
                     <View>
@@ -77,11 +78,11 @@ const OrderCard = ({ order, onPress }) => {
                                 router.push('/success');
                             }
                         }).map((button) => (
-                            <TouchableOpacity key={button.key} onPress={button.onPress}>
+                            <SoundTouchableOpacity key={button.key} onPress={button.onPress}>
                                 <View style={{ backgroundColor: button.color }}>
                                     <Text style={styles.statusText}>{button.label}</Text>
                                 </View>
-                            </TouchableOpacity>
+                            </SoundTouchableOpacity>
                         ))}
                     </View>
                 )}
