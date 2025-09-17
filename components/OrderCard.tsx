@@ -1,6 +1,7 @@
 import React, { useEffect, useState} from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 
 import { useOrder } from '@/context/orderContext'
 import firebaseService from '@/handlers/firebaseService'
@@ -9,6 +10,7 @@ import { useOrderStatus } from '@/hooks/useOrderStatus';
 import type { OrderData, OrderStatus } from '@/context/orderContext';
 
 const OrderCard = ({ order, onPress }) => {
+    const router = useRouter();
     const { date, total, shops, items } = order;
     const { allOrders, selectedOrder, setSelectedOrder, updateOrderStatus } = useOrder()
     const { userData } = useUser();
@@ -71,6 +73,9 @@ const OrderCard = ({ order, onPress }) => {
                         {buildStatusButtons(order.status, order.shopOwnerView || false, (newStatus) => {
                             updateOrderStatus(selectedOrder.id, selectedOrder.shopId, newStatus as OrderStatus);
                             setIsPressed(false);
+                            if (newStatus === 'preparing') {
+                                router.push('/success');
+                            }
                         }).map((button) => (
                             <TouchableOpacity key={button.key} onPress={button.onPress}>
                                 <View style={{ backgroundColor: button.color }}>
