@@ -29,6 +29,7 @@ import {
     getDoc,
     arrayUnion,
 } from 'firebase/firestore';
+import { getFunctions, httpsCallable } from 'firebase/functions';
 
 class FirebaseService {
     private static instance: FirebaseService;
@@ -44,6 +45,7 @@ class FirebaseService {
     private storage: FirebaseStorage | null;
     private analytics: Analytics | null;
     private db: Firestore | null;
+    private functions: any;
 
     private constructor() {
         this.firebaseConfig = {
@@ -59,6 +61,7 @@ class FirebaseService {
         this.analytics = null;
         this.auth = null;
         this.db = null;
+        this.functions = null;
     }
 
     public static getInstance(): FirebaseService {
@@ -73,6 +76,7 @@ class FirebaseService {
             this.app = null;
             this.auth = null;
             this.db = null;
+            this.functions = null;
             console.log('Disconnected from Firebase');
             return true;
         } catch (error) {
@@ -84,7 +88,7 @@ class FirebaseService {
     async connect() {
         try {
             // Check if Firebase is already initialized
-            if (this.app && this.auth && this.db && this.storage) {
+            if (this.app && this.auth && this.db && this.storage && this.functions) {
                 console.log('Firebase already connected');
                 return true;
             }
@@ -134,12 +138,26 @@ class FirebaseService {
                 this.db = getFirestore(this.app);
             }
 
+            // Initialize Functions if not already initialized
+            if (!this.functions) {
+                this.functions = getFunctions(this.app);
+            }
+
             console.log('Successfully connected to Firebase');
             return true;
         } catch (error) {
             console.error('Error connecting to Firebase:', error);
             throw error;
         }
+    }
+
+    // Helper method to get auth token for function calls
+    private async getAuthToken(): Promise<string> {
+        await this.connect();
+        if (!this.auth?.currentUser) {
+            throw new Error('User not authenticated');
+        }
+        return await this.auth.currentUser.getIdToken();
     }
 
     async logout() {
@@ -205,36 +223,63 @@ class FirebaseService {
     async registerUser(email: string, password: string, username: string): Promise<UserCredential['user']> {
         try {
             if (!this.auth) {
-                this.connect();
+                await this.connect();
                 if (!this.auth) {
                     throw new Error('Error connecting to Firebase Authentication');
                 }
             }
-            const users = await this.getDocumentsWhere('users', 'username', '==', username);
-            if (users.length > 0) {
-                throw new Error('Username taken');
+
+            // Call Firebase Function for user registration
+            const registerFunction = httpsCallable(this.functions, 'registerUser');
+            const result = await registerFunction({
+                email,
+                password,
+                username,
+                userData: {
+                    // Any additional user data can be passed here
+                }
+            });
+
+            if (result.data.success) {
+                // Now sign in the user locally
+                const userCredential = await signInWithEmailAndPassword(this.auth, email, password);
+                const user = userCredential.user;
+                console.log('User registered and signed in:', user.uid);
+                return user;
+            } else {
+                throw new Error(result.data.message || 'Registration failed');
             }
-            const userCredential = await createUserWithEmailAndPassword(this.auth, email, password);
-            const user = userCredential.user;
-            console.log('User registered:', user.uid);
-            return user;
         } catch (error) {
             console.error('Error registering user:', error);
-            switch (error.code) {
-                case 'auth/email-already-in-use':
-                    throw new Error('Email already in use');
-                case 'auth/invalid-email':
-                    throw new Error('Invalid email');
-                default:
-                    throw error;
+            if (error.code === 'functions/already-exists') {
+                throw new Error('Username already taken');
+            } else if (error.code === 'functions/invalid-argument') {
+                throw new Error('Invalid registration data');
+            } else if (error.message?.includes('email-already-in-use')) {
+                throw new Error('Email already in use');
+            } else if (error.message?.includes('invalid-email')) {
+                throw new Error('Invalid email');
+            } else {
+                throw error;
             }
         }
     }
 
     async getDocument(collectionPath: string, docId: string) {
         try {
+            // For user documents, try to use the function-based approach if authenticated
+            if (collectionPath === 'users' && this.auth?.currentUser) {
+                try {
+                    return await this.getUserById(docId);
+                } catch (error) {
+                    console.warn('Function call failed, falling back to direct Firestore access:', error);
+                    // Fall through to direct Firestore access
+                }
+            }
+            
+            // Legacy direct Firestore access for backward compatibility
             if (!this.db) {
-                this.connect();
+                await this.connect();
                 if (!this.db) {
                     throw new Error('Error connecting to Firestore');
                 }
@@ -351,45 +396,41 @@ class FirebaseService {
 
     async createShopForUser(userId: string, shopData: object): Promise<void> {
         try {
-            if (!this.db) {
-                await this.connect();
-                if (!this.db) {
-                    throw new Error('Error connecting to Firestore');
-                }
-            }
+            const authToken = await this.getAuthToken();
+            const createShopFunction = httpsCallable(this.functions, 'createShopForUser');
             
-            const shopsCollectionRef = collection(this.db, 'shops');
-            const userDocRef = doc(this.db, 'users', userId);
-        
-            // Create the shop document
-            const docRef = await addDoc(shopsCollectionRef, shopData);
-            console.log("Shop created with ID: ", docRef.id);
-        
-            const shopDocRef = doc(this.db, 'shops', docRef.id);
-
-            // Update the user's 'shops' array with the document reference
-            await updateDoc(userDocRef, {
-                shops: arrayUnion(shopDocRef)
+            const result = await createShopFunction({
+                userId,
+                shopData,
+                authToken
             });
-        
-            console.log("Shop reference added to user's shops array.");
+
+            if (result.data.success) {
+                console.log("Shop created with ID: ", result.data.shopId);
+            } else {
+                throw new Error(result.data.message || 'Failed to create shop');
+            }
         } catch (error) {
-            console.error("Error creating shop or updating user: ", error);
+            console.error("Error creating shop:", error);
             throw error;
         }
     }
 
     async getUserById(userId: string) {
         try {
-            if (!this.db) {
-                await this.connect();
-                if (!this.db) {
-                    throw new Error('Error connecting to Firestore');
-                }
-            }
+            const authToken = await this.getAuthToken();
+            const getUserFunction = httpsCallable(this.functions, 'getUserById');
             
-            const userDoc = await this.getDocument('users', userId);
-            return userDoc;
+            const result = await getUserFunction({
+                userId,
+                authToken
+            });
+
+            if (result.data.success) {
+                return result.data.data;
+            } else {
+                throw new Error(result.data.message || 'Failed to get user');
+            }
         } catch (error) {
             console.error("Error fetching user by ID:", error);
             throw error;
@@ -398,19 +439,22 @@ class FirebaseService {
 
     async updateShopDetails(shopId: string, shopData: object): Promise<void> {
         try {
-            if (!this.db) {
-                await this.connect();
-                if (!this.db) {
-                    throw new Error('Error connecting to Firestore');
-                }
+            const authToken = await this.getAuthToken();
+            const updateShopFunction = httpsCallable(this.functions, 'updateShopDetails');
+            
+            const result = await updateShopFunction({
+                shopId,
+                shopData,
+                authToken
+            });
+
+            if (result.data.success) {
+                console.log("Shop updated with ID: ", shopId);
+            } else {
+                throw new Error(result.data.message || 'Failed to update shop');
             }
-            
-            const shopDocRef = doc(this.db, 'shops', shopId);
-            
-            await updateDoc(shopDocRef, shopData);
-            console.log("Shop updated with ID: ", shopId);
         } catch (error) {
-            console.error("Error updating shop: ", error);
+            console.error("Error updating shop:", error);
             throw error;
         }
     }
@@ -459,20 +503,19 @@ class FirebaseService {
 
     async getItemsForShop(shopId: string): Promise<any[]> {
         try {
-            if (!this.db) {
-                await this.connect();
-                if (!this.db) {
-                    throw new Error('Error connecting to Firestore');
-                }
-            }
-            const itemsSnapshot = await this.getDocumentsWhere('items', 'shopId', '==', shopId);
-            const items: any[] = [];
-
-            itemsSnapshot.forEach((doc) => {
-                items.push({ ...doc });
+            const authToken = await this.getAuthToken();
+            const getItemsFunction = httpsCallable(this.functions, 'getItemsForShop');
+            
+            const result = await getItemsFunction({
+                shopId,
+                authToken
             });
 
-            return items;
+            if (result.data.success) {
+                return result.data.data;
+            } else {
+                throw new Error(result.data.message || 'Failed to get items');
+            }
         } catch (error) {
             console.error("Error fetching items for shop:", error);
             throw error;
@@ -502,28 +545,20 @@ class FirebaseService {
 
     async getShopsByZipCodePrefix(zipPrefix: string, userId: string): Promise<any[]> {
         try {
-            if (!this.db) {
-                await this.connect();
-                if (!this.db) {
-                    throw new Error('Error connecting to Firestore');
-                }
+            const authToken = await this.getAuthToken();
+            const getShopsFunction = httpsCallable(this.functions, 'getShopsByZipCodePrefix');
+            
+            const result = await getShopsFunction({
+                zipPrefix,
+                userId,
+                authToken
+            });
+
+            if (result.data.success) {
+                return result.data.data;
+            } else {
+                throw new Error(result.data.message || 'Failed to get shops by ZIP code');
             }
-            
-            // Query for shops where marketId starts with the zip prefix
-            const collectionRef = collection(this.db, 'shops');
-            
-            // First get all shops with matching zip prefix
-            const q = query(
-                collectionRef,
-                where('marketId', '>=', zipPrefix),
-                where('marketId', '<=', zipPrefix + '\uf8ff')
-            );
-            
-            // Then filter out the user's own shops in the client
-            const shops = await getDocs(q);
-            return shops.docs
-                .map(doc => ({ id: doc.id, ...doc.data() }))
-                .filter(shop => shop.userId !== userId);
         } catch (error) {
             console.error('Error getting shops by zip code prefix:', error);
             throw error;
@@ -629,26 +664,23 @@ class FirebaseService {
 
     async createItemForShop(shopId: string, itemData: object): Promise<string> {
         try {
-            if (!this.db) {
-                await this.connect();
-                if (!this.db) {
-                    throw new Error('Error connecting to Firestore');
-                }
-            }
+            const authToken = await this.getAuthToken();
+            const createItemFunction = httpsCallable(this.functions, 'createItemForShop');
             
-            const itemsCollectionRef = collection(this.db, 'items');
-            
-            // Create the item document
-            const docRef = await addDoc(itemsCollectionRef, {
-                ...itemData,
-                shopId: [shopId], // Store as array for potential multi-shop items in the future
-                createdAt: new Date()
+            const result = await createItemFunction({
+                shopId,
+                itemData,
+                authToken
             });
-            
-            console.log("Item created with ID: ", docRef.id);
-            return docRef.id;
+
+            if (result.data.success) {
+                console.log("Item created with ID: ", result.data.itemId);
+                return result.data.itemId;
+            } else {
+                throw new Error(result.data.message || 'Failed to create item');
+            }
         } catch (error) {
-            console.error("Error creating item: ", error);
+            console.error("Error creating item:", error);
             throw error;
         }
     }
@@ -672,14 +704,19 @@ class FirebaseService {
 
     async getAllItemsForUser(userId: string): Promise<any[]> {
         try {
-            if (!this.db) {
-                await this.connect();
-                if (!this.db) {
-                    throw new Error('Error connecting to Firestore');
-                }
+            const authToken = await this.getAuthToken();
+            const getItemsFunction = httpsCallable(this.functions, 'getAllItemsForUser');
+            
+            const result = await getItemsFunction({
+                userId,
+                authToken
+            });
+
+            if (result.data.success) {
+                return result.data.data;
+            } else {
+                throw new Error(result.data.message || 'Failed to get items');
             }
-            const itemsSnapshot = await this.getDocumentsWhere('items', 'userId', '==', userId);
-            return itemsSnapshot;
         } catch (error) {
             console.error("Error fetching items for user:", error);
             throw error;
@@ -688,21 +725,19 @@ class FirebaseService {
 
     async getShopsForUser(userId: string): Promise<any[]> {
         try {
-            if (!this.db) {
-                await this.connect();
-                if (!this.db) {
-                    throw new Error('Error connecting to Firestore');
-                }
-            }
-            const shopsSnapshot = await this.getDocumentsWhere('shops', 'userId', '==', userId);
-            const shops: any[] = [];
+            const authToken = await this.getAuthToken();
+            const getShopsFunction = httpsCallable(this.functions, 'getShopsForUser');
             
-            shopsSnapshot.forEach((shopDoc) => {
-                const { id, ...shopData } = shopDoc;
-                shops.push({ id, ...shopData });
+            const result = await getShopsFunction({
+                userId,
+                authToken
             });
-            
-            return shops;
+
+            if (result.data.success) {
+                return result.data.data;
+            } else {
+                throw new Error(result.data.message || 'Failed to get shops');
+            }
         } catch (error) {
             console.error("Error fetching shops for user:", error);
             throw error;
@@ -711,42 +746,41 @@ class FirebaseService {
 
     async createOrder(orderData: object): Promise<string> {
         try {
-            if (!this.db) {
-                await this.connect();
-                if (!this.db) {
-                    throw new Error('Error connecting to Firestore');
-                }
-            }
+            const authToken = await this.getAuthToken();
+            const createOrderFunction = httpsCallable(this.functions, 'createOrder');
             
-            const ordersCollectionRef = collection(this.db, 'orders');
-            const docRef = await addDoc(ordersCollectionRef, {
-                ...orderData,
-                createdAt: new Date()
+            const result = await createOrderFunction({
+                orderData,
+                authToken
             });
-            
-            console.log("Order created with ID: ", docRef.id);
-            return docRef.id;
+
+            if (result.data.success) {
+                console.log("Order created with ID: ", result.data.orderId);
+                return result.data.orderId;
+            } else {
+                throw new Error(result.data.message || 'Failed to create order');
+            }
         } catch (error) {
-            console.error("Error creating order: ", error);
+            console.error("Error creating order:", error);
             throw error;
         }
     }
 
     async getOrdersFromUser(userId: string): Promise<any[]> {
         try {
-            if (!this.db) {
-                await this.connect();
-                if (!this.db) {
-                    throw new Error('Error connecting to Firestore');
-                }
-            }
-            const ordersSnapshot = await this.getDocumentsWhere('orders', 'userId', '==', userId);
-            return ordersSnapshot.sort((a, b) => {
-                // Sort by creation date, newest first
-                const aTime = a.createdAt?.seconds || 0;
-                const bTime = b.createdAt?.seconds || 0;
-                return bTime - aTime;
+            const authToken = await this.getAuthToken();
+            const getOrdersFunction = httpsCallable(this.functions, 'getOrdersFromUser');
+            
+            const result = await getOrdersFunction({
+                userId,
+                authToken
             });
+
+            if (result.data.success) {
+                return result.data.data;
+            } else {
+                throw new Error(result.data.message || 'Failed to get orders');
+            }
         } catch (error) {
             console.error("Error fetching orders for user:", error);
             throw error;
@@ -755,19 +789,19 @@ class FirebaseService {
 
     async getOrdersForShop(shopId: string): Promise<any[]> {
         try {
-            if (!this.db) {
-                await this.connect();
-                if (!this.db) {
-                    throw new Error('Error connecting to Firestore');
-                }
-            }
-            const ordersSnapshot = await this.getDocumentsWhere('orders', 'shopId', '==', shopId);
-            return ordersSnapshot.sort((a, b) => {
-                // Sort by creation date, newest first
-                const aTime = a.createdAt?.seconds || 0;
-                const bTime = b.createdAt?.seconds || 0;
-                return bTime - aTime;
+            const authToken = await this.getAuthToken();
+            const getOrdersFunction = httpsCallable(this.functions, 'getOrdersForShop');
+            
+            const result = await getOrdersFunction({
+                shopId,
+                authToken
             });
+
+            if (result.data.success) {
+                return result.data.data;
+            } else {
+                throw new Error(result.data.message || 'Failed to get orders for shop');
+            }
         } catch (error) {
             console.error("Error fetching orders for shop:", error);
             throw error;
@@ -775,24 +809,25 @@ class FirebaseService {
     }
 
     async updateOrderStatus(orderId: string, shopId: string, status: string): Promise<void> {
-        console.log('retrieving order: ', orderId, ' from firebase')
+        console.log('updating order: ', orderId, ' status to:', status)
         try {
-            if (!this.db) {
-                await this.connect();
-                if (!this.db) {
-                    throw new Error('Error connecting to Firestore');
-                }
-            }
+            const authToken = await this.getAuthToken();
+            const updateOrderFunction = httpsCallable(this.functions, 'updateOrderStatus');
             
-            const orderResult = await this.getOrder(orderId, shopId);
-            await updateDoc(orderResult.ref, {
+            const result = await updateOrderFunction({
+                orderId,
+                shopId,
                 status,
-                updatedAt: new Date()
+                authToken
             });
-            
-            console.log("Order status updated: ", orderId, status);
+
+            if (result.data.success) {
+                console.log("Order status updated: ", orderId, status);
+            } else {
+                throw new Error(result.data.message || 'Failed to update order status');
+            }
         } catch (error) {
-            console.error("Error updating order status: ", error);
+            console.error("Error updating order status:", error);
             throw error;
         }
     }
