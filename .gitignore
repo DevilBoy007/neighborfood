@@ -6,7 +6,6 @@ notes/
 
 # firebase
 .firebaserc
-firebase.json
 
 # build outputs
 assets/mascot/
@@ -22,6 +21,10 @@ npm-debug.*
 *.mobileprovision
 *.orig.*
 web-build/
+
+# Firebase Functions
+functions/lib/
+functions/node_modules/
 
 # macOS
 .DS_Store
