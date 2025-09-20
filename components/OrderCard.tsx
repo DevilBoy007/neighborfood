@@ -10,7 +10,7 @@ import { useOrderStatus } from '@/hooks/useOrderStatus';
 import type { OrderStatus } from '@/context/orderContext';
 import { SoundTouchableOpacity } from '@/components/SoundTouchableOpacity';
 
-const OrderCard = ({ order, onPress }) => {
+const OrderCard = ({ order, onPress, onStatusChange = undefined }) => {
     const router = useRouter();
     const { date, total, shops, items } = order;
     const { allOrders, selectedOrder, setSelectedOrder, updateOrderStatus } = useOrder()
@@ -72,10 +72,15 @@ const OrderCard = ({ order, onPress }) => {
                 { isPressed && (
                     <View>
                         {buildStatusButtons(order.status, order.shopOwnerView || false, (newStatus) => {
-                            updateOrderStatus(selectedOrder.id, selectedOrder.shopId, newStatus as OrderStatus);
+                            if (selectedOrder) {
+                                updateOrderStatus(selectedOrder.id, selectedOrder.shopId, newStatus as OrderStatus);
+                            }
                             setIsPressed(false);
                             if (newStatus === 'preparing') {
                                 router.push('/success');
+                            }
+                            if (newStatus === 'completed' && onStatusChange) {
+                                onStatusChange(newStatus);
                             }
                         }).map((button) => (
                             <SoundTouchableOpacity key={button.key} onPress={button.onPress}>

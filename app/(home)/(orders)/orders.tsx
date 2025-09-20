@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, Platform, RefreshControl } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import ConfettiCannon from 'react-native-confetti-cannon';
 
 import OrderCard from '@/components/OrderCard';
 import { useUser } from '@/context/userContext';
@@ -22,6 +23,7 @@ const OrdersScreen = () => {
         refreshOrders
     } = useOrder();
     const [orders, setOrders] = useState<any[]>([]);
+    const confettiRef = useRef<any>(null);
 
     const orderFilter = filter || 'placed';
 
@@ -84,6 +86,12 @@ const OrdersScreen = () => {
     const handleOrderPress = (orderCardData: any) => {
         setSelectedOrder(orderCardData.originalOrder);
         router.push('./details');
+    };
+
+    const handleStatusChange = (newStatus: string) => {
+        if (newStatus === 'completed') {
+            confettiRef.current?.start();
+        }
     };
 
     const config = {
@@ -167,12 +175,14 @@ const OrdersScreen = () => {
                                 key={order.docId || index}
                                 order={formattedOrder}
                                 onPress={() => handleOrderPress(formattedOrder)}
+                                onStatusChange={handleStatusChange}
                             />
                         ) : (
                             <View key={order.docId || index} style={styles.orderContainer}>
                                 <OrderCard
                                     order={formattedOrder}
                                     onPress={() => handleOrderPress(formattedOrder)}
+                                    onStatusChange={handleStatusChange}
                                 />
                                 <View style={styles.statusContainer}>
                                 </View>
@@ -181,6 +191,15 @@ const OrdersScreen = () => {
                     })
                 )}
             </ScrollView>
+            <View style={styles.confetti}>
+                <ConfettiCannon
+                    ref={confettiRef}
+                    count={200}
+                    origin={{x: -10, y: 0}}
+                    autoStart={false}
+                    fadeOut={true}
+                />
+            </View>
         </SafeAreaView>
     );
 };
@@ -258,6 +277,15 @@ const styles = StyleSheet.create({
         top: 10,
         right: 10,
         zIndex: 1,
+    },
+    confetti: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        pointerEvents: 'none',
+        zIndex: 1000,
     },
 });
 
