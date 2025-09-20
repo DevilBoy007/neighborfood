@@ -10,16 +10,15 @@ type OrderItem = {
     photoURL?: string;
 };
 
-type OrderStatus = 
+export type OrderStatus = 
     | 'pending' 
     | 'preparing' 
     | 'ready' 
     | 'in-delivery' 
-    | 'delivered' 
     | 'completed' 
     | 'cancelled';
 
-type OrderData = {
+export type OrderData = {
     id: string;
     userId: string;
     shopId: string;
@@ -46,6 +45,7 @@ type OrderContextType = {
     // Orders received by user's shops (as shop owner)
     receivedOrders: OrderData[];
     orderHistory: OrderData[];
+    allOrders: OrderData[];
     selectedOrder: OrderData | null;
     isLoadingOrders: boolean;
     isInitialized: boolean;
@@ -56,7 +56,7 @@ type OrderContextType = {
     addToOrderHistory: (order: OrderData) => void;
     addToPlacedOrders: (order: OrderData) => void;
     addToReceivedOrders: (order: OrderData) => void;
-    updateOrderStatus: (orderId: string, status: OrderStatus) => void;
+    updateOrderStatus: (orderId: string, shopId: string, status: OrderStatus) => void;
     initializeOrders: (userId: string) => Promise<void>;
     refreshOrders: (userId: string) => Promise<void>;
     resetOrderContext: () => void;
@@ -80,12 +80,12 @@ export const OrderProvider = ({ children }: OrderProviderProps) => {
     const [placedOrders, setPlacedOrdersState] = useState<OrderData[]>([]);
     const [receivedOrders, setReceivedOrdersState] = useState<OrderData[]>([]);
     const [orderHistory, setOrderHistoryState] = useState<OrderData[]>([]);
+    const [allOrders, setAllOrdersState] = useState<OrderData[]>([]);
     
     const [selectedOrder, setSelectedOrderState] = useState<OrderData | null>(null);
     const [isLoadingOrders, setIsLoadingOrders] = useState(false);
     const [isInitialized, setIsInitialized] = useState(false);
 
-    // New setters for placed and received orders
     const setPlacedOrders = (orders: OrderData[]) => {
         setPlacedOrdersState(orders);
     };
@@ -102,16 +102,37 @@ export const OrderProvider = ({ children }: OrderProviderProps) => {
         setOrderHistoryState(orders);
     };
 
+    const setAllOrders = (orders: OrderData[]) => {
+        setAllOrdersState(orders);
+    }
+
+    const updateAllOrders = () => {
+        const combined = [...placedOrders, ...receivedOrders, ...orderHistory];
+        setAllOrdersState(combined);
+    };
+
     const addToOrderHistory = (order: OrderData) => {
-        setOrderHistoryState(prevOrders => [order, ...prevOrders]);
+        setOrderHistoryState(prevOrders => {
+            const updated = [order, ...prevOrders];
+            setAllOrdersState([...placedOrders, ...receivedOrders, ...updated]);
+            return updated;
+        });
     };
 
     const addToPlacedOrders = (order: OrderData) => {
-        setPlacedOrdersState(prevOrders => [order, ...prevOrders]);
+        setPlacedOrdersState(prevOrders => {
+            const updated = [order, ...prevOrders];
+            setAllOrdersState([...updated, ...receivedOrders, ...orderHistory]);
+            return updated;
+        });
     };
 
     const addToReceivedOrders = (order: OrderData) => {
-        setReceivedOrdersState(prevOrders => [order, ...prevOrders]);
+        setReceivedOrdersState(prevOrders => {
+            const updated = [order, ...prevOrders];
+            setAllOrdersState([...placedOrders, ...updated, ...orderHistory]);
+            return updated;
+        });
     };
 
     const initializeOrders = async (userId: string) => {
@@ -147,6 +168,8 @@ export const OrderProvider = ({ children }: OrderProviderProps) => {
             );
             
             setOrderHistoryState(orderHistoryData);
+            
+            setAllOrdersState([...userPlacedOrders, ...userReceivedOrders, ...orderHistoryData]);
             setIsInitialized(true);
             
             console.log(`Initialized: ${userPlacedOrders.length} placed orders, ${userReceivedOrders.length} received orders, ${currentOrdersData.length} current orders, ${orderHistoryData.length} historical orders`);
@@ -180,6 +203,7 @@ export const OrderProvider = ({ children }: OrderProviderProps) => {
             );
             
             setOrderHistoryState(orderHistoryData);
+            setAllOrdersState([...userPlacedOrders, ...userReceivedOrders, ...orderHistoryData]);
             
             console.log(`Refreshed: ${userPlacedOrders.length} placed orders, ${userReceivedOrders.length} received orders, ${orderHistoryData.length} historical orders`);
             
@@ -190,40 +214,62 @@ export const OrderProvider = ({ children }: OrderProviderProps) => {
         }
     };
 
-    const updateOrderStatus = (orderId: string, status: OrderStatus) => {
-        // Update in order history
-        setOrderHistoryState(prevOrders => 
-        prevOrders.map(order => 
-            order.id === orderId ? { ...order, status } : order
-        )
-        );
+    const updateOrderStatus = async (orderId: string, shopId: string, status: OrderStatus) => {
+        try {
+            // Find the order to get shopId
+            const order = allOrders.find(o => (o.id === orderId && o.shopId === shopId));
+            if (!order) {
+                console.error('Order not found:', orderId);
+                return;
+            }
 
-        // Update selected order if matching
-        if (selectedOrder && selectedOrder.id === orderId) {
-            setSelectedOrderState(prevOrder =>
-                prevOrder ? { ...prevOrder, status } : null
+            // Update in Firebase
+            await firebaseService.updateOrderStatus(orderId, order.shopId, status);
+
+            // Update in placed orders
+            setPlacedOrdersState(prevOrders => 
+                prevOrders.map(order => 
+                    (order.id === orderId && order.shopId === shopId) ? { ...order, status } : order
+                )
             );
-        }
 
-        // Update current orders if matching
-        setCurrentOrdersState(prevOrders =>
-            prevOrders.map(order =>
-                order.id === orderId ? { ...order, status } : order
-            )
-        );
-
-        // If order is completed, remove from current orders
-        if (status === 'completed') {
-            setCurrentOrdersState(prevOrders =>
-                prevOrders.filter(order => order.id !== orderId)
+            // Update in received orders
+            setReceivedOrdersState(prevOrders => 
+                prevOrders.map(order => 
+                    (order.id === orderId && order.shopId === shopId) ? { ...order, status } : order
+                )
             );
+
+            // Update in order history
+            setOrderHistoryState(prevOrders => 
+                prevOrders.map(order => 
+                    (order.id === orderId && order.shopId === shopId) ? { ...order, status } : order
+                )
+            );
+
+            // Update in all orders
+            setAllOrdersState(prevOrders => 
+                prevOrders.map(order => 
+                    (order.id === orderId && order.shopId === shopId) ? { ...order, status } : order
+                )
+            );
+
+            // Update selected order if matching
+            if (selectedOrder && selectedOrder.id === orderId && selectedOrder.shopId === shopId) {
+                setSelectedOrderState(prevOrder =>
+                    prevOrder ? { ...prevOrder, status } : null
+                );
+            }
+
+            console.log('Order status updated successfully:', orderId, status);
+        } catch (error) {
+            console.error('Error updating order status:', error);
         }
-    };
+    }
 
     const resetOrderContext = () => {
         setPlacedOrdersState([]);
         setReceivedOrdersState([]);
-        setCurrentOrdersState([]);
         setOrderHistoryState([]);
         setSelectedOrderState(null);
         setIsLoadingOrders(false);
@@ -236,6 +282,7 @@ export const OrderProvider = ({ children }: OrderProviderProps) => {
             placedOrders,
             receivedOrders,
             orderHistory,
+            allOrders,
             selectedOrder,
             isLoadingOrders,
             isInitialized,
