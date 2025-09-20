@@ -4,7 +4,6 @@
  */
 
 import { useColorScheme } from 'react-native';
-
 import { Colors } from '@/constants/Colors';
 
 export function useThemeColor(
@@ -19,4 +18,10 @@ export function useThemeColor(
   } else {
     return Colors[theme][colorName];
   }
+}
+
+// Enhanced hook that works with the new theme system
+export function useAppThemeColor(colorName: keyof typeof Colors.light) {
+  const theme = useColorScheme() ?? 'light';
+  return Colors[theme][colorName];
 }

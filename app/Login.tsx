@@ -13,6 +13,7 @@ import { EventRegister } from 'react-native-event-listeners';
 import { KeyboardToolbar } from 'react-native-keyboard-controller';
 import { useRouter } from 'expo-router';
 import { useUser } from '@/context/userContext';
+import { useThemeColors } from '@/context/themeContext';
 
 import firebaseService from '@/handlers/firebaseService';
 
@@ -22,6 +23,9 @@ const LoginScreen = () => {
     const [error, setError] = useState('');
     const [disabled, setDisabled] = useState<boolean>(false);
     const router = useRouter();
+    
+    // Use theme colors
+    const themeColors = useThemeColors();
     
     // Use the user context
     const { userData, setUserData } = useUser();
@@ -104,35 +108,36 @@ const LoginScreen = () => {
     return (
         <KeyboardAvoidingView
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-            style={styles.container}
+            style={[styles.container, { backgroundColor: themeColors.secondary }]}
             keyboardVerticalOffset={Platform.select({ ios: -350, android: -350 })}
         >
             <ScrollView scrollEnabled={false}>
-                <Text style={styles.title}>Login</Text>
+                <Text style={[styles.title, { color: themeColors.white }]}>Login</Text>
                 <View style={styles.inputContainer}>
                     <TextInput
                         autoCapitalize='none'
-                        style={styles.input}
+                        style={[styles.input, { color: themeColors.white }]}
                         placeholder="email"
-                        placeholderTextColor={'#fff'}
+                        placeholderTextColor={themeColors.white}
                         value={email}
                         onChangeText={setEmail}
                     />
                     <TextInput
-                        style={styles.input}
+                        style={[styles.input, { color: themeColors.white }]}
                         placeholder="password"
-                        placeholderTextColor={'#fff'}
+                        placeholderTextColor={themeColors.white}
                         value={password}
                         onChangeText={setPassword}
                         secureTextEntry
                     />
-                    <Text style={styles.errorText}>{error}</Text>
+                    <Text style={[styles.errorText, { color: themeColors.error }]}>{error}</Text>
                 </View>
             </ScrollView>
             <View style={styles.buttonContainer}>
                 <TouchableOpacity
                     style={[
                         styles.button,
+                        { backgroundColor: themeColors.primary },
                         disabled && styles.buttonDisabled,
                     ]}
                     onPress={handleLogin}
@@ -140,6 +145,7 @@ const LoginScreen = () => {
                 >
                     <Text style={[
                         styles.buttonText,
+                        { color: themeColors.white },
                         disabled && styles.buttonTextDisabled]}>
                             Login
                     </Text>
@@ -153,13 +159,13 @@ const LoginScreen = () => {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#B7FFB0',
+        // backgroundColor moved to JSX with dynamic color
     },
     title: {
         fontFamily: 'TitanOne',
         fontSize: 36,
         fontWeight: 'bold',
-        color: '#fff',
+        // color moved to JSX
         marginTop: 100,
         textAlign: 'center',
         paddingBottom: 75,
@@ -175,7 +181,7 @@ const styles = StyleSheet.create({
         margin: 12,
         borderBottomWidth: 1,
         padding: 10,
-        color: 'fff',
+        // color moved to JSX
         fontSize: 20,
     },
     buttonContainer: {
@@ -195,10 +201,10 @@ const styles = StyleSheet.create({
         width: '100%',
         padding: 10,
         paddingBottom: 33,
-        backgroundColor: '#00bfff',
+        // backgroundColor moved to JSX
     },
     buttonText: {
-        color: 'white',
+        // color moved to JSX
         textAlign: 'center',
         fontSize: 30,
         fontFamily: 'TextMeOne',
@@ -211,7 +217,7 @@ const styles = StyleSheet.create({
         color: '#666'
     },
     errorText: {
-        color: 'red',
+        // color moved to JSX
         marginVertical: 2,
         marginHorizontal: 2,
         fontFamily: 'TextMeOne',

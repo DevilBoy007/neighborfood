@@ -1,8 +1,9 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Platform, ScrollView } from 'react-native';
 import { router } from 'expo-router';
 import firebaseService from '@/handlers/firebaseService';
 import { useUser } from '@/context/userContext';
+import ThemeSelector from '@/components/ThemeSelector';
 
 const Settings = () => {
     // Use the user context for logout and to get user data
@@ -38,40 +39,41 @@ const Settings = () => {
                 </Text>}
             </View>
 
-            {/* User profile header */}
-            <View style={styles.userHeader}>
-                <Text style={styles.welcomeText}>Logged in as: {userData?.displayName || 'not logged in'}</Text>
-            </View>
+            <ScrollView style={styles.scrollContent}>
+                {/* User profile header */}
+                <View style={styles.userHeader}>
+                    <Text style={styles.welcomeText}>Logged in as: {userData?.displayName || 'not logged in'}</Text>
+                </View>
 
-            <TouchableOpacity
-                style={styles.menuItem}
-                onPress={() => {
-                    router.back(); // Close modal first
-                    router.push('/EditDetails'); // Navigate to full page
-                }}
-            >
-                <Text style={styles.menuText}>Edit Details</Text>
-            </TouchableOpacity>
+                {/* Theme Selector */}
+                <ThemeSelector />
 
-            {/* Add other menu items */}
-            <TouchableOpacity style={styles.menuItem}>
-                <Text style={styles.menuText}>Appearance</Text>
-            </TouchableOpacity>
+                <TouchableOpacity
+                    style={styles.menuItem}
+                    onPress={() => {
+                        router.back(); // Close modal first
+                        router.push('/EditDetails'); // Navigate to full page
+                    }}
+                >
+                    <Text style={styles.menuText}>Edit Details</Text>
+                </TouchableOpacity>
 
-            <TouchableOpacity style={styles.menuItem}>
-                <Text style={styles.menuText}>About</Text>
-            </TouchableOpacity>
+                {/* Add other menu items */}
+                <TouchableOpacity style={styles.menuItem}>
+                    <Text style={styles.menuText}>About</Text>
+                </TouchableOpacity>
 
-            <TouchableOpacity style={styles.menuItem}>
-                <Text style={styles.menuText}>Legal</Text>
-            </TouchableOpacity>
+                <TouchableOpacity style={styles.menuItem}>
+                    <Text style={styles.menuText}>Legal</Text>
+                </TouchableOpacity>
 
-            <TouchableOpacity 
-                style={styles.menuItem}
-                onPress={handleLogout}
-            >
-                <Text style={styles.menuText}>Logout</Text>
-            </TouchableOpacity>
+                <TouchableOpacity 
+                    style={styles.menuItem}
+                    onPress={handleLogout}
+                >
+                    <Text style={styles.menuText}>Logout</Text>
+                </TouchableOpacity>
+            </ScrollView>
         </View>
     );
 };
@@ -81,6 +83,9 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: '#b7ffb0',
         padding: 20,
+    },
+    scrollContent: {
+        flex: 1,
     },
     dragBar: {
         width: '100%',
