@@ -12,6 +12,7 @@ import { ShopProvider } from "@/context/shopContext";
 import { ItemProvider } from "@/context/itemContext";
 import { OrderProvider } from "@/context/orderContext";
 import { CartProvider } from "@/context/cartContext";
+import { ThemeProvider } from "@/context/themeContext";
 import { GoogleMapsLoader } from "@/components/GoogleMapsLoader";
 import { View, Text, LogBox } from 'react-native';
 
@@ -88,19 +89,21 @@ export default function RootLayout() {
         return null;
     }
     return (
-        <GoogleMapsLoader>
-            <OrderProvider>
-                <UserProvider>
-                    <LocationProvider>
-                        <ShopProvider>
-                            <ItemProvider>
-                                <CartProvider>
-                                    <KeyboardProvider>
-                                        <GestureHandlerRootView style={{ flex: 1 }}>
-                                            <Stack>
+        <ThemeProvider>
+            <GoogleMapsLoader>
+                <OrderProvider>
+                    <UserProvider>
+                        <LocationProvider>
+                            <ShopProvider>
+                                <ItemProvider>
+                                    <CartProvider>
+                                        <KeyboardProvider>
+                                            <GestureHandlerRootView style={{ flex: 1 }}>
+                                                <Stack>
                                                 <Stack.Screen name="index" options={{ headerShown: false }} />
                                                 <Stack.Screen name="Register" options={{ headerShown: false }} />
                                                 <Stack.Screen name="Login" options={{ headerShown: false }} />
+                                                <Stack.Screen name="theme-demo" options={{ headerShown: false }} />
                                                 <Stack.Screen name="+not-found" options={{ headerShown: false }} />
                                                 <Stack.Screen name="success" options={{ headerShown: false, animation: 'fade' }} />
                                                 <Stack.Screen name="EditDetails" options={{ headerShown: false }} />
@@ -123,5 +126,6 @@ export default function RootLayout() {
                 </UserProvider>
             </OrderProvider>
         </GoogleMapsLoader>
+        </ThemeProvider>
     );
 }
