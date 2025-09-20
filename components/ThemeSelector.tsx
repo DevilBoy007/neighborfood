@@ -91,7 +91,6 @@ const ThemeSelector: React.FC<ThemeSelectorProps> = ({ style }) => {
     </View>
   );
 };
-};
 
 const styles = StyleSheet.create({
   container: {
