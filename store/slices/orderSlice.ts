@@ -1,5 +1,5 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
-import firebaseService from '@/handlers/firebaseService';
+import firebaseService from '../../handlers/firebaseService';
 
 type OrderItem = {
   itemId: string;
