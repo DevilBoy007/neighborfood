@@ -6,7 +6,6 @@ import {
     initializeAuth,
     getAuth,
     browserLocalPersistence,
-    getReactNativePersistence,
     createUserWithEmailAndPassword,
     signInWithEmailAndPassword,
     signOut,
@@ -106,9 +105,9 @@ class FirebaseService {
                     this.auth = initializeAuth(this.app, {
                         persistence: Platform.OS === 'web'
                             ? browserLocalPersistence
-                            : getReactNativePersistence(AsyncStorage)
+                            : browserLocalPersistence // Use browserLocalPersistence for now
                     });
-                } catch (authError) {
+                } catch (authError: any) {
                     if (authError.code === 'auth/already-initialized') {
                         this.auth = getAuth(this.app);
                         console.log('Retrieved existing auth instance');
@@ -158,6 +157,15 @@ class FirebaseService {
             throw new Error('User not authenticated');
         }
         return await this.auth.currentUser.getIdToken();
+    }
+
+    // Helper method to handle function results
+    private handleFunctionResult(result: any, operation: string): any {
+        if (result.data?.success) {
+            return (result.data as any).data || result.data;
+        } else {
+            throw new Error(result.data?.message || `Failed to ${operation}`);
+        }
     }
 
     async logout() {
@@ -240,14 +248,14 @@ class FirebaseService {
                 }
             });
 
-            if (result.data.success) {
+            if ((result.data as any).success) {
                 // Now sign in the user locally
                 const userCredential = await signInWithEmailAndPassword(this.auth, email, password);
                 const user = userCredential.user;
                 console.log('User registered and signed in:', user.uid);
                 return user;
             } else {
-                throw new Error(result.data.message || 'Registration failed');
+                throw new Error((result.data as any).message || 'Registration failed');
             }
         } catch (error) {
             console.error('Error registering user:', error);
@@ -405,10 +413,10 @@ class FirebaseService {
                 authToken
             });
 
-            if (result.data.success) {
-                console.log("Shop created with ID: ", result.data.shopId);
+            if ((result.data as any).success) {
+                console.log("Shop created with ID: ", (result.data as any).shopId);
             } else {
-                throw new Error(result.data.message || 'Failed to create shop');
+                throw new Error((result.data as any).message || 'Failed to create shop');
             }
         } catch (error) {
             console.error("Error creating shop:", error);
@@ -426,10 +434,10 @@ class FirebaseService {
                 authToken
             });
 
-            if (result.data.success) {
-                return result.data.data;
+            if ((result.data as any).success) {
+                return (result.data as any).data;
             } else {
-                throw new Error(result.data.message || 'Failed to get user');
+                throw new Error((result.data as any).message || 'Failed to get user');
             }
         } catch (error) {
             console.error("Error fetching user by ID:", error);
@@ -448,10 +456,10 @@ class FirebaseService {
                 authToken
             });
 
-            if (result.data.success) {
+            if ((result.data as any).success) {
                 console.log("Shop updated with ID: ", shopId);
             } else {
-                throw new Error(result.data.message || 'Failed to update shop');
+                throw new Error((result.data as any).message || 'Failed to update shop');
             }
         } catch (error) {
             console.error("Error updating shop:", error);
@@ -472,7 +480,7 @@ class FirebaseService {
             const shops: any[] = [];
             const shopIds: string[] = [];
 
-            shopsSnapshot.forEach((shopDoc) => {
+            shopsSnapshot.forEach((shopDoc: any) => {
                 const { id, ...shopData } = shopDoc;
                 console.log('Fetching shop:', shopData.name);
                 shops.push({ id, ...shopData });
@@ -487,7 +495,7 @@ class FirebaseService {
                 console.log('Fetching items for shop ID:', shopId);
                 const itemsForShop = await this.getDocumentsWhere('items', 'shopId', '==', shopId);
                 console.log(`Found ${itemsForShop.length} items for shop ${shopId}`);
-                itemsForShop.forEach(item => {
+                itemsForShop.forEach((item: any) => {
                     console.log('Fetching item:', item.name);
                     items.push(item);
                 });
@@ -511,10 +519,10 @@ class FirebaseService {
                 authToken
             });
 
-            if (result.data.success) {
-                return result.data.data;
+            if ((result.data as any).success) {
+                return (result.data as any).data;
             } else {
-                throw new Error(result.data.message || 'Failed to get items');
+                throw new Error((result.data as any).message || 'Failed to get items');
             }
         } catch (error) {
             console.error("Error fetching items for shop:", error);
@@ -554,10 +562,10 @@ class FirebaseService {
                 authToken
             });
 
-            if (result.data.success) {
-                return result.data.data;
+            if ((result.data as any).success) {
+                return (result.data as any).data;
             } else {
-                throw new Error(result.data.message || 'Failed to get shops by ZIP code');
+                throw new Error((result.data as any).message || 'Failed to get shops by ZIP code');
             }
         } catch (error) {
             console.error('Error getting shops by zip code prefix:', error);
@@ -568,21 +576,27 @@ class FirebaseService {
     /**
      * Get shops by either ZIP code prefix or by coordinates within a radius
      */
-    async getShopsNearby(zipPrefix, userCoords, userId) {
+    async getShopsNearby(zipPrefix: any, userCoords: any, userId: any) {
         try {
-            let query = collection(this.db, 'shops');
+            if (!this.db) {
+                await this.connect();
+                if (!this.db) {
+                    throw new Error('Error connecting to Firestore');
+                }
+            }
+            let querySnapshot;
 
             if (zipPrefix) {
                 // Use the existing ZIP code prefix query
-                query = query.where('zipPrefix', '==', zipPrefix);
-            } else if (userCoords) {
-                // If no ZIP but we have coordinates, we'd use geolocation query
-                // Note: This would require Firestore GeoPoint and geohashing setup
-                // For simplicity, you might just return all shops and filter them client-side for now
+                const queryRef = query(collection(this.db, 'shops'), where('zipPrefix', '==', zipPrefix));
+                querySnapshot = await getDocs(queryRef);
+            } else {
+                // If no ZIP but we have coordinates, just get all shops for now
+                const collectionRef = collection(this.db, 'shops');
+                querySnapshot = await getDocs(collectionRef);
             }
 
-            const querySnapshot = await getDocs(query);
-            const shops = [];
+            const shops: any[] = [];
 
             querySnapshot.forEach((doc) => {
                 const shopData = doc.data();
@@ -673,11 +687,11 @@ class FirebaseService {
                 authToken
             });
 
-            if (result.data.success) {
-                console.log("Item created with ID: ", result.data.itemId);
-                return result.data.itemId;
+            if ((result.data as any).success) {
+                console.log("Item created with ID: ", (result.data as any).itemId);
+                return (result.data as any).itemId;
             } else {
-                throw new Error(result.data.message || 'Failed to create item');
+                throw new Error((result.data as any).message || 'Failed to create item');
             }
         } catch (error) {
             console.error("Error creating item:", error);
@@ -712,10 +726,10 @@ class FirebaseService {
                 authToken
             });
 
-            if (result.data.success) {
-                return result.data.data;
+            if ((result.data as any).success) {
+                return (result.data as any).data;
             } else {
-                throw new Error(result.data.message || 'Failed to get items');
+                throw new Error((result.data as any).message || 'Failed to get items');
             }
         } catch (error) {
             console.error("Error fetching items for user:", error);
@@ -733,10 +747,10 @@ class FirebaseService {
                 authToken
             });
 
-            if (result.data.success) {
-                return result.data.data;
+            if ((result.data as any).success) {
+                return (result.data as any).data;
             } else {
-                throw new Error(result.data.message || 'Failed to get shops');
+                throw new Error((result.data as any).message || 'Failed to get shops');
             }
         } catch (error) {
             console.error("Error fetching shops for user:", error);
@@ -754,11 +768,11 @@ class FirebaseService {
                 authToken
             });
 
-            if (result.data.success) {
-                console.log("Order created with ID: ", result.data.orderId);
-                return result.data.orderId;
+            if ((result.data as any).success) {
+                console.log("Order created with ID: ", (result.data as any).orderId);
+                return (result.data as any).orderId;
             } else {
-                throw new Error(result.data.message || 'Failed to create order');
+                throw new Error((result.data as any).message || 'Failed to create order');
             }
         } catch (error) {
             console.error("Error creating order:", error);
@@ -776,10 +790,10 @@ class FirebaseService {
                 authToken
             });
 
-            if (result.data.success) {
-                return result.data.data;
+            if ((result.data as any).success) {
+                return (result.data as any).data;
             } else {
-                throw new Error(result.data.message || 'Failed to get orders');
+                throw new Error((result.data as any).message || 'Failed to get orders');
             }
         } catch (error) {
             console.error("Error fetching orders for user:", error);
@@ -797,10 +811,10 @@ class FirebaseService {
                 authToken
             });
 
-            if (result.data.success) {
-                return result.data.data;
+            if ((result.data as any).success) {
+                return (result.data as any).data;
             } else {
-                throw new Error(result.data.message || 'Failed to get orders for shop');
+                throw new Error((result.data as any).message || 'Failed to get orders for shop');
             }
         } catch (error) {
             console.error("Error fetching orders for shop:", error);
@@ -821,10 +835,10 @@ class FirebaseService {
                 authToken
             });
 
-            if (result.data.success) {
+            if ((result.data as any).success) {
                 console.log("Order status updated: ", orderId, status);
             } else {
-                throw new Error(result.data.message || 'Failed to update order status');
+                throw new Error((result.data as any).message || 'Failed to update order status');
             }
         } catch (error) {
             console.error("Error updating order status:", error);
