@@ -52,12 +52,12 @@ export const useOrderStatus = () => {
                     ];
                 case 'ready':
                     return [
-                        { label: 'Complete', targetStatus: 'completed', color: '#4CAF50' },
+                        { label: 'Complete', targetStatus: 'completed', color: '#00bfff' },
                         { label: 'Cancel', targetStatus: 'cancelled', color: '#f44336' }
                     ];
                 case 'in-delivery':
                     return [
-                        { label: 'Complete', targetStatus: 'completed', color: '#4CAF50' }
+                        { label: 'Complete', targetStatus: 'completed', color: '#00bfff' }
                     ];
                 default:
                     return [];
