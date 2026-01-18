@@ -3,11 +3,9 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
-import { useOrder } from '@/context/orderContext'
+import { useOrder, useUser, OrderStatus } from '@/store/reduxHooks';
 import firebaseService from '@/handlers/firebaseService'
-import { useUser } from '@/context/userContext';
 import { useOrderStatus } from '@/hooks/useOrderStatus';
-import type { OrderStatus } from '@/context/orderContext';
 import { SoundTouchableOpacity } from '@/components/SoundTouchableOpacity';
 
 const OrderCard = ({ order, onPress }) => {

@@ -13,7 +13,7 @@ import {
     Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useOrder } from '@/context/orderContext';
+import { useOrder } from '@/store/reduxHooks';
 import { useOrderStatus } from '@/hooks/useOrderStatus';
 
 const { height } = Dimensions.get('window');

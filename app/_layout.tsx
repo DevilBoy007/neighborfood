@@ -6,12 +6,9 @@ import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import Toast, { BaseToast } from 'react-native-toast-message';
-import { UserProvider } from "@/context/userContext";
-import { LocationProvider, useLocation } from "@/context/locationContext";
-import { ShopProvider } from "@/context/shopContext";
-import { ItemProvider } from "@/context/itemContext";
-import { OrderProvider } from "@/context/orderContext";
-import { CartProvider } from "@/context/cartContext";
+import { Provider } from 'react-redux';
+import { PersistGate } from 'redux-persist/integration/react';
+import { store, persistor } from '@/store';
 import { GoogleMapsLoader } from "@/components/GoogleMapsLoader";
 import { View, Text, LogBox } from 'react-native';
 
@@ -88,40 +85,32 @@ export default function RootLayout() {
         return null;
     }
     return (
-        <GoogleMapsLoader>
-            <OrderProvider>
-                <UserProvider>
-                    <LocationProvider>
-                        <ShopProvider>
-                            <ItemProvider>
-                                <CartProvider>
-                                    <KeyboardProvider>
-                                        <GestureHandlerRootView style={{ flex: 1 }}>
-                                            <Stack>
-                                                <Stack.Screen name="index" options={{ headerShown: false }} />
-                                                <Stack.Screen name="Register" options={{ headerShown: false }} />
-                                                <Stack.Screen name="Login" options={{ headerShown: false }} />
-                                                <Stack.Screen name="+not-found" options={{ headerShown: false }} />
-                                                <Stack.Screen name="success" options={{ headerShown: false, animation: 'fade' }} />
-                                                <Stack.Screen name="EditDetails" options={{ headerShown: false }} />
-                                                <Stack.Screen
-                                                    name="Settings"
-                                                    options={{
-                                                        headerShown: false,
-                                                        presentation: 'modal',
-                                                        animation: 'slide_from_bottom',
-                                                    }}
-                                                />
-                                            </Stack>
-                                            <Toast config={toastConfig} />
-                                        </GestureHandlerRootView>
-                                    </KeyboardProvider>
-                                </CartProvider>
-                            </ItemProvider>
-                        </ShopProvider>
-                    </LocationProvider>
-                </UserProvider>
-            </OrderProvider>
-        </GoogleMapsLoader>
+        <Provider store={store}>
+            <PersistGate loading={null} persistor={persistor}>
+                <GoogleMapsLoader>
+                    <KeyboardProvider>
+                        <GestureHandlerRootView style={{ flex: 1 }}>
+                            <Stack>
+                                <Stack.Screen name="index" options={{ headerShown: false }} />
+                                <Stack.Screen name="Register" options={{ headerShown: false }} />
+                                <Stack.Screen name="Login" options={{ headerShown: false }} />
+                                <Stack.Screen name="+not-found" options={{ headerShown: false }} />
+                                <Stack.Screen name="success" options={{ headerShown: false, animation: 'fade' }} />
+                                <Stack.Screen name="EditDetails" options={{ headerShown: false }} />
+                                <Stack.Screen
+                                    name="Settings"
+                                    options={{
+                                        headerShown: false,
+                                        presentation: 'modal',
+                                        animation: 'slide_from_bottom',
+                                    }}
+                                />
+                            </Stack>
+                            <Toast config={toastConfig} />
+                        </GestureHandlerRootView>
+                    </KeyboardProvider>
+                </GoogleMapsLoader>
+            </PersistGate>
+        </Provider>
     );
 }

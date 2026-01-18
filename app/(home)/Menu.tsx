@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Image, ScrollView, Platform, ImageSourcePropType } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useLocation } from '@/context/locationContext';
+import { useLocation } from '@/store/reduxHooks';
 
 import shopIcon from '@/assets/images/shop.png';
 import receiptIcon from '@/assets/images/receipt.png';

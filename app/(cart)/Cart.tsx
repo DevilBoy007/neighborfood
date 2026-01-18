@@ -12,7 +12,7 @@ import {
     Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useCart } from '@/context/cartContext';
+import { useCart } from '@/store/reduxHooks';
 
 const { height } = Dimensions.get('window');
 

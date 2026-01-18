@@ -8,7 +8,7 @@ import { useFocusEffect } from '@react-navigation/native';
 
 import ShopCard from '@/components/ShopCard';
 import firebaseService from '@/handlers/firebaseService';
-import { useUser } from '@/context/userContext';
+import { useUser } from '@/store/reduxHooks';
 
 export default function Shops() {
     const { userData } = useUser();

@@ -3,8 +3,7 @@ import { useRouter } from 'expo-router';
 import { APIProvider, Map, AdvancedMarker, Pin, InfoWindow } from '@vis.gl/react-google-maps'
 import { StyleSheet, Text, View, ActivityIndicator } from 'react-native';
 
-import { useShop, ShopData } from '@/context/shopContext';
-import { useLocation } from '@/context/locationContext';
+import { useShop, useLocation, ShopData } from '@/store/reduxHooks';
 
 interface MarkerData {
     id: string;

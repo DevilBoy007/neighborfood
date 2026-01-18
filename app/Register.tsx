@@ -14,8 +14,7 @@ import { useRouter } from 'expo-router';
 import { updateProfile, User } from 'firebase/auth';
 import { EventRegister } from 'react-native-event-listeners';
 import firebaseService from '@/handlers/firebaseService';
-import { useUser } from '@/context/userContext';
-import { useLocation } from '@/context/locationContext';
+import { useUser, useLocation } from '@/store/reduxHooks';
 import { GeoPoint } from 'firebase/firestore';
 
 // Conditionally import problematic native-only modules

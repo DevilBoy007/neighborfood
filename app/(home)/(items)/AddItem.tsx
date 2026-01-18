@@ -19,9 +19,7 @@ import Toast from 'react-native-toast-message';
 import * as ImagePicker from 'expo-image-picker';
 
 import firebaseService from '@/handlers/firebaseService';
-import { useUser } from '@/context/userContext';
-import { useItem } from '@/context/itemContext';
-import { useShop } from '@/context/shopContext';
+import { useUser, useItem, useShop } from '@/store/reduxHooks';
 
 const categories = ['produce', 'dairy', 'meat', 'baked good', 'preserves', 'spices', 'prepared foods', 'other'];
 const units = ['each', 'lb', 'oz', 'bunch', 'pint', 'quart', 'gallon'];
