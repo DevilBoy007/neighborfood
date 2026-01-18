@@ -43,6 +43,7 @@ import {
   initializeOrders,
   refreshOrders,
   resetOrderState,
+  selectAllOrders,
   OrderData,
   OrderStatus,
 } from './slices/orderSlice';
@@ -216,13 +217,13 @@ export const useItem = () => {
  */
 export const useOrder = () => {
   const dispatch = useAppDispatch();
-  const placedOrders = useAppSelector((state) => state.order.placedOrders);
-  const receivedOrders = useAppSelector((state) => state.order.receivedOrders);
-  const orderHistory = useAppSelector((state) => state.order.orderHistory);
-  const allOrders = useAppSelector((state) => state.order.allOrders);
-  const selectedOrder = useAppSelector((state) => state.order.selectedOrder);
-  const isLoadingOrders = useAppSelector((state) => state.order.isLoadingOrders);
-  const isInitialized = useAppSelector((state) => state.order.isInitialized);
+  const placedOrders = useAppSelector((state) => state.order?.placedOrders ?? []);
+  const receivedOrders = useAppSelector((state) => state.order?.receivedOrders ?? []);
+  const orderHistory = useAppSelector((state) => state.order?.orderHistory ?? []);
+  const allOrders = useAppSelector(selectAllOrders);
+  const selectedOrder = useAppSelector((state) => state.order?.selectedOrder ?? null);
+  const isLoadingOrders = useAppSelector((state) => state.order?.isLoadingOrders ?? false);
+  const isInitialized = useAppSelector((state) => state.order?.isInitialized ?? false);
 
   const setPlacedOrdersHandler = useCallback(
     (orders: OrderData[]) => {

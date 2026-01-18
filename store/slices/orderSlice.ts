@@ -43,7 +43,6 @@ type OrderState = {
   placedOrders: OrderData[];
   receivedOrders: OrderData[];
   orderHistory: OrderData[];
-  allOrders: OrderData[];
   selectedOrder: OrderData | null;
   isLoadingOrders: boolean;
   isInitialized: boolean;
@@ -53,7 +52,6 @@ const initialState: OrderState = {
   placedOrders: [],
   receivedOrders: [],
   orderHistory: [],
-  allOrders: [],
   selectedOrder: null,
   isLoadingOrders: false,
   isInitialized: false,
@@ -166,36 +164,29 @@ const orderSlice = createSlice({
   reducers: {
     setPlacedOrders: (state, action: PayloadAction<OrderData[]>) => {
       state.placedOrders = action.payload;
-      state.allOrders = [...action.payload, ...state.receivedOrders, ...state.orderHistory];
     },
     setReceivedOrders: (state, action: PayloadAction<OrderData[]>) => {
       state.receivedOrders = action.payload;
-      state.allOrders = [...state.placedOrders, ...action.payload, ...state.orderHistory];
     },
     setSelectedOrder: (state, action: PayloadAction<OrderData | null>) => {
       state.selectedOrder = action.payload;
     },
     setOrderHistory: (state, action: PayloadAction<OrderData[]>) => {
       state.orderHistory = action.payload;
-      state.allOrders = [...state.placedOrders, ...state.receivedOrders, ...action.payload];
     },
     addToOrderHistory: (state, action: PayloadAction<OrderData>) => {
       state.orderHistory = [action.payload, ...state.orderHistory];
-      state.allOrders = [...state.placedOrders, ...state.receivedOrders, ...state.orderHistory];
     },
     addToPlacedOrders: (state, action: PayloadAction<OrderData>) => {
       state.placedOrders = [action.payload, ...state.placedOrders];
-      state.allOrders = [...state.placedOrders, ...state.receivedOrders, ...state.orderHistory];
     },
     addToReceivedOrders: (state, action: PayloadAction<OrderData>) => {
       state.receivedOrders = [action.payload, ...state.receivedOrders];
-      state.allOrders = [...state.placedOrders, ...state.receivedOrders, ...state.orderHistory];
     },
     resetOrderState: (state) => {
       state.placedOrders = [];
       state.receivedOrders = [];
       state.orderHistory = [];
-      state.allOrders = [];
       state.selectedOrder = null;
       state.isLoadingOrders = false;
       state.isInitialized = false;
@@ -212,11 +203,6 @@ const orderSlice = createSlice({
           state.placedOrders = action.payload.placedOrders;
           state.receivedOrders = action.payload.receivedOrders;
           state.orderHistory = action.payload.orderHistory;
-          state.allOrders = [
-            ...action.payload.placedOrders,
-            ...action.payload.receivedOrders,
-            ...action.payload.orderHistory,
-          ];
           state.isInitialized = true;
         }
         state.isLoadingOrders = false;
@@ -231,11 +217,6 @@ const orderSlice = createSlice({
         state.placedOrders = action.payload.placedOrders;
         state.receivedOrders = action.payload.receivedOrders;
         state.orderHistory = action.payload.orderHistory;
-        state.allOrders = [
-          ...action.payload.placedOrders,
-          ...action.payload.receivedOrders,
-          ...action.payload.orderHistory,
-        ];
         state.isLoadingOrders = false;
       })
       .addCase(refreshOrders.rejected, (state) => {
@@ -250,7 +231,6 @@ const orderSlice = createSlice({
         state.placedOrders = state.placedOrders.map(updateOrder);
         state.receivedOrders = state.receivedOrders.map(updateOrder);
         state.orderHistory = state.orderHistory.map(updateOrder);
-        state.allOrders = state.allOrders.map(updateOrder);
 
         if (state.selectedOrder?.id === orderId && state.selectedOrder?.shopId === shopId) {
           state.selectedOrder = { ...state.selectedOrder, status };
@@ -258,6 +238,12 @@ const orderSlice = createSlice({
       });
   },
 });
+
+// Selector to compute allOrders dynamically (avoids redundant state storage)
+export const selectAllOrders = (state: { order?: OrderState }): OrderData[] => {
+  if (!state.order) return [];
+  return [...state.order.placedOrders, ...state.order.receivedOrders, ...state.order.orderHistory];
+};
 
 export const {
   setPlacedOrders,

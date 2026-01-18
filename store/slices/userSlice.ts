@@ -34,12 +34,12 @@ const initialState: UserState = {
   isLoading: true,
 };
 
-const getStorage = () => Platform.OS === 'web' ? localStorage : AsyncStorage;
+// Platform detection done once at module load time
+const storage = Platform.OS === 'web' ? localStorage : AsyncStorage;
 
 export const loadUserData = createAsyncThunk(
   'user/loadUserData',
   async () => {
-    const storage = getStorage();
     const data = await storage.getItem('userData');
     if (data) {
       return JSON.parse(data) as UserData;
@@ -51,7 +51,6 @@ export const loadUserData = createAsyncThunk(
 export const saveUserData = createAsyncThunk(
   'user/saveUserData',
   async (data: UserData | null) => {
-    const storage = getStorage();
     if (data) {
       await storage.setItem('userData', JSON.stringify(data));
     } else {
