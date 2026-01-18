@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'expo-router';
 import { StyleSheet, View, Text, Image, Platform, LogBox, ActivityIndicator } from 'react-native';
 import MapView, { PROVIDER_DEFAULT, PROVIDER_GOOGLE, Marker, Callout } from 'react-native-maps';
-import icon from '@/assets/images/rabbit-icon.png'
+import icon from '@/assets/images/map-market.png'
 
 import { useLocation } from '@/context/locationContext';
 import { useShop, ShopData } from '@/context/shopContext';

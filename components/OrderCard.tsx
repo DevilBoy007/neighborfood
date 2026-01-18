@@ -1,19 +1,24 @@
 import React, { useEffect, useState} from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 
 import { useOrder } from '@/context/orderContext'
 import firebaseService from '@/handlers/firebaseService'
 import { useUser } from '@/context/userContext';
 import { useOrderStatus } from '@/hooks/useOrderStatus';
+import type { OrderStatus } from '@/context/orderContext';
+import { SoundTouchableOpacity } from '@/components/SoundTouchableOpacity';
 
 const OrderCard = ({ order, onPress }) => {
+    const router = useRouter();
     const { date, total, shops, items } = order;
-    const { selectedOrder, setSelectedOrder } = useOrder()
+    const { allOrders, selectedOrder, setSelectedOrder, updateOrderStatus } = useOrder()
     const { userData } = useUser();
-    const { getStatusColor, getStatusText } = useOrderStatus();
+    const { getStatusColor, getStatusText, buildStatusButtons } = useOrderStatus();
 
     const [customerName, setCustomerName] = useState<string>('unknown');
+    const [isPressed, setIsPressed] = useState(false);
 
     useEffect(() => {
         let isMounted = true;
@@ -28,14 +33,16 @@ const OrderCard = ({ order, onPress }) => {
     }, [order.customerId]);
 
     const handleStatusPress = (order) => {
-        alert(`ORDER TOTAL: $${order.total}`)
-        setSelectedOrder(order)
-        console.log('selected order: ', selectedOrder)
+        console.log(order)
+        const orderToSet = allOrders.find(o => (o.id === order.id && o.shopName === order.shops[0])) || null;
+        setSelectedOrder(orderToSet);
+        setIsPressed(prev => !prev);
+        console.log('selected order:', orderToSet)
     }
 
     return (
         <>
-            <TouchableOpacity style={styles.orderCard} onPress={onPress}>
+            <SoundTouchableOpacity style={styles.orderCard} onPress={onPress}>
                 <View style={styles.orderHeader}>
                     <Text style={styles.dateText}>{date}</Text>
                     <Ionicons name="chevron-forward" size={24} color="black" />
@@ -60,12 +67,34 @@ const OrderCard = ({ order, onPress }) => {
 
                     <Text style={styles.itemsText}>items: {items}</Text>
                 </View>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.statusContainer} onPress={()=>{handleStatusPress(order)}}>
-                <View style={{ backgroundColor: getStatusColor(order.status) }}>
-                    <Text style={styles.statusText}>{getStatusText(order.status)}</Text>
-                </View>
-            </TouchableOpacity>
+            </SoundTouchableOpacity>
+            <View style={styles.statusMetaContainer}>
+                { isPressed && (
+                    <View>
+                        {buildStatusButtons(order.status, order.shopOwnerView || false, (newStatus) => {
+                            updateOrderStatus(selectedOrder.id, selectedOrder.shopId, newStatus as OrderStatus);
+                            setIsPressed(false);
+                            if (newStatus === 'preparing') {
+                                router.push('/success');
+                            }
+                        }).map((button) => (
+                            <SoundTouchableOpacity key={button.key} onPress={button.onPress}>
+                                <View style={{ backgroundColor: button.color }}>
+                                    <Text style={styles.statusText}>{button.label}</Text>
+                                </View>
+                            </SoundTouchableOpacity>
+                        ))}
+                    </View>
+                )}
+                <TouchableOpacity
+                    style={styles.activeStatusContainer}
+                    onPress={handleStatusPress.bind(this, order)}
+                >
+                    <View style={[{ backgroundColor: getStatusColor(order.status) }, isPressed && { backgroundColor: 'rgba(0, 0, 0, 0.2)' }]}>
+                        <Text style={styles.statusText}>{isPressed ? 'Close' : getStatusText(order.status)}</Text>
+                    </View>
+                </TouchableOpacity>
+            </View>
         </>
     );
 };
@@ -124,7 +153,10 @@ const styles = StyleSheet.create({
         marginTop: 8,
         fontFamily: 'TextMeOne',
     },
-    statusContainer: {
+    statusMetaContainer: {
+        zIndex: -2,
+    },
+    activeStatusContainer: {
         zIndex: -1,
         marginBottom: 16,
 

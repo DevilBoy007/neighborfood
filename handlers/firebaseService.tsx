@@ -686,6 +686,37 @@ class FirebaseService {
         }
     }
 
+    async updateItemQuantity(itemId: string, quantityChange: number): Promise<void> {
+        try {
+            if (!this.db) {
+                await this.connect();
+                if (!this.db) {
+                    throw new Error('Error connecting to Firestore');
+                }
+            }
+            
+            const item = await this.getItemById(itemId);
+            if (!item) {
+                throw new Error(`Item with ID ${itemId} not found`);
+            }
+
+            const currentQuantity = (item as any).quantity || 0;
+            const newQuantity = currentQuantity + quantityChange;
+            
+            if (newQuantity < 0) {
+                console.warn(`Cannot set negative quantity for item ${itemId}. Current: ${currentQuantity}, Change: ${quantityChange}`);
+                await this.updateDocument('items', itemId, { quantity: 0 });
+                return;
+            }
+
+            await this.updateDocument('items', itemId, { quantity: newQuantity });
+            console.log(`Updated item ${itemId} quantity: ${currentQuantity} -> ${newQuantity}`);
+        } catch (error) {
+            console.error("Error updating item quantity:", error);
+            throw error;
+        }
+    }
+
     async getShopsForUser(userId: string): Promise<any[]> {
         try {
             if (!this.db) {
@@ -774,7 +805,8 @@ class FirebaseService {
         }
     }
 
-    async updateOrderStatus(orderId: string, status: string): Promise<void> {
+    async updateOrderStatus(orderId: string, shopId: string, status: string): Promise<void> {
+        console.log('retrieving order: ', orderId, ' from firebase')
         try {
             if (!this.db) {
                 await this.connect();
@@ -783,8 +815,8 @@ class FirebaseService {
                 }
             }
             
-            const orderDocRef = doc(this.db, 'orders', orderId);
-            await updateDoc(orderDocRef, {
+            const orderResult = await this.getOrder(orderId, shopId);
+            await updateDoc(orderResult.ref, {
                 status,
                 updatedAt: new Date()
             });
@@ -866,16 +898,10 @@ class FirebaseService {
             
             // Flatten the arrays and add shop information
             shopOrdersArrays.forEach((shopOrders, index) => {
-                const shopInfo = userShops[index];
                 shopOrders.forEach(order => {
                     allShopOrders.push({
                         ...order,
                         shopOwnerView: true, // Flag to indicate this is from shop owner perspective
-                        shopInfo: {
-                            id: shopInfo.id,
-                            name: shopInfo.name,
-                            // Add other shop details as needed
-                        }
                     });
                 });
             });
@@ -893,13 +919,37 @@ class FirebaseService {
         }
     }
 
-    /**
-     * Legacy method - kept for backward compatibility
-     * Now calls the new comprehensive method and returns only placed orders
-     */
-    async getOrdersFromUserLegacy(userId: string): Promise<any[]> {
-        const { placedOrders } = await this.getOrdersForUser(userId);
-        return placedOrders;
+
+    async getOrder(orderId: string, shopId: string): Promise<any> {
+
+        try {
+            if (!this.db) {
+                await this.connect();
+                if (!this.db) {
+                    throw new Error('Error connecting to Firestore');
+                }
+            }
+            
+            const collectionRef = collection(this.db, 'orders');
+            const q = query(collectionRef, 
+                where('id', '==', orderId), 
+                where('shopId', '==', shopId)
+            );
+            const snapshot = await getDocs(q);
+            
+            if (snapshot.empty) {
+                throw new Error('Order not found');
+            }
+            
+            const docSnapshot = snapshot.docs[0];
+            return { 
+                ref: docSnapshot.ref, 
+                data: { id: docSnapshot.id, ...docSnapshot.data() } 
+            };
+        } catch (error) {
+            console.error("Error fetching order:", error);
+            throw error;
+        }
     }
 }
 
