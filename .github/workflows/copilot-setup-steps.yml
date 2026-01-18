@@ -1,0 +1,176 @@
+name: Neighborfood Expo Development Environment Setup
+
+# This file documents the setup steps for provisioning a development environment
+# for the Neighborfood Expo application. It can be used by GitHub Copilot or
+# as a reference for setting up local or cloud-based development environments.
+
+environment:
+  name: Neighborfood Development
+  description: Complete environment for Expo React Native development
+  
+  runtime:
+    node_version: "22.x"  # or latest LTS
+    package_manager: npm
+    platform: macOS/Linux/Windows
+  
+  system_dependencies:
+    - name: Node.js
+      version: ">=18.0.0"
+      required: true
+      install: "Download from nodejs.org or use nvm/volta"
+    
+    - name: npm
+      version: ">=9.0.0"
+      required: true
+      install: "Included with Node.js"
+    
+    - name: Expo CLI
+      version: latest
+      required: true
+      install: "npx expo-cli (no global install needed)"
+    
+    - name: Git
+      version: ">=2.0.0"
+      required: true
+      install: "System package manager or git-scm.com"
+
+  optional_dependencies:
+    - name: Xcode
+      platform: macOS
+      purpose: iOS development and simulator
+      version: ">=14.0"
+    
+    - name: Android Studio
+      platform: macOS/Linux/Windows
+      purpose: Android development and emulator
+      version: latest
+    
+    - name: Watchman
+      platform: macOS/Linux
+      purpose: Better file watching performance
+      install: "brew install watchman (macOS)"
+
+setup_steps:
+  - step: 1
+    name: Install dependencies
+    command: npm install
+    description: Install all Node.js dependencies from package.json
+    required: true
+    precondition: Node.js and npm are installed
+    
+  - step: 2
+    name: Install Expo SDK dependencies
+    command: npx expo install
+    description: Ensure all Expo SDK packages are at compatible versions
+    required: true
+    precondition: npm install has completed successfully
+  
+  - step: 3
+    name: Start Expo development server
+    command: npx expo start
+    description: Launch the Metro bundler and Expo DevTools
+    required: false
+    options:
+      - flag: "--clear"
+        description: "Clear Metro bundler cache"
+      - flag: "--web"
+        description: "Open web version in browser"
+      - flag: "--ios"
+        description: "Open in iOS simulator (macOS only)"
+      - flag: "--android"
+        description: "Open in Android emulator"
+
+validation_steps:
+  - name: Verify Node.js installation
+    command: node --version
+    expected_output: "v22.x.x or v18.x.x+"
+  
+  - name: Verify npm installation
+    command: npm --version
+    expected_output: "9.x.x or higher"
+  
+  - name: Verify project dependencies
+    command: npm list --depth=0
+    expected_output: "No errors, all dependencies installed"
+  
+  - name: Check Expo CLI availability
+    command: npx expo --version
+    expected_output: "Expo CLI version number"
+  
+  - name: Verify TypeScript compilation
+    command: npx tsc --noEmit
+    expected_output: "No TypeScript errors"
+
+development_ports:
+  - port: 19000
+    service: Expo DevTools
+    description: Web interface for Expo development tools
+  
+  - port: 19001
+    service: Expo Metro Bundler
+    description: Metro bundler connection port
+  
+  - port: 19002
+    service: Expo Web
+    description: Web version of the app
+  
+  - port: 8081
+    service: Metro Bundler (alternative)
+    description: Alternative Metro bundler port
+
+environment_variables:
+  - name: EXPO_DEVTOOLS_LISTEN_ADDRESS
+    value: "0.0.0.0"
+    description: "Allow DevTools to listen on all network interfaces"
+    required_for: "Remote development or containers"
+  
+  - name: NODE_ENV
+    value: "development"
+    description: "Node environment mode"
+    default: true
+
+common_issues:
+  - issue: "Metro bundler cache issues"
+    solution: "Run: npx expo start --clear"
+  
+  - issue: "Incompatible Expo SDK versions"
+    solution: "Run: npx expo install --check && npx expo install --fix"
+  
+  - issue: "Port already in use"
+    solution: "Kill process using port 8081/19000 or use different port"
+  
+  - issue: "Module resolution errors"
+    solution: "Delete node_modules and package-lock.json, then run npm install"
+
+vscode_extensions:
+  - id: dbaeumer.vscode-eslint
+    name: ESLint
+    purpose: JavaScript/TypeScript linting
+  
+  - id: esbenp.prettier-vscode
+    name: Prettier
+    purpose: Code formatting
+  
+  - id: ms-vscode.vscode-typescript-next
+    name: TypeScript
+    purpose: Enhanced TypeScript support
+  
+  - id: expo.vscode-expo-tools
+    name: Expo Tools
+    purpose: Expo development integration
+  
+  - id: GitHub.copilot
+    name: GitHub Copilot
+    purpose: AI-powered code completion
+  
+  - id: GitHub.copilot-chat
+    name: GitHub Copilot Chat
+    purpose: AI-powered chat assistance
+
+notes:
+  - Always run `npm install` before starting development
+  - Use `npx expo install` to ensure SDK compatibility
+  - Don't attempt to upgrade dependencies that include breaking changes unless there is a critical vulnerability
+  - The project uses file-based routing with expo-router
+  - TypeScript strict mode is enabled
+  - Metro bundler has custom configuration for web maps aliasing
