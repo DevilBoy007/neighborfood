@@ -223,38 +223,46 @@ export const OrderProvider = ({ children }: OrderProviderProps) => {
                 return;
             }
 
-            // Update in Firebase
+            if (order.status === 'pending' && status === 'preparing') {
+                console.log('Updating item quantities for accepted order:', orderId);
+                
+                for (const orderItem of order.items) {
+                    try {
+                        await firebaseService.updateItemQuantity(orderItem.itemId, -orderItem.quantity);
+                        console.log(`Decreased quantity for item ${orderItem.name} by ${orderItem.quantity}`);
+                    } catch (itemError) {
+                        // Continue with other items even if one fails
+                        console.error(`Error updating quantity for item ${orderItem.itemId}:`, itemError);
+                    }
+                }
+            }
+
             await firebaseService.updateOrderStatus(orderId, order.shopId, status);
 
-            // Update in placed orders
             setPlacedOrdersState(prevOrders => 
                 prevOrders.map(order => 
                     (order.id === orderId && order.shopId === shopId) ? { ...order, status } : order
                 )
             );
 
-            // Update in received orders
             setReceivedOrdersState(prevOrders => 
                 prevOrders.map(order => 
                     (order.id === orderId && order.shopId === shopId) ? { ...order, status } : order
                 )
             );
 
-            // Update in order history
             setOrderHistoryState(prevOrders => 
                 prevOrders.map(order => 
                     (order.id === orderId && order.shopId === shopId) ? { ...order, status } : order
                 )
             );
 
-            // Update in all orders
             setAllOrdersState(prevOrders => 
                 prevOrders.map(order => 
                     (order.id === orderId && order.shopId === shopId) ? { ...order, status } : order
                 )
             );
 
-            // Update selected order if matching
             if (selectedOrder && selectedOrder.id === orderId && selectedOrder.shopId === shopId) {
                 setSelectedOrderState(prevOrder =>
                     prevOrder ? { ...prevOrder, status } : null

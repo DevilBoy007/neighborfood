@@ -686,6 +686,37 @@ class FirebaseService {
         }
     }
 
+    async updateItemQuantity(itemId: string, quantityChange: number): Promise<void> {
+        try {
+            if (!this.db) {
+                await this.connect();
+                if (!this.db) {
+                    throw new Error('Error connecting to Firestore');
+                }
+            }
+            
+            const item = await this.getItemById(itemId);
+            if (!item) {
+                throw new Error(`Item with ID ${itemId} not found`);
+            }
+
+            const currentQuantity = (item as any).quantity || 0;
+            const newQuantity = currentQuantity + quantityChange;
+            
+            if (newQuantity < 0) {
+                console.warn(`Cannot set negative quantity for item ${itemId}. Current: ${currentQuantity}, Change: ${quantityChange}`);
+                await this.updateDocument('items', itemId, { quantity: 0 });
+                return;
+            }
+
+            await this.updateDocument('items', itemId, { quantity: newQuantity });
+            console.log(`Updated item ${itemId} quantity: ${currentQuantity} -> ${newQuantity}`);
+        } catch (error) {
+            console.error("Error updating item quantity:", error);
+            throw error;
+        }
+    }
+
     async getShopsForUser(userId: string): Promise<any[]> {
         try {
             if (!this.db) {
