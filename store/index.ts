@@ -42,7 +42,7 @@ const persistConfig = {
 
 const persistedReducer = persistReducer(persistConfig, rootReducer);
 
-// Custom serializable check that allows Firebase objects (Timestamp, GeoPoint, DocumentReference)
+// Custom serializable check that allows Firebase objects (Timestamp, GeoPoint, DocumentReference, DocumentKey)
 // This is more maintainable than listing every possible path
 const isSerializable = (value: unknown): boolean => {
   // Allow standard serializable values
@@ -76,8 +76,30 @@ const isSerializable = (value: unknown): boolean => {
     value !== null &&
     typeof value === 'object' &&
     'id' in value &&
+    'path' in value
+  ) {
+    return true;
+  }
+  
+  // Allow Firebase DocumentKey objects (internal Firebase structure with path.segments)
+  if (
+    value !== null &&
+    typeof value === 'object' &&
     'path' in value &&
-    typeof (value as { path: unknown }).path === 'string'
+    typeof (value as { path: unknown }).path === 'object' &&
+    (value as { path: { segments?: unknown } }).path !== null &&
+    'segments' in ((value as { path: object }).path)
+  ) {
+    return true;
+  }
+  
+  // Allow Firebase internal path objects (have len, offset, segments properties)
+  if (
+    value !== null &&
+    typeof value === 'object' &&
+    'segments' in value &&
+    'len' in value &&
+    'offset' in value
   ) {
     return true;
   }
