@@ -1,4 +1,4 @@
-import { configureStore, combineReducers } from '@reduxjs/toolkit';
+import { configureStore, combineReducers, isPlain } from '@reduxjs/toolkit';
 import { persistStore, persistReducer, FLUSH, REHYDRATE, PAUSE, PERSIST, PURGE, REGISTER } from 'redux-persist';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
@@ -42,6 +42,59 @@ const persistConfig = {
 
 const persistedReducer = persistReducer(persistConfig, rootReducer);
 
+// Custom serializable check that allows Firebase objects (Timestamp, GeoPoint, DocumentReference)
+// This is more maintainable than listing every possible path
+const isSerializable = (value: unknown): boolean => {
+  // Allow standard serializable values
+  if (isPlain(value)) return true;
+  
+  // Allow Date objects
+  if (value instanceof Date) return true;
+  
+  // Allow Firebase Timestamp objects (have seconds and nanoseconds properties)
+  if (
+    value !== null &&
+    typeof value === 'object' &&
+    'seconds' in value &&
+    'nanoseconds' in value
+  ) {
+    return true;
+  }
+  
+  // Allow Firebase GeoPoint objects (have latitude and longitude properties)
+  if (
+    value !== null &&
+    typeof value === 'object' &&
+    'latitude' in value &&
+    'longitude' in value
+  ) {
+    return true;
+  }
+  
+  // Allow Firebase DocumentReference objects (have id and path properties)
+  if (
+    value !== null &&
+    typeof value === 'object' &&
+    'id' in value &&
+    'path' in value &&
+    typeof (value as { path: unknown }).path === 'string'
+  ) {
+    return true;
+  }
+  
+  // Allow expo-location coords objects
+  if (
+    value !== null &&
+    typeof value === 'object' &&
+    'accuracy' in value &&
+    'altitude' in value
+  ) {
+    return true;
+  }
+  
+  return false;
+};
+
 export const store = configureStore({
   reducer: persistedReducer,
   middleware: (getDefaultMiddleware) =>
@@ -49,50 +102,8 @@ export const store = configureStore({
       serializableCheck: {
         // Ignore redux-persist actions
         ignoredActions: [FLUSH, REHYDRATE, PAUSE, PERSIST, PURGE, REGISTER],
-        // Ignore paths that may contain Firebase Timestamp, GeoPoint, or DocumentReference objects
-        // Also ignore expo-location coords which may contain non-serializable values
-        ignoredActionPaths: [
-          // User-related paths
-          'payload.createdAt',
-          'payload.location',
-          'payload.location.coords',
-          'payload.shops',
-          'meta.arg.createdAt',
-          'meta.arg.location',
-          'meta.arg.location.coords',
-          'meta.arg.shops',
-          // Location-related paths (expo-location coords)
-          'payload.coords',
-          'meta.arg.coords',
-          'meta.arg',
-          // Order-related paths
-          'payload.estimatedDeliveryTime',
-          'payload.deliveredAt',
-          'meta.arg.estimatedDeliveryTime',
-          'meta.arg.deliveredAt',
-        ],
-        ignoredPaths: [
-          // User state paths
-          'user.userData.createdAt',
-          'user.userData.location',
-          'user.userData.location.coords',
-          'user.userData.shops',
-          // Location state paths (expo-location)
-          'location.coords',
-          // Shop state paths
-          'shop.selectedShop.createdAt',
-          'shop.selectedShop.location',
-          'shop.shops',
-          // Item state paths
-          'item.selectedItem.createdAt',
-          // Order state paths
-          'order.placedOrders',
-          'order.receivedOrders',
-          'order.orderHistory',
-          'order.selectedOrder.createdAt',
-          'order.selectedOrder.estimatedDeliveryTime',
-          'order.selectedOrder.deliveredAt',
-        ],
+        // Use custom isSerializable function to handle Firebase objects
+        isSerializable,
       },
     }),
 });
