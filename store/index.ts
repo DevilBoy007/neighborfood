@@ -47,7 +47,22 @@ export const store = configureStore({
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
       serializableCheck: {
+        // Ignore redux-persist actions
         ignoredActions: [FLUSH, REHYDRATE, PAUSE, PERSIST, PURGE, REGISTER],
+        // Ignore paths that may contain Firebase Timestamp, GeoPoint, or DocumentReference objects
+        ignoredActionPaths: [
+          'payload.createdAt',
+          'payload.location.coords',
+          'payload.shops',
+          'meta.arg.createdAt',
+          'meta.arg.location.coords',
+          'meta.arg.shops',
+        ],
+        ignoredPaths: [
+          'user.userData.createdAt',
+          'user.userData.location.coords',
+          'user.userData.shops',
+        ],
       },
     }),
 });
