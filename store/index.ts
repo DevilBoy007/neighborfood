@@ -50,6 +50,7 @@ export const store = configureStore({
         // Ignore redux-persist actions
         ignoredActions: [FLUSH, REHYDRATE, PAUSE, PERSIST, PURGE, REGISTER],
         // Ignore paths that may contain Firebase Timestamp, GeoPoint, or DocumentReference objects
+        // Also ignore expo-location coords which may contain non-serializable values
         ignoredActionPaths: [
           // User-related paths
           'payload.createdAt',
@@ -60,6 +61,10 @@ export const store = configureStore({
           'meta.arg.location',
           'meta.arg.location.coords',
           'meta.arg.shops',
+          // Location-related paths (expo-location coords)
+          'payload.coords',
+          'meta.arg.coords',
+          'meta.arg',
           // Order-related paths
           'payload.estimatedDeliveryTime',
           'payload.deliveredAt',
@@ -72,6 +77,8 @@ export const store = configureStore({
           'user.userData.location',
           'user.userData.location.coords',
           'user.userData.shops',
+          // Location state paths (expo-location)
+          'location.coords',
           // Shop state paths
           'shop.selectedShop.createdAt',
           'shop.selectedShop.location',
