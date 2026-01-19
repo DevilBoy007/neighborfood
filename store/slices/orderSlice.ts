@@ -1,4 +1,4 @@
-import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
+import { createSlice, createAsyncThunk, PayloadAction, createSelector } from '@reduxjs/toolkit';
 import firebaseService from '../../handlers/firebaseService';
 
 type OrderItem = {
@@ -127,7 +127,13 @@ export const updateOrderStatusAsync = createAsyncThunk(
   ) => {
     try {
       const state = getState() as { order: OrderState };
-      const order = state.order.allOrders.find((o) => o.id === orderId && o.shopId === shopId);
+      // Compute allOrders from the three arrays
+      const allOrders = [
+        ...state.order.placedOrders,
+        ...state.order.receivedOrders,
+        ...state.order.orderHistory,
+      ];
+      const order = allOrders.find((o) => o.id === orderId && o.shopId === shopId);
 
       if (!order) {
         console.error('Order not found:', orderId);
@@ -239,11 +245,17 @@ const orderSlice = createSlice({
   },
 });
 
-// Selector to compute allOrders dynamically (avoids redundant state storage)
-export const selectAllOrders = (state: { order?: OrderState }): OrderData[] => {
-  if (!state.order) return [];
-  return [...state.order.placedOrders, ...state.order.receivedOrders, ...state.order.orderHistory];
-};
+// Memoized selector to compute allOrders dynamically (avoids redundant state storage and unnecessary rerenders)
+const selectPlacedOrders = (state: { order?: OrderState }) => state.order?.placedOrders ?? [];
+const selectReceivedOrders = (state: { order?: OrderState }) => state.order?.receivedOrders ?? [];
+const selectOrderHistory = (state: { order?: OrderState }) => state.order?.orderHistory ?? [];
+
+export const selectAllOrders = createSelector(
+  [selectPlacedOrders, selectReceivedOrders, selectOrderHistory],
+  (placedOrders, receivedOrders, orderHistory) => {
+    return [...placedOrders, ...receivedOrders, ...orderHistory];
+  }
+);
 
 export const {
   setPlacedOrders,
