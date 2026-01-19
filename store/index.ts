@@ -51,17 +51,40 @@ export const store = configureStore({
         ignoredActions: [FLUSH, REHYDRATE, PAUSE, PERSIST, PURGE, REGISTER],
         // Ignore paths that may contain Firebase Timestamp, GeoPoint, or DocumentReference objects
         ignoredActionPaths: [
+          // User-related paths
           'payload.createdAt',
+          'payload.location',
           'payload.location.coords',
           'payload.shops',
           'meta.arg.createdAt',
+          'meta.arg.location',
           'meta.arg.location.coords',
           'meta.arg.shops',
+          // Order-related paths
+          'payload.estimatedDeliveryTime',
+          'payload.deliveredAt',
+          'meta.arg.estimatedDeliveryTime',
+          'meta.arg.deliveredAt',
         ],
         ignoredPaths: [
+          // User state paths
           'user.userData.createdAt',
+          'user.userData.location',
           'user.userData.location.coords',
           'user.userData.shops',
+          // Shop state paths
+          'shop.selectedShop.createdAt',
+          'shop.selectedShop.location',
+          'shop.shops',
+          // Item state paths
+          'item.selectedItem.createdAt',
+          // Order state paths
+          'order.placedOrders',
+          'order.receivedOrders',
+          'order.orderHistory',
+          'order.selectedOrder.createdAt',
+          'order.selectedOrder.estimatedDeliveryTime',
+          'order.selectedOrder.deliveredAt',
         ],
       },
     }),
