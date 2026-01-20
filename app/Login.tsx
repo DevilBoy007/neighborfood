@@ -12,7 +12,7 @@ import {
 import { EventRegister } from 'react-native-event-listeners';
 import { KeyboardToolbar } from 'react-native-keyboard-controller';
 import { useRouter } from 'expo-router';
-import { useUser } from '@/context/userContext';
+import { useUser } from '@/store/reduxHooks';
 
 import firebaseService from '@/handlers/firebaseService';
 

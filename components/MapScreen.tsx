@@ -5,8 +5,7 @@ import { StyleSheet, View, Text, Image, Platform, LogBox, ActivityIndicator } fr
 import MapView, { PROVIDER_DEFAULT, PROVIDER_GOOGLE, Marker, Callout } from 'react-native-maps';
 import icon from '@/assets/images/map-market.png'
 
-import { useLocation } from '@/context/locationContext';
-import { useShop, ShopData } from '@/context/shopContext';
+import { useLocation, useShop, ShopData } from '@/store/reduxHooks';
 import { Ionicons } from '@expo/vector-icons';
 
 interface MarkerData {

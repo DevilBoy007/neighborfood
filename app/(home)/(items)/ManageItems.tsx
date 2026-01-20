@@ -7,9 +7,7 @@ import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 
 import firebaseService from '@/handlers/firebaseService';
-import { useUser } from '@/context/userContext';
-import { useItem, ItemData } from '@/context/itemContext';
-import { useShop } from '@/context/shopContext';
+import { useUser, useItem, useShop, ItemData } from '@/store/reduxHooks';
 import Toast from 'react-native-toast-message';
 import ItemCard from '@/components/ItemCard';
 

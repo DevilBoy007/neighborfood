@@ -13,9 +13,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import Toast from 'react-native-toast-message';
 import { v4 as uuidv4 } from 'uuid';
-import { useCart } from '@/context/cartContext';
-import { useUser } from '@/context/userContext';
-import { useOrder } from '@/context/orderContext';
+import { useCart, useUser, useOrder } from '@/store/reduxHooks';
 import firebaseService from '@/handlers/firebaseService';
 
 type DeliveryOption = 'pickup' | 'delivery';
@@ -25,7 +23,7 @@ const Checkout = () => {
     const router = useRouter();
     const { shopCarts, clearCart, calculateTotalSubtotal } = useCart();
     const { userData } = useUser();
-    const { addToOrderHistory, addToCurrentOrders, refreshOrders } = useOrder();
+    const { addToPlacedOrders, refreshOrders } = useOrder();
     
     const [shopDeliveryOptions, setShopDeliveryOptions] = useState<Record<string, DeliveryOption>>({});
     const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('card');

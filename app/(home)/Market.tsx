@@ -3,8 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, FlatList, StyleSheet, Platform
 import { Ionicons } from '@expo/vector-icons';
 
 import ShopCard from '@/components/ShopCard';
-import { useUser } from '@/context/userContext';
-import { useLocation } from '@/context/locationContext';
+import { useUser, useLocation } from '@/store/reduxHooks';
 import firebaseService from '@/handlers/firebaseService';
 
 const MapScreen = Platform.OS === 'web'

@@ -9,10 +9,7 @@ import ParallaxScrollView from '@/components/ParallaxScrollView';
 import ItemCard from '@/components/ItemCard';
 import firebaseService from '@/handlers/firebaseService';
 
-import { useLocation } from '@/context/locationContext';
-import { useUser } from '@/context/userContext';
-import { useShop } from '@/context/shopContext';
-import { ItemData } from '@/context/itemContext';
+import { useLocation, useUser, useShop, ItemData } from '@/store/reduxHooks';
 
 export default function ShopDetails() {
     const { selectedShop, setSelectedShop } = useShop();

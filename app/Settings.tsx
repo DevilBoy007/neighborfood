@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
 import { router } from 'expo-router';
 import firebaseService from '@/handlers/firebaseService';
-import { useUser } from '@/context/userContext';
+import { useUser } from '@/store/reduxHooks';
 
 const Settings = () => {
     // Use the user context for logout and to get user data

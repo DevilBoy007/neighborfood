@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useShop, ShopData } from '@/context/shopContext';
+import { useShop, ShopData } from '@/store/reduxHooks';
 
 type ShopLocation = {
     marketId: string;

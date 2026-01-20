@@ -2,8 +2,7 @@ import React, { useState } from 'react';
 import { useRouter } from 'expo-router';
 import { View, Text, StyleSheet, Image, TouchableOpacity, Alert, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useCart } from '@/context/cartContext';
-import { useItem, ItemData } from '@/context/itemContext';
+import { useCart, useItem, ItemData } from '@/store/reduxHooks';
 
 interface ItemCardProps {
     item: ItemData;

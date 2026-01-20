@@ -4,8 +4,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
 import OrderCard from '@/components/OrderCard';
-import { useUser } from '@/context/userContext';
-import { useOrder } from '@/context/orderContext';
+import { useUser, useOrder } from '@/store/reduxHooks';
 
 const OrdersScreen = () => {
     const router = useRouter();

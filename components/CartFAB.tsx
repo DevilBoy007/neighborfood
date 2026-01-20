@@ -2,7 +2,7 @@ import React from 'react';
 import { StyleSheet, View, Text, TouchableOpacity, Platform } from 'react-native';
 import { useRouter, usePathname } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { useCart } from '../context/cartContext';
+import { useCart } from '@/store/reduxHooks';
 
 interface CartFABProps {
     bottom?: number;

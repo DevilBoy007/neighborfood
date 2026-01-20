@@ -18,8 +18,7 @@ import { GeoPoint } from 'firebase/firestore';
 import Toast from 'react-native-toast-message';
 
 import firebaseService from '@/handlers/firebaseService';
-import { useUser } from '@/context/userContext';
-import { useShop } from '@/context/shopContext';
+import { useUser, useShop } from '@/store/reduxHooks';
 
 const weekDays = Platform.OS === 'web' ? ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'] : ['M', 'T', 'W', 'Th', 'F', 'Sa', 'Su'];
 const seasons = ['spring', 'summer', 'fall', 'winter'];
