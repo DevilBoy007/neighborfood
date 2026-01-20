@@ -10,12 +10,16 @@ import {
     signInWithEmailAndPassword,
     signOut,
     Auth,
-    UserCredential
+    UserCredential,
+    Persistence
 } from 'firebase/auth';
-// @ts-ignore - getReactNativePersistence exists in firebase/auth/react-native
-import { getReactNativePersistence } from 'firebase/auth';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getFunctions, httpsCallable, Functions, HttpsCallableResult } from 'firebase/functions';
+
+// Type declaration for getReactNativePersistence which is available in firebase/auth but not well-typed
+declare function getReactNativePersistence(storage: typeof AsyncStorage): Persistence;
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const { getReactNativePersistence: getReactNativePersistenceImpl } = require('firebase/auth');
 
 /**
  * FirebaseService - Refactored to use Cloud Functions for Firestore operations
@@ -100,7 +104,7 @@ class FirebaseService {
                     this.auth = initializeAuth(this.app, {
                         persistence: Platform.OS === 'web'
                             ? browserLocalPersistence
-                            : getReactNativePersistence(AsyncStorage)
+                            : getReactNativePersistenceImpl(AsyncStorage)
                     });
                 } catch (authError) {
                     if ((authError as { code?: string }).code === 'auth/already-initialized') {
@@ -645,18 +649,21 @@ class FirebaseService {
         }
     }
 
-    async getOrder(orderId: string, shopId: string): Promise<{ ref: unknown; data: unknown }> {
+    /**
+     * Get a specific order
+     * Note: In the Cloud Functions version, document references are not returned.
+     * The 'ref' property is maintained for API compatibility but will always be null.
+     * Use updateOrderStatus() directly to update orders.
+     */
+    async getOrder(orderId: string, shopId: string): Promise<{ ref: null; data: { id: string; [key: string]: unknown } }> {
         try {
             const data = await this.callFunction<
                 { orderId: string; shopId: string },
                 { id: string; [key: string]: unknown }
             >('getOrder', { orderId, shopId });
             
-            // Note: Cloud Functions don't return document references
-            // The ref is included for API compatibility but won't be used for updates
-            // Updates should go through updateOrderStatus
             return { 
-                ref: null, // Document reference not available via Cloud Functions
+                ref: null, // Document reference not available via Cloud Functions - use updateOrderStatus() instead
                 data 
             };
         } catch (error) {

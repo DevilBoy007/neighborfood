@@ -551,7 +551,7 @@ export const createItemForShop = onCall(async (request: CallableRequest<CreateIt
         const itemsCollectionRef = db.collection('items');
         const docRef = await itemsCollectionRef.add({
             ...itemData,
-            shopId: [shopId], // Store as array for potential multi-shop items
+            shopId: shopId, // Store as string - change to array if multi-shop items are needed later
             createdAt: FieldValue.serverTimestamp()
         });
         
