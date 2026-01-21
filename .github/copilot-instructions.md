@@ -8,12 +8,34 @@
 - **Framework**: React Native 0.79.6 with Expo SDK 53
 - **Language**: TypeScript 5.8.3
 - **Routing**: Expo Router 5.1.10 (file-based routing)
-- **Backend**: Firebase (Authentication, Storage, Firestore)
-- **State Management**: React Context API (user, location, shop, item, order, cart, payment contexts)
+- **Backend**: Firebase (Authentication, Storage, Firestore via Cloud Functions)
+- **State Management**: Redux Toolkit with Redux Persist
 - **Maps**: React Native Maps + Google Maps API (with web fallback using react-native-web-maps)
 - **UI**: React Native with Expo components
 - **Testing**: Jest with jest-expo preset
 - **Build Tool**: Metro bundler
+
+### Firebase Architecture
+The app uses a hybrid Firebase architecture following best practices:
+
+**Client-Side (in `handlers/firebaseService.tsx`):**
+- **Authentication**: Login, register, logout remain client-side (Firebase recommendation for token management)
+- **Storage**: File uploads use client-side SDK for direct file access
+  - `uploadProductImage(file, shopId, itemId)` → `product_images/{shopId}/{itemId}/{filename}`
+  - `uploadUserProfileImage(file, userId)` → `user_profile_images/{userId}/{filename}`
+
+**Server-Side (in `functions/src/index.ts`):**
+- All Firestore CRUD operations use Cloud Functions via `httpsCallable`
+- Provides server-side validation and permission checks
+- 30+ callable functions for shops, items, orders, users, and generic CRUD
+
+**Deploying Cloud Functions:**
+```bash
+npx firebase login
+cp .firebaserc.example .firebaserc  # add your project ID
+cd functions && npm install && cd ..
+npx firebase deploy --only functions
+```
 
 ## Build & Run Instructions
 
@@ -22,6 +44,7 @@
 - Expo CLI (installed via npx)
 - For iOS: Xcode and iOS Simulator
 - For Android: Android Studio and Android Emulator
+- For Cloud Functions: Firebase CLI (installed as `firebase-tools` dependency)
 
 ### Installation
 **Always run `npm install` before building or running the project.**
@@ -69,17 +92,16 @@ npx expo install
   /ThemedText.tsx, /ThemedView.tsx, /SafeView.tsx
   /SoundPressable.tsx, /SoundTouchableOpacity.tsx
 
-/context/               # React Context providers
-  /userContext.tsx      # User authentication state
-  /locationContext.tsx  # User location services
-  /shopContext.tsx      # Shop data
-  /itemContext.tsx      # Item/menu data
-  /orderContext.tsx     # Order management
-  /cartContext.tsx      # Shopping cart state
-  /paymentContext.tsx   # Payment processing
+/store/                 # Redux store configuration
+  /store.ts             # Redux store with persist config
+  /reduxHooks.ts        # Typed Redux hooks
 
 /handlers/              # Service layer
-  /firebaseService.tsx  # Firebase integration
+  /firebaseService.tsx  # Firebase integration (auth, storage, Cloud Functions client)
+
+/functions/             # Firebase Cloud Functions (Node.js)
+  /src/index.ts         # All callable functions for Firestore operations
+  /package.json         # Function dependencies (firebase-admin, firebase-functions)
 
 /hooks/                 # Custom React hooks
   /useColorScheme.ts    # Theme detection
@@ -104,11 +126,13 @@ npx expo install
 - **metro.config.js**: Custom Metro config with .cjs support and web alias for react-native-maps → react-native-web-maps
 - **app.json**: Expo config with plugins for expo-router, expo-location, expo-media-library
 - **package.json**: Dependencies and npm scripts
+- **firebase.json**: Firebase configuration for Cloud Functions deployment
+- **.firebaserc.example**: Template for Firebase project linking
 
 ### Key Architectural Elements
 1. **Entry Point**: `index.js` → registers root component via expo-router
 2. **Root Layout**: `app/_layout.tsx` contains:
-   - All Context Providers (User, Location, Shop, Item, Order, Cart)
+   - Redux Provider with persisted store
    - GestureHandlerRootView wrapper
    - KeyboardProvider
    - GoogleMapsLoader component
@@ -124,6 +148,12 @@ npx expo install
    - Native: react-native-maps
    - Web: react-native-web-maps (aliased via Metro config)
    - Google Maps API loader for web
+
+5. **Firebase Service (`handlers/firebaseService.tsx`)**:
+   - Singleton pattern for Firebase app instance
+   - Client-side: Authentication methods (login, register, logout)
+   - Client-side: Storage uploads (`uploadProductImage`, `uploadUserProfileImage`)
+   - Cloud Functions: All Firestore operations via `callFunction<T, R>()` helper
 
 ### Known Issues & Workarounds
 1. **Text Node Warning**: The app patches React.createElement in `app/_layout.tsx` to wrap stray text nodes in Text components for web compatibility

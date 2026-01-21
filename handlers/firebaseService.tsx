@@ -544,22 +544,6 @@ class FirebaseService {
         }
     }
 
-    /**
-     * @deprecated Use uploadProductImage or uploadUserProfileImage instead.
-     * This method is kept for backward compatibility but may not work with new storage rules.
-     */
-    async uploadImage(
-        image: File,
-        progressCallback?: (progress: number) => void,
-        successCallback?: (downloadURL: string) => void,
-        errorCallback?: (error: unknown) => void
-    ) {
-        console.warn('uploadImage is deprecated. Use uploadProductImage or uploadUserProfileImage instead.');
-        const fileName = image.name || `image_${Date.now()}`;
-        const storagePath = `img/${fileName}`;
-        return this.uploadToStorage(image, storagePath, progressCallback, successCallback, errorCallback);
-    }
-
     // =========================================================================
     // Item Operations (via Cloud Functions)
     // =========================================================================
