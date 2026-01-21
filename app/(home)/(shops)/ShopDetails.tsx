@@ -115,7 +115,12 @@ export default function ShopDetails() {
             
             const file = new File([blob], filename, { type: blob.type });
             
-            const uploadTask = await firebaseService.uploadImage(file, 
+            // Use uploadProductImage with 'background' as the itemId for shop background images
+            // Storage path: product_images/{shopId}/background/{filename}
+            const uploadTask = await firebaseService.uploadProductImage(
+                file, 
+                selectedShop.id,
+                'background',
                 // Progress callback
                 (progress) => {
                     setUploadProgress(progress);

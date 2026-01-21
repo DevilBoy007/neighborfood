@@ -442,10 +442,51 @@ class FirebaseService {
     // =========================================================================
     // Storage Operations (CLIENT-SIDE - Best Practice)
     // File uploads require direct client access to files
+    //
+    // Storage paths must match Firebase Storage rules:
+    // - product_images/{shopId}/{itemId}/{filename} - for item/product images
+    // - user_profile_images/{userId}/{filename} - for user profile images
     // =========================================================================
 
-    async uploadImage(
+    /**
+     * Upload a product image (item image)
+     * Path: product_images/{shopId}/{itemId}/{filename}
+     */
+    async uploadProductImage(
         image: File,
+        shopId: string,
+        itemId: string,
+        progressCallback?: (progress: number) => void,
+        successCallback?: (downloadURL: string) => void,
+        errorCallback?: (error: unknown) => void
+    ) {
+        const fileName = image.name || `item_${Date.now()}.jpg`;
+        const storagePath = `product_images/${shopId}/${itemId}/${fileName}`;
+        return this.uploadToStorage(image, storagePath, progressCallback, successCallback, errorCallback);
+    }
+
+    /**
+     * Upload a user profile image
+     * Path: user_profile_images/{userId}/{filename}
+     */
+    async uploadUserProfileImage(
+        image: File,
+        userId: string,
+        progressCallback?: (progress: number) => void,
+        successCallback?: (downloadURL: string) => void,
+        errorCallback?: (error: unknown) => void
+    ) {
+        const fileName = image.name || `profile_${Date.now()}.jpg`;
+        const storagePath = `user_profile_images/${userId}/${fileName}`;
+        return this.uploadToStorage(image, storagePath, progressCallback, successCallback, errorCallback);
+    }
+
+    /**
+     * Internal method to upload a file to Firebase Storage
+     */
+    private async uploadToStorage(
+        image: File,
+        storagePath: string,
         progressCallback?: (progress: number) => void,
         successCallback?: (downloadURL: string) => void,
         errorCallback?: (error: unknown) => void
@@ -460,9 +501,8 @@ class FirebaseService {
         }
         
         try {
-            // Create a unique filename if needed
-            const fileName = image.name || `image_${Date.now()}`;
-            const storageRef = ref(this.storage, `img/${fileName}`);
+            console.log('Uploading to path:', storagePath);
+            const storageRef = ref(this.storage, storagePath);
             const uploadTask = uploadBytesResumable(storageRef, image);
 
             uploadTask.on('state_changed',
@@ -502,6 +542,22 @@ class FirebaseService {
             if (errorCallback) errorCallback(error);
             throw error;
         }
+    }
+
+    /**
+     * @deprecated Use uploadProductImage or uploadUserProfileImage instead.
+     * This method is kept for backward compatibility but may not work with new storage rules.
+     */
+    async uploadImage(
+        image: File,
+        progressCallback?: (progress: number) => void,
+        successCallback?: (downloadURL: string) => void,
+        errorCallback?: (error: unknown) => void
+    ) {
+        console.warn('uploadImage is deprecated. Use uploadProductImage or uploadUserProfileImage instead.');
+        const fileName = image.name || `image_${Date.now()}`;
+        const storagePath = `img/${fileName}`;
+        return this.uploadToStorage(image, storagePath, progressCallback, successCallback, errorCallback);
     }
 
     // =========================================================================
