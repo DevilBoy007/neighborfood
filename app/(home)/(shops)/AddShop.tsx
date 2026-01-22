@@ -9,7 +9,6 @@ import {
     SafeAreaView,
     KeyboardAvoidingView,
     StyleSheet,
-    Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Picker } from '@react-native-picker/picker';
@@ -249,7 +248,7 @@ export default function ShopRegistrationScreen() {
                         router.back();
                     }, 2000);
                 }
-            } catch (error) {
+            } catch {
                 Toast.show({
                     type: 'error',
                     text1: 'Error',

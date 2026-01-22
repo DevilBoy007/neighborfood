@@ -1,16 +1,14 @@
 import { useRouter } from 'expo-router'
 import { Platform, StyleSheet, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 
 export default function SucessScreen({ onTimerComplete = () => { } }) {
     const router = useRouter()
-    const [show, setShow] = useState(false);
     
     onTimerComplete = router.back
     
     useEffect(() => {
-        setShow(true);
         const timer = setTimeout(() => {
             onTimerComplete();
         }, (Platform.OS === 'web'? 2000 : 1200));

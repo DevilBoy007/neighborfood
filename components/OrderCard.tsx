@@ -70,6 +70,7 @@ const OrderCard = ({ order, onPress }) => {
             }
         });
         return () => { isMounted = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [order.customerId, order.originalOrder?.shopId, userData?.uid]);
 
     const handleStatusPress = (order) => {

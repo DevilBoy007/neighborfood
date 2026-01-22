@@ -28,7 +28,7 @@ const ContactScreen = () => {
                 <Text style={styles.headerText}>Contact Us</Text>
             </View>
             <View style={{ paddingHorizontal: 16, paddingBottom: 0 }}>
-                <Text style={styles.title}>what's on your mind?</Text>
+                <Text style={styles.title}>what&apos;s on your mind?</Text>
             </View>
             <KeyboardAvoidingView 
                 style={{ flex: 1 }}

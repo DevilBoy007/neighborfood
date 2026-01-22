@@ -7,7 +7,7 @@ const SplashScreen = () => {
         <View style={styles.container}>
             <View style={styles.textContainer}>
                 <Text style={styles.title}>...oops</Text>
-                <Text style={styles.subtitle}>we couldn't find what you were looking for </Text>
+                <Text style={styles.subtitle}>we couldn&apos;t find what you were looking for </Text>
             </View>
             
             <View style={styles.buttonContainer}>

@@ -42,6 +42,7 @@ const LoginScreen = () => {
         return () => {
             EventRegister.removeEventListener(userLoggedInListener);
         };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [userData]);
 
     const handleLogin = async () => {

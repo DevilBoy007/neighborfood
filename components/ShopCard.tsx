@@ -3,14 +3,6 @@ import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useShop, ShopData } from '@/store/reduxHooks';
 
-type ShopLocation = {
-    marketId: string;
-    coordinates: {
-        latitude: number;
-        longitude: number;
-    };
-};
-
 interface ShopCardProps {
     name: string;
     shop: ShopData;

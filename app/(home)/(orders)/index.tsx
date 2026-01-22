@@ -26,7 +26,7 @@ const OrdersScreen = () => {
                             <Ionicons name="bag-outline" size={32} color="#2196F3" />
                         </View>
                         <Text style={styles.tabButtonText}>Orders Placed</Text>
-                        <Text style={styles.tabButtonSubtext}>Active orders you've placed</Text>
+                        <Text style={styles.tabButtonSubtext}>Active orders you&apos;ve placed</Text>
                     </TouchableOpacity>
                     
                     <TouchableOpacity 

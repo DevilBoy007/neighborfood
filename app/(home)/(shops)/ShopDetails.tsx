@@ -65,6 +65,7 @@ export default function ShopDetails() {
         }
 
         fetchShopItems();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [selectedShop?.id, selectedShop?.items]);
     
     useEffect(() => {
@@ -83,6 +84,7 @@ export default function ShopDetails() {
         }
 
         fetchShopOwner();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [selectedShop?.userId]);
 
     const pickImage = async () => {
@@ -127,7 +129,7 @@ export default function ShopDetails() {
             
             // Use uploadProductImage with 'background' as the itemId for shop background images
             // Storage path: product_images/{shopId}/background/{filename}
-            const uploadTask = await firebaseService.uploadProductImage(
+            await firebaseService.uploadProductImage(
                 file, 
                 selectedShop.id,
                 'background',
@@ -301,7 +303,7 @@ export default function ShopDetails() {
                 <View style={styles.ownerRow}>
                     <Ionicons name="person-outline" size={16} color="#555" />
                     <Text style={styles.ownerText}>
-                        {selectedShop.userId == userData?.uid ? 'you' : shopOwner ? shopOwner.username : 'Loading...'}
+                        {selectedShop.userId === userData?.uid ? 'you' : shopOwner ? shopOwner.username : 'Loading...'}
                     </Text>
                 </View>
                     <Text style={styles.shopDescription}>{selectedShop.description}</Text>

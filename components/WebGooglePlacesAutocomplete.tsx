@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, FlatList, Platform } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, FlatList } from 'react-native';
 import { useGoogleMaps } from './GoogleMapsLoader';
 
 interface PlaceData {
@@ -12,11 +12,11 @@ interface PlaceData {
 }
 
 interface PlaceDetails {
-  address_components: Array<{
+  address_components: {
     long_name: string;
     short_name: string;
     types: string[];
-  }>;
+  }[];
   formatted_address: string;
   geometry: {
     location: {

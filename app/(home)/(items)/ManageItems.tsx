@@ -55,6 +55,7 @@ export default function ManageItems() {
     };
 
     // Memoize the fetch function to prevent unnecessary rerenders
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     const memoizedFetchUserItems = React.useCallback(fetchUserItems, [userData, shops.length]);
 
     // Initial data fetch

@@ -4,8 +4,6 @@ import {
     View,
     Text,
     StyleSheet,
-    SafeAreaView,
-    ScrollView,
     Animated,
     Dimensions,
     Platform,
@@ -104,6 +102,7 @@ const CartScreen = () => {
                 useNativeDriver: true,
             })
         ]).start();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     const handleRemoveItem = (shopId: string, itemId: string, clearShop: boolean = false) => {

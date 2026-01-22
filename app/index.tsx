@@ -1,4 +1,4 @@
-import { StyleSheet, Text, View, Pressable, Platform } from 'react-native';
+import { StyleSheet, Text, View, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 
 import { SoundPressable

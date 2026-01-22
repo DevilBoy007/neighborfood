@@ -49,6 +49,7 @@ const OrdersScreen = () => {
         };
 
         loadOrders();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [userData?.uid, orderFilter, isInitialized, placedOrders, receivedOrders, orderHistory]);
 
     const handleRefresh = async () => {

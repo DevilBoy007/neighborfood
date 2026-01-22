@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     View,
     Text,
@@ -17,6 +17,7 @@ import { useUser, useLocation } from '@/store/reduxHooks';
 import { GeoPoint } from 'firebase/firestore';
 import { SoundTouchableOpacity } from '@/components/SoundTouchableOpacity';
 
+/* eslint-disable @typescript-eslint/no-require-imports */
 // Conditionally import problematic native-only modules
 const KeyboardControllerImport = Platform.OS !== 'web' ? 
   require('react-native-keyboard-controller') : 
@@ -45,12 +46,15 @@ if (Platform.OS !== 'web') {
   DatePicker = require('react-native-date-picker').default;
 } else {
   // Web doesn't need the native DatePicker component
-  DatePicker = () => null;
+  const WebDatePicker = () => null;
+  WebDatePicker.displayName = 'WebDatePicker';
+  DatePicker = WebDatePicker;
 }
+/* eslint-enable @typescript-eslint/no-require-imports */
 const RegisterScreen = () => {
     const router = useRouter();
     const { setUserData } = useUser();
-    const [user, setUser] = useState<User | null>(null);
+    const [, setUser] = useState<User | null>(null);
     const { locationData, fetchCurrentLocation } = useLocation();
     const [formData, setFormData] = useState({
         firstName: '',
@@ -141,6 +145,7 @@ const RegisterScreen = () => {
                 }
             }
         })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [locationData.coords, locationData.zipCode]);
     
     useEffect(() => {
@@ -154,6 +159,7 @@ const RegisterScreen = () => {
         return () => {
             EventRegister.rm(userLoggedInListener);
         };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     const handleChange = (name, value) => {

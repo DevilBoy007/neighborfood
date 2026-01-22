@@ -83,6 +83,7 @@ export default function AddItemScreen() {
         };
 
         loadShops();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [userData]);
 
     useEffect(() => {
@@ -256,7 +257,7 @@ export default function AddItemScreen() {
                 if (image && (!itemId || (selectedItem && image !== selectedItem.imageUrl))) {
                     try {
                         imageUrl = await uploadImageToFirebase(image, shopId, newItemIdForUpload);
-                    } catch (uploadError) {
+                    } catch {
                         Toast.show({
                             type: 'error',
                             text1: 'Error',
@@ -374,7 +375,7 @@ export default function AddItemScreen() {
                         }, 2000);
                     }
                 }
-            } catch (error) {
+            } catch {
                 setIsLoadingItem(false);
                 Toast.show({
                     type: 'error',

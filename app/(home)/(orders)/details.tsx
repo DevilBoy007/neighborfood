@@ -7,7 +7,6 @@ import {
     StyleSheet,
     SafeAreaView,
     TouchableOpacity,
-    ScrollView,
     Animated,
     Dimensions,
     Platform,
@@ -60,6 +59,7 @@ const OrderDetailScreen = () => {
         return () => {
             setSelectedOrder(null);
         };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [selectedOrder]);
 
     const formatOrderData = (order: any) => {

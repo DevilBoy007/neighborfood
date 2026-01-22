@@ -1,6 +1,5 @@
-import React from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { View, StyleSheet, Platform, Image } from 'react-native';
-import { useEffect, useState, useCallback } from 'react';
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Stack, useRouter } from "expo-router";
 import { SoundTouchableOpacity } from '@/components/SoundTouchableOpacity';
@@ -46,10 +45,12 @@ export default function RootLayout() {
       }
     };
     checkUser();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const toggleSettings = useCallback(() => {
     router.navigate('/Settings');
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (

@@ -1,11 +1,9 @@
 import React from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Dimensions, Image, Platform } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, Platform } from 'react-native';
 import {  ScrollView } from 'react-native-gesture-handler';
 
 import profileIcon from '@/assets/images/user.png';
 import { router } from 'expo-router';
-
-const { height, width } = Dimensions.get('window');
 
 const EditDetails = () => {
 

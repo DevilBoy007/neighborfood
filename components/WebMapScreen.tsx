@@ -23,13 +23,14 @@ interface WebMapScreenProps {
 const MapScreenWeb = ({ shops = [] }: WebMapScreenProps) => {
     const router = useRouter();
     const { locationData, fetchCurrentLocation } = useLocation();
-        const { selectedShop, setSelectedShop } = useShop();
+    const { setSelectedShop } = useShop();
     const [selectedMarkerId, setSelectedMarkerId] = useState<string | null>(null);
     const [markers, setMarkers] = useState<MarkerData[]>([]);
     const [mapKey, setMapKey] = useState(Date.now()); // Add key to force re-render
 
     useEffect(() => {
         fetchCurrentLocation();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     useEffect(() => {

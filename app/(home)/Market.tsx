@@ -6,9 +6,11 @@ import ShopCard from '@/components/ShopCard';
 import { useUser, useLocation, ShopData } from '@/store/reduxHooks';
 import firebaseService from '@/handlers/firebaseService';
 
+/* eslint-disable @typescript-eslint/no-require-imports */
 const MapScreen = Platform.OS === 'web'
     ? require('@/components/WebMapScreen').default
     : require('@/components/MapScreen').default;
+/* eslint-enable @typescript-eslint/no-require-imports */
 
 // Extended type for shops with items attached
 type ShopWithItems = ShopData & { items?: unknown[] };
@@ -16,7 +18,8 @@ type ShopWithItems = ShopData & { items?: unknown[] };
 const MarketScreen = () => {
     const [isMapView, setIsMapView] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
-    const [showSortOptions, setShowSortOptions] = useState(false);
+    // TODO: Implement sort options feature
+    const [, /* setShowSortOptions */] = useState(false);
     const [shops, setShops] = useState<ShopWithItems[]>([]);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);

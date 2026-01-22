@@ -23,7 +23,7 @@ const Checkout = () => {
     const router = useRouter();
     const { shopCarts, clearCart, calculateTotalSubtotal } = useCart();
     const { userData } = useUser();
-    const { addToPlacedOrders, refreshOrders } = useOrder();
+    const { refreshOrders } = useOrder();
     
     const [shopDeliveryOptions, setShopDeliveryOptions] = useState<Record<string, DeliveryOption>>({});
     const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('card');
@@ -140,7 +140,6 @@ const Checkout = () => {
                     specialInstructions
                 };
                 
-                // Use dedicated createOrder function instead of generic addDocument
                 await firebaseService.createOrder(orderData);
                 
                 return orderData;
@@ -148,7 +147,6 @@ const Checkout = () => {
 
             const createdOrders = await Promise.all(orderPromises);
             
-            // Refresh orders to get the newly created orders from Firebase
             if (userData?.uid) {
                 await refreshOrders(userData.uid);
             }
