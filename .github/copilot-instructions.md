@@ -155,6 +155,119 @@ npx expo install
    - Client-side: Storage uploads (`uploadProductImage`, `uploadUserProfileImage`)
    - Cloud Functions: All Firestore operations via `callFunction<T, R>()` helper
 
+### Firestore schemas*
+
+===================
+Collection: `users` 
+-------------------
+
+ --data()--
+ createdAt: DateTime,
+ dob: string (YYYY-MM-DD),
+ first: string,
+ last: string,
+ location: {
+    address: string, 
+    city: string, 
+    coords: Geopoint, 
+    state: string, 
+    zip: string
+ },
+ phone: string,
+ username: string
+ --Firebase Auth provided fields--
+ uid: string (same as `id`, auto-generated Document ID)
+ email: string,
+ displayName: string,
+ signedIn: DateTime,
+ providerData: array[UserInfo: {
+    providerId: string,
+    uid: 'string', (specific to provider, not Firestore uid),
+    displayName: string,
+    email: string,
+    phoneNumber: string,
+    photoURL: string
+ }],
+ metadata: {
+    creationTime: string (ISO 8601 timestamp),
+    lastSignInTime: string, (ISO 8601 timestamp)
+ }
+
+===================
+Collection `shops`:
+-------------------
+
+doc.id: string (auto-generated ID),
+--data()--
+allowPickup: boolean,
+backgroundImageUrl: string,
+closeTime: string (24 HH:MM)
+createdAt: DateTime,
+days: array[string],
+description: string,
+localDelivery: boolean,
+location: Geopoint (creating user.location.coords),
+marketId: string (creating user.location.zip),
+name: string,
+openTime: string (24 HH:MM),
+seasons: array[string],
+type: string,
+userId: string (creating user.uid)
+
+=================
+Collection `items`:
+-----------------
+
+doc.id: string (auto-generated ID),
+--data()--
+category: array[string],
+createdAt: DateTime,
+description: string,
+imageUrl: string,
+marketId: string (creating user.location.zip)
+name: string,
+negotiable: boolean,
+price: float,
+quantity: int,
+shopId: string (shop.id that item is assigned to),
+unit: string,
+userId: string (creating user.uid)
+
+==================
+Collection `orders`:
+------------------
+
+doc.id: string (auto-generated ID),
+--data()--
+contactPhone: string (buyer's user.phone)
+createdAt: DateTime,
+deliveryAddress: string,
+deliveryFee: float,
+deliveryOption: string,
+estimatedDeliveryTime: DateTime,
+id: string (manually created to link orders placed together)
+items: array[
+    {
+        itemId: string,
+        name: string,
+        photoURL: string,
+        price: float,
+        quantity: int,
+    }
+],
+paymentMethod: string,
+shopId: string (shop.id that sold the items),
+shopName: string (shop.name that sold the items),
+shopPhotoURL: string (shop.backgroundImageUrl that sold the items),
+specialInstructions: string,
+status: string,
+subtotal: float,
+tax: float,
+tip: float,
+total: float,
+updatedAt: DateTime,
+userId: string (buyer's user.uid)
+
 ### Known Issues & Workarounds
 1. **Text Node Warning**: The app patches React.createElement in `app/_layout.tsx` to wrap stray text nodes in Text components for web compatibility
 2. **Metro Config**: Package exports disabled (`unstable_enablePackageExports = false`) to avoid compatibility issues
