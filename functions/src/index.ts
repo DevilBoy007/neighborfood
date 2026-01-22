@@ -168,6 +168,11 @@ interface GetShopsByZipCodePrefixRequest {
     userId: string;
 }
 
+interface GetShopsWithItemsRequest {
+    zipPrefix: string;
+    userId: string;
+}
+
 interface CreateItemRequest {
     shopId: string;
     itemData: DocumentData;
@@ -574,6 +579,72 @@ export const getShopsByZipCodePrefix = onCall(async (request: CallableRequest<Ge
     } catch (error) {
         console.error('Error getting shops by zip code prefix:', error);
         throw new HttpsError('internal', 'Error getting shops');
+    }
+});
+
+/**
+ * Get shops with their items in a single call (batch operation)
+ * This reduces the number of function calls from N+1 to 1
+ */
+export const getShopsWithItems = onCall(async (request: CallableRequest<GetShopsWithItemsRequest>) => {
+    verifyAuth(request);
+    const { zipPrefix, userId } = request.data;
+    
+    if (!zipPrefix || !userId) {
+        throw new HttpsError('invalid-argument', 'ZIP prefix and user ID are required');
+    }
+
+    try {
+        // Get all shops matching the zip prefix (excluding user's own shops)
+        const shopsSnapshot = await db.collection('shops')
+            .where('marketId', '>=', zipPrefix)
+            .where('marketId', '<=', zipPrefix + '\uf8ff')
+            .get();
+        
+        const shops = shopsSnapshot.docs
+            .map(doc => ({ id: doc.id, ...sanitizeFirestoreData(doc.data()) } as DocumentData))
+            .filter(shop => shop.userId !== userId);
+        
+        if (shops.length === 0) {
+            return [];
+        }
+        
+        // Get all items for all shops in a single query using 'in' operator
+        // Firestore 'in' supports up to 30 values, so we batch if needed
+        const shopIds = shops.map(shop => shop.id as string);
+        const itemsByShopId: Record<string, DocumentData[]> = {};
+        
+        // Initialize empty arrays for each shop
+        shopIds.forEach(id => { itemsByShopId[id] = []; });
+        
+        // Batch shop IDs into groups of 30 (Firestore 'in' limit)
+        const batchSize = 30;
+        for (let i = 0; i < shopIds.length; i += batchSize) {
+            const batchIds = shopIds.slice(i, i + batchSize);
+            const itemsSnapshot = await db.collection('items')
+                .where('shopId', 'in', batchIds)
+                .get();
+            
+            itemsSnapshot.docs.forEach(doc => {
+                const itemData = sanitizeFirestoreData(doc.data());
+                const item = { id: doc.id, ...itemData } as DocumentData;
+                const shopId = item.shopId as string;
+                if (shopId && itemsByShopId[shopId]) {
+                    itemsByShopId[shopId].push(item);
+                }
+            });
+        }
+        
+        // Attach items to each shop
+        const shopsWithItems = shops.map(shop => ({
+            ...shop,
+            items: itemsByShopId[shop.id as string] || []
+        }));
+        
+        return shopsWithItems;
+    } catch (error) {
+        console.error('Error getting shops with items:', error);
+        throw new HttpsError('internal', 'Error getting shops with items');
     }
 });
 

@@ -42,27 +42,37 @@ export default function ShopDetails() {
 
     useEffect(() => {
         async function fetchShopItems() {
-        if (!selectedShop) return;
-        
-        try {
-            setLoading(true);
-            const shopItems = await firebaseService.getItemsForShop(selectedShop.id);
-            setItems(shopItems || []);
-        } catch (error) {
-            console.error("Error fetching items:", error);
-        } finally {
-            setLoading(false);
-        }
+            if (!selectedShop) return;
+            
+            // Use items already attached to the shop if available (from batch fetch)
+            if (selectedShop.items && selectedShop.items.length > 0) {
+                console.log('Using pre-loaded items from shop object');
+                setItems(selectedShop.items);
+                setLoading(false);
+                return;
+            }
+            
+            // Only fetch if items aren't already attached
+            try {
+                setLoading(true);
+                const shopItems = await firebaseService.getItemsForShop(selectedShop.id);
+                setItems(shopItems || []);
+            } catch (error) {
+                console.error("Error fetching items:", error);
+            } finally {
+                setLoading(false);
+            }
         }
 
         fetchShopItems();
-    }, [selectedShop]);
+    }, [selectedShop?.id, selectedShop?.items]);
     
     useEffect(() => {
         async function fetchShopOwner() {
             if (!selectedShop) return;
 
             try {
+                // getUserById now uses caching internally
                 const owner = await firebaseService.getUserById(selectedShop.userId);
                 if (owner) {
                     setShopOwner(owner);
@@ -73,7 +83,7 @@ export default function ShopDetails() {
         }
 
         fetchShopOwner();
-    }, [selectedShop]);
+    }, [selectedShop?.userId]);
 
     const pickImage = async () => {
         if (!selectedShop || selectedShop.userId !== userData?.uid) {

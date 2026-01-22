@@ -46,6 +46,13 @@ class FirebaseService {
     private storage: FirebaseStorage | null;
     private analytics: Analytics | null;
     private functions: Functions | null;
+    
+    // Cache for reducing redundant API calls
+    private cache: {
+        users: Map<string, { data: unknown; timestamp: number }>;
+        shopsWithItems: Map<string, { data: unknown[]; timestamp: number }>;
+    };
+    private readonly CACHE_TTL = 5 * 60 * 1000; // 5 minutes cache TTL
 
     private constructor() {
         this.firebaseConfig = {
@@ -61,6 +68,12 @@ class FirebaseService {
         this.analytics = null;
         this.auth = null;
         this.functions = null;
+        
+        // Initialize cache
+        this.cache = {
+            users: new Map(),
+            shopsWithItems: new Map()
+        };
     }
 
     public static getInstance(): FirebaseService {
@@ -69,12 +82,35 @@ class FirebaseService {
         }
         return FirebaseService.instance;
     }
+    
+    // Cache helper methods
+    private isCacheValid(timestamp: number): boolean {
+        return Date.now() - timestamp < this.CACHE_TTL;
+    }
+    
+    public clearCache(): void {
+        this.cache.users.clear();
+        this.cache.shopsWithItems.clear();
+    }
+    
+    public clearUserCache(userId?: string): void {
+        if (userId) {
+            this.cache.users.delete(userId);
+        } else {
+            this.cache.users.clear();
+        }
+    }
+    
+    public clearShopsCache(): void {
+        this.cache.shopsWithItems.clear();
+    }
 
     disconnect() {
         try {
             this.app = null;
             this.auth = null;
             this.functions = null;
+            this.clearCache();
             console.log('Disconnected from Firebase');
             return true;
         } catch (error) {
@@ -354,12 +390,27 @@ class FirebaseService {
         }
     }
 
-    async getUserById(userId: string) {
+    async getUserById(userId: string, skipCache = false) {
         try {
-            return await this.callFunction<
+            // Check cache first
+            if (!skipCache) {
+                const cached = this.cache.users.get(userId);
+                if (cached && this.isCacheValid(cached.timestamp)) {
+                    return cached.data as { id: string; [key: string]: unknown } | null;
+                }
+            }
+            
+            const result = await this.callFunction<
                 { userId: string },
                 { id: string; [key: string]: unknown } | null
             >('getUserById', { userId });
+            
+            // Cache the result
+            if (result) {
+                this.cache.users.set(userId, { data: result, timestamp: Date.now() });
+            }
+            
+            return result;
         } catch (error) {
             console.error("Error fetching user by ID:", error);
             throw error;
@@ -423,6 +474,38 @@ class FirebaseService {
             >('getShopsByZipCodePrefix', { zipPrefix, userId });
         } catch (error) {
             console.error('Error getting shops by zip code prefix:', error);
+            throw error;
+        }
+    }
+    
+    /**
+     * Get shops with their items in a single call (batch operation)
+     * Reduces N+1 calls to 1 call, with client-side caching
+     */
+    async getShopsWithItems(zipPrefix: string, userId: string, skipCache = false): Promise<unknown[]> {
+        try {
+            const cacheKey = `${zipPrefix}:${userId}`;
+            
+            // Check cache first
+            if (!skipCache) {
+                const cached = this.cache.shopsWithItems.get(cacheKey);
+                if (cached && this.isCacheValid(cached.timestamp)) {
+                    console.log('Returning cached shops with items');
+                    return cached.data;
+                }
+            }
+            
+            const result = await this.callFunction<
+                { zipPrefix: string; userId: string },
+                unknown[]
+            >('getShopsWithItems', { zipPrefix, userId });
+            
+            // Cache the result
+            this.cache.shopsWithItems.set(cacheKey, { data: result, timestamp: Date.now() });
+            
+            return result;
+        } catch (error) {
+            console.error('Error getting shops with items:', error);
             throw error;
         }
     }

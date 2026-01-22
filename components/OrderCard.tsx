@@ -1,4 +1,4 @@
-import React, { useEffect, useState} from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -16,18 +16,32 @@ const OrderCard = ({ order, onPress }) => {
 
     const [customerName, setCustomerName] = useState<string>('unknown');
     const [isPressed, setIsPressed] = useState(false);
+    
+    // Track if we've already fetched this customer to avoid redundant calls
+    const lastFetchedCustomerId = useRef<string | null>(null);
 
     useEffect(() => {
         let isMounted = true;
+        
+        // Skip if this is the current user
         if (order.customerId === userData?.uid) {
             setCustomerName('you');
             return;
         }
+        
+        // Skip if we already fetched this customer (cache also helps, but this avoids even the cache lookup)
+        if (lastFetchedCustomerId.current === order.customerId && customerName !== 'unknown') {
+            return;
+        }
+        
+        lastFetchedCustomerId.current = order.customerId;
+        
+        // getUserById now uses internal caching
         firebaseService.getUserById(order.customerId).then((customer) => {
             if (isMounted) setCustomerName(customer?.username || 'unknown');
         });
         return () => { isMounted = false; };
-    }, [order.customerId]);
+    }, [order.customerId, userData?.uid]);
 
     const handleStatusPress = (order) => {
         console.log(order)

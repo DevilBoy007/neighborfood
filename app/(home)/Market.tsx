@@ -1,63 +1,65 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { View, Text, TextInput, TouchableOpacity, FlatList, StyleSheet, Platform, ActivityIndicator, RefreshControl } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import ShopCard from '@/components/ShopCard';
-import { useUser, useLocation } from '@/store/reduxHooks';
+import { useUser, useLocation, ShopData } from '@/store/reduxHooks';
 import firebaseService from '@/handlers/firebaseService';
 
 const MapScreen = Platform.OS === 'web'
     ? require('@/components/WebMapScreen').default
     : require('@/components/MapScreen').default;
 
+// Extended type for shops with items attached
+type ShopWithItems = ShopData & { items?: unknown[] };
+
 const MarketScreen = () => {
     const [isMapView, setIsMapView] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
     const [showSortOptions, setShowSortOptions] = useState(false);
-    const [shops, setShops] = useState([]);
+    const [shops, setShops] = useState<ShopWithItems[]>([]);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     
     // Use both user context and location context
     const { userData } = useUser();
     const { locationData } = useLocation();
+    
+    // Track last fetched parameters to avoid redundant calls
+    const lastFetchRef = useRef<{ zipPrefix: string | null; userId: string | null }>({ zipPrefix: null, userId: null });
 
     // Fetch shops based on current location or fallback to user's stored location
-    const fetchShopsAndItems = async () => {
+    const fetchShopsAndItems = useCallback(async (forceRefresh = false) => {
+        // Try to use current location's ZIP code first
+        let zipToUse = locationData.zipCode;
+        
+        // Fall back to user's stored ZIP if current location isn't available
+        if (!zipToUse && userData?.location?.zip) {
+            zipToUse = userData.location.zip;
+        }
+        
+        const zipPrefix = zipToUse?.substring(0, 2) || null;
+        const userId = userData?.uid || null;
+        
+        // Skip if we already fetched with these parameters (unless force refresh)
+        if (!forceRefresh && 
+            lastFetchRef.current.zipPrefix === zipPrefix && 
+            lastFetchRef.current.userId === userId &&
+            shops.length > 0) {
+            return;
+        }
+        
         try {
             setLoading(true);
             
-            // Try to use current location's ZIP code first
-            let zipToUse = locationData.zipCode;
-            
-            // Fall back to user's stored ZIP if current location isn't available
-            if (!zipToUse && userData?.location?.zip) {
-                zipToUse = userData.location.zip;
-            }
-            
-            if (zipToUse) {
-                // Get first 2 digits of ZIP code
-                const zipPrefix = zipToUse.substring(0, 2);
-                const shopsData = await firebaseService.getShopsByZipCodePrefix(zipPrefix, userData.uid);
+            if (zipPrefix && userId) {
+                // Update tracking ref
+                lastFetchRef.current = { zipPrefix, userId };
                 
-                // Fetch items for each shop and attach them directly to the shop objects
-                const shopsWithItems = await Promise.all(shopsData.map(async (shop) => {
-                    try {
-                        const shopItems = await firebaseService.getItemsForShop(shop.id);
-                        return {
-                            ...shop,
-                            items: shopItems || []
-                        };
-                    } catch (err) {
-                        console.error(`Error fetching items for shop ${shop.id}:`, err);
-                        return {
-                            ...shop,
-                            items: []
-                        };
-                    }
-                }));
+                // Use new batch function that fetches shops with items in a single call
+                const shopsWithItems = await firebaseService.getShopsWithItems(zipPrefix, userId);
                 
-                setShops(shopsWithItems || []);
+                setShops((shopsWithItems || []) as ShopWithItems[]);
             } else {
                 // If no ZIP code available, set empty shops array
                 setShops([]);
@@ -72,18 +74,18 @@ const MarketScreen = () => {
             setLoading(false);
             setRefreshing(false);
         }
-    };
+    }, [locationData.zipCode, userData?.location?.zip, userData?.uid, shops.length]);
 
-    // Update when either userData or locationData changes
+    // Only re-fetch when the actual zip code or user ID changes
     useEffect(() => {
         fetchShopsAndItems();
-    }, [userData, locationData.zipCode]);
+    }, [fetchShopsAndItems]);
 
     const toggleView = () => setIsMapView(!isMapView);
     
     const onRefresh = () => {
         setRefreshing(true);
-        fetchShopsAndItems();
+        fetchShopsAndItems(true); // Force refresh
     };
     
     const renderContent = () => {
