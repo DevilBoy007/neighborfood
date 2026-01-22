@@ -63,8 +63,11 @@ const MarketScreen = () => {
                 setShops([]);
             }
         } catch (error) {
-            console.error("Error fetching shops:", error);
+            if (error instanceof TypeError && error.message.includes('undefined')) {
             setShops([]);
+            } else {
+                console.error("Error fetching shops:", error);
+            }
         } finally {
             setLoading(false);
             setRefreshing(false);
