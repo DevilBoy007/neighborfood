@@ -19,6 +19,85 @@ admin.initializeApp();
 const db = admin.firestore();
 
 // =============================================================================
+// Helper functions to convert Firestore data to JSON-serializable format
+// This prevents "Maximum call stack size exceeded" errors during serialization
+// =============================================================================
+
+interface SanitizedTimestamp {
+    seconds: number;
+    nanoseconds: number;
+}
+
+function getTimestampSeconds(timestamp: unknown): number {
+    if (timestamp && typeof timestamp === 'object' && 'seconds' in timestamp) {
+        return (timestamp as SanitizedTimestamp).seconds || 0;
+    }
+    return 0;
+}
+
+function sanitizeFirestoreData(data: FirebaseFirestore.DocumentData | undefined | null): Record<string, unknown> {
+    if (!data) return {};
+    
+    const result: Record<string, unknown> = {};
+    
+    for (const [key, value] of Object.entries(data)) {
+        result[key] = sanitizeValue(value, new WeakSet());
+    }
+    
+    return result;
+}
+
+function sanitizeValue(value: unknown, visited: WeakSet<object>): unknown {
+    if (value === null || value === undefined) {
+        return value;
+    }
+    
+    // Handle Firestore Timestamp
+    if (value instanceof admin.firestore.Timestamp) {
+        return {
+            seconds: value.seconds,
+            nanoseconds: value.nanoseconds
+        };
+    }
+    
+    // Handle Firestore DocumentReference - convert to path string
+    if (value instanceof admin.firestore.DocumentReference) {
+        return value.path;
+    }
+    
+    // Handle Firestore GeoPoint
+    if (value instanceof admin.firestore.GeoPoint) {
+        return {
+            latitude: value.latitude,
+            longitude: value.longitude
+        };
+    }
+    
+    // Handle arrays
+    if (Array.isArray(value)) {
+        return value.map(item => sanitizeValue(item, visited));
+    }
+    
+    // Handle plain objects (but not special Firestore types)
+    if (typeof value === 'object' && value !== null) {
+        // Prevent circular reference infinite recursion
+        if (visited.has(value)) {
+            return '[Circular Reference]';
+        }
+        visited.add(value);
+        
+        const result: Record<string, unknown> = {};
+        for (const [k, v] of Object.entries(value)) {
+            result[k] = sanitizeValue(v, visited);
+        }
+        return result;
+    }
+    
+    // Return primitive values as-is
+    return value;
+}
+
+// =============================================================================
 // Type Definitions
 // =============================================================================
 
@@ -172,7 +251,7 @@ export const getDocument = onCall(async (request: CallableRequest<GetDocumentReq
         const snapshot = await docRef.get();
         
         if (snapshot.exists) {
-            return { id: snapshot.id, ...snapshot.data() };
+            return { id: snapshot.id, ...sanitizeFirestoreData(snapshot.data()) };
         } else {
             return null;
         }
@@ -196,7 +275,7 @@ export const getAllDocuments = onCall(async (request: CallableRequest<GetAllDocu
     try {
         const collectionRef = db.collection(collectionPath);
         const snapshot = await collectionRef.get();
-        return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        return snapshot.docs.map(doc => ({ id: doc.id, ...sanitizeFirestoreData(doc.data()) }));
     } catch (error) {
         console.error('Error getting all documents:', error);
         throw new HttpsError('internal', 'Error getting documents');
@@ -218,7 +297,7 @@ export const getDocumentsWhere = onCall(async (request: CallableRequest<GetDocum
         const collectionRef = db.collection(collectionPath);
         const q = collectionRef.where(field, operator, value);
         const snapshot = await q.get();
-        return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        return snapshot.docs.map(doc => ({ id: doc.id, ...sanitizeFirestoreData(doc.data()) }));
     } catch (error) {
         console.error('Error getting documents with condition:', error);
         throw new HttpsError('internal', 'Error getting documents');
@@ -399,7 +478,7 @@ export const getShopsAndItemsForUser = onCall(async (request: CallableRequest<Ge
         shopsSnapshot.forEach((shopDoc) => {
             const shopData = shopDoc.data();
             console.log('Fetching shop:', shopData.name);
-            shops.push({ id: shopDoc.id, ...shopData });
+            shops.push({ id: shopDoc.id, ...sanitizeFirestoreData(shopData) });
             shopIds.push(shopDoc.id);
         });
 
@@ -414,7 +493,7 @@ export const getShopsAndItemsForUser = onCall(async (request: CallableRequest<Ge
             console.log(`Found ${itemsSnapshot.docs.length} items for shop ${shopId}`);
             itemsSnapshot.forEach(itemDoc => {
                 console.log('Fetching item:', itemDoc.data().name);
-                items.push({ id: itemDoc.id, ...itemDoc.data() });
+                items.push({ id: itemDoc.id, ...sanitizeFirestoreData(itemDoc.data()) });
             });
         }));
 
@@ -441,7 +520,7 @@ export const getItemsForShop = onCall(async (request: CallableRequest<GetItemsFo
             .where('shopId', '==', shopId)
             .get();
         
-        return itemsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        return itemsSnapshot.docs.map(doc => ({ id: doc.id, ...sanitizeFirestoreData(doc.data()) }));
     } catch (error) {
         console.error('Error fetching items for shop:', error);
         throw new HttpsError('internal', 'Error fetching items');
@@ -464,7 +543,7 @@ export const getShopsForMarket = onCall(async (request: CallableRequest<GetShops
             .where('marketId', '==', marketId)
             .get();
         
-        return shopsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        return shopsSnapshot.docs.map(doc => ({ id: doc.id, ...sanitizeFirestoreData(doc.data()) }));
     } catch (error) {
         console.error('Error fetching shops for market:', error);
         throw new HttpsError('internal', 'Error fetching shops');
@@ -490,7 +569,7 @@ export const getShopsByZipCodePrefix = onCall(async (request: CallableRequest<Ge
         
         // Filter out the user's own shops
         const shops = shopsSnapshot.docs
-            .map(doc => ({ id: doc.id, ...doc.data() } as DocumentData));
+            .map(doc => ({ id: doc.id, ...sanitizeFirestoreData(doc.data()) } as DocumentData));
         return shops.filter(shop => shop.userId !== userId);
     } catch (error) {
         console.error('Error getting shops by zip code prefix:', error);
@@ -514,7 +593,7 @@ export const getShopsForUser = onCall(async (request: CallableRequest<GetShopsFo
             .where('userId', '==', userId)
             .get();
         
-        return shopsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        return shopsSnapshot.docs.map(doc => ({ id: doc.id, ...sanitizeFirestoreData(doc.data()) }));
     } catch (error) {
         console.error('Error fetching shops for user:', error);
         throw new HttpsError('internal', 'Error fetching shops');
@@ -579,7 +658,7 @@ export const getItemById = onCall(async (request: CallableRequest<GetItemByIdReq
         const itemDoc = await db.collection('items').doc(itemId).get();
         
         if (itemDoc.exists) {
-            return { id: itemDoc.id, ...itemDoc.data() };
+            return { id: itemDoc.id, ...sanitizeFirestoreData(itemDoc.data()) };
         } else {
             return null;
         }
@@ -605,7 +684,7 @@ export const getAllItemsForUser = onCall(async (request: CallableRequest<GetAllI
             .where('userId', '==', userId)
             .get();
         
-        return itemsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        return itemsSnapshot.docs.map(doc => ({ id: doc.id, ...sanitizeFirestoreData(doc.data()) }));
     } catch (error) {
         console.error('Error fetching items for user:', error);
         throw new HttpsError('internal', 'Error fetching items');
@@ -708,12 +787,12 @@ export const getOrdersFromUser = onCall(async (request: CallableRequest<GetOrder
             .where('userId', '==', userId)
             .get();
         
-        const orders = ordersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as DocumentData));
+        const orders = ordersSnapshot.docs.map(doc => ({ id: doc.id, ...sanitizeFirestoreData(doc.data()) } as DocumentData));
         
         // Sort by creation date, newest first
         return orders.sort((a, b) => {
-            const aTime = a.createdAt?.seconds || 0;
-            const bTime = b.createdAt?.seconds || 0;
+            const aTime = getTimestampSeconds(a.createdAt);
+            const bTime = getTimestampSeconds(b.createdAt);
             return bTime - aTime;
         });
     } catch (error) {
@@ -749,12 +828,12 @@ export const getOrdersForShop = onCall(async (request: CallableRequest<GetOrders
             .where('shopId', '==', shopId)
             .get();
         
-        const orders = ordersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as DocumentData));
+        const orders = ordersSnapshot.docs.map(doc => ({ id: doc.id, ...sanitizeFirestoreData(doc.data()) } as DocumentData));
         
         // Sort by creation date, newest first
         return orders.sort((a, b) => {
-            const aTime = a.createdAt?.seconds || 0;
-            const bTime = b.createdAt?.seconds || 0;
+            const aTime = getTimestampSeconds(a.createdAt);
+            const bTime = getTimestampSeconds(b.createdAt);
             return bTime - aTime;
         });
     } catch (error) {
@@ -837,7 +916,7 @@ export const getOrdersForUser = onCall(async (request: CallableRequest<GetOrders
         
         const placedOrders = placedOrdersSnapshot.docs.map(doc => ({ 
             id: doc.id, 
-            ...doc.data() 
+            ...sanitizeFirestoreData(doc.data()) 
         } as DocumentData));
 
         // Get orders received by the user's shops (as shop owner)
@@ -858,7 +937,7 @@ export const getOrdersForUser = onCall(async (request: CallableRequest<GetOrders
             shopOrdersSnapshot.forEach(orderDoc => {
                 receivedOrders.push({
                     id: orderDoc.id,
-                    ...orderDoc.data(),
+                    ...sanitizeFirestoreData(orderDoc.data()),
                     shopOwnerView: true
                 } as DocumentData);
             });
@@ -866,21 +945,21 @@ export const getOrdersForUser = onCall(async (request: CallableRequest<GetOrders
 
         // Combine and sort all orders by creation date
         const allOrders = [...placedOrders, ...receivedOrders].sort((a, b) => {
-            const aTime = a.createdAt?.seconds || 0;
-            const bTime = b.createdAt?.seconds || 0;
+            const aTime = getTimestampSeconds(a.createdAt);
+            const bTime = getTimestampSeconds(b.createdAt);
             return bTime - aTime;
         });
 
         // Sort individual arrays as well
         placedOrders.sort((a, b) => {
-            const aTime = a.createdAt?.seconds || 0;
-            const bTime = b.createdAt?.seconds || 0;
+            const aTime = getTimestampSeconds(a.createdAt);
+            const bTime = getTimestampSeconds(b.createdAt);
             return bTime - aTime;
         });
 
         receivedOrders.sort((a, b) => {
-            const aTime = a.createdAt?.seconds || 0;
-            const bTime = b.createdAt?.seconds || 0;
+            const aTime = getTimestampSeconds(a.createdAt);
+            const bTime = getTimestampSeconds(b.createdAt);
             return bTime - aTime;
         });
 
@@ -931,7 +1010,7 @@ export const getOrder = onCall(async (request: CallableRequest<GetOrderRequest>)
 
         return { 
             id: orderDoc.id, 
-            ...orderData 
+            ...sanitizeFirestoreData(orderData)
         };
     } catch (error) {
         if (error instanceof HttpsError) throw error;
@@ -959,7 +1038,7 @@ export const getUserById = onCall(async (request: CallableRequest<GetUserByIdReq
         const userDoc = await db.collection('users').doc(userId).get();
         
         if (userDoc.exists) {
-            return { id: userDoc.id, ...userDoc.data() };
+            return { id: userDoc.id, ...sanitizeFirestoreData(userDoc.data()) };
         } else {
             return null;
         }
