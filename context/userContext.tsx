@@ -48,10 +48,25 @@ type UserProviderProps = {
   children: ReactNode;
 };
 
+// Helper to get storage - lazily evaluated with guard for bundling
+const getStorage = () => {
+  if (Platform.OS === 'web') {
+    if (typeof localStorage === 'undefined') {
+      return {
+        getItem: () => Promise.resolve(null),
+        setItem: () => Promise.resolve(),
+        removeItem: () => Promise.resolve(),
+      };
+    }
+    return localStorage;
+  }
+  return AsyncStorage;
+};
+
 export const UserProvider = ({ children }: UserProviderProps) => {
   const [userData, setUserDataState] = useState<UserData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const storage = Platform.OS === 'web' ? localStorage : AsyncStorage;
+  const storage = getStorage();
 
   useEffect(() => {
     const loadUserData = async () => {
@@ -99,11 +114,7 @@ export const UserProvider = ({ children }: UserProviderProps) => {
   const clearUserData = async () => {
     try {
       setUserDataState(null);
-      if (Platform.OS === 'web') {
-        localStorage.removeItem('userData');
-      } else {
-        await AsyncStorage.removeItem('userData');
-      }
+      await storage.removeItem('userData');
     } catch (error) {
       console.error('Error clearing user data:', error);
     }

@@ -1,0 +1,16 @@
+# App Launch Test
+# Verifies the app launches correctly and shows the initial screen
+
+appId: com.neighborfood.app
+---
+- launchApp:
+    clearState: true
+    clearKeychain: true
+
+# Wait for app to load
+- extendedWaitUntil:
+    visible: 'Market|Login|Welcome'
+    timeout: 15000
+
+# Take screenshot for verification
+- takeScreenshot: ${MAESTRO_TESTS_DIR}/app-launch-initial

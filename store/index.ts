@@ -28,12 +28,27 @@ const rootReducer = combineReducers({
   cart: cartReducer,
 });
 
-// Web storage adapter for redux-persist
+// Web storage adapter for redux-persist (lazy access to avoid bundling issues)
 const createWebStorage = () => {
   return {
-    getItem: (key: string) => Promise.resolve(localStorage.getItem(key)),
-    setItem: (key: string, value: string) => Promise.resolve(localStorage.setItem(key, value)),
-    removeItem: (key: string) => Promise.resolve(localStorage.removeItem(key)),
+    getItem: (key: string) => {
+      if (typeof localStorage === 'undefined') {
+        return Promise.resolve(null);
+      }
+      return Promise.resolve(localStorage.getItem(key));
+    },
+    setItem: (key: string, value: string) => {
+      if (typeof localStorage === 'undefined') {
+        return Promise.resolve();
+      }
+      return Promise.resolve(localStorage.setItem(key, value));
+    },
+    removeItem: (key: string) => {
+      if (typeof localStorage === 'undefined') {
+        return Promise.resolve();
+      }
+      return Promise.resolve(localStorage.removeItem(key));
+    },
   };
 };
 

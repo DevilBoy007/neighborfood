@@ -1,0 +1,67 @@
+name: Development Build
+
+on:
+  workflow_dispatch:
+    inputs:
+      platform:
+        type: choice
+        options:
+          - android
+          - ios
+          - both
+        required: true
+        description: 'Platform to build for'
+      message:
+        type: string
+        required: false
+        description: 'Build message/description'
+
+jobs:
+  # Build Android development client (simulator/emulator)
+  build_android:
+    name: Build Android Dev
+    if: ${{ inputs.platform == 'android' || inputs.platform == 'both' }}
+    type: build
+    params:
+      platform: android
+      profile: development
+      message: ${{ inputs.message || 'Development build' }}
+
+  # Build iOS development client (simulator)
+  build_ios:
+    name: Build iOS Dev
+    if: ${{ inputs.platform == 'ios' || inputs.platform == 'both' }}
+    type: build
+    params:
+      platform: ios
+      profile: development
+      message: ${{ inputs.message || 'Development build' }}
+
+  # Show instructions after build
+  next_steps:
+    name: Next Steps
+    after: [build_android, build_ios]
+    type: doc
+    params:
+      md: |
+        # Development Build Complete 🎉
+
+        ## Installation Instructions
+
+        ### Android
+        1. Download the APK from EAS Dashboard
+        2. Install on device/emulator: `adb install <path-to-apk>`
+        3. Run: `npx expo start --dev-client`
+
+        ### iOS Simulator
+        1. Download the build from EAS Dashboard
+        2. Drag and drop into Simulator, or use: `xcrun simctl install booted <path-to-app>`
+        3. Run: `npx expo start --dev-client`
+
+        ## Running the Development Server
+
+        ```bash
+        npx expo start --dev-client
+        ```
+
+        The app will connect to your local development server for hot reloading.

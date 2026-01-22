@@ -56,10 +56,25 @@ type CartProviderProps = {
   children: ReactNode;
 };
 
+// Helper to get storage - lazily evaluated with guard for bundling
+const getStorage = () => {
+  if (Platform.OS === 'web') {
+    if (typeof localStorage === 'undefined') {
+      return {
+        getItem: () => Promise.resolve(null),
+        setItem: () => Promise.resolve(),
+        removeItem: () => Promise.resolve(),
+      };
+    }
+    return localStorage;
+  }
+  return AsyncStorage;
+};
+
 export const CartProvider = ({ children }: CartProviderProps) => {
   const [shopCarts, setShopCarts] = useState<ShopCart[]>([]);
   const [isLoadingCart, setIsLoadingCart] = useState(true);
-  const storage = Platform.OS === 'web' ? localStorage : AsyncStorage;
+  const storage = getStorage();
 
   // Load cart from storage on initial render
   useEffect(() => {

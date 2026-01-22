@@ -1,0 +1,54 @@
+name: Production Build & Submit
+
+on:
+  push:
+    branches: ['main']
+    tags:
+      - 'v*'
+
+jobs:
+  # Build Android for production
+  build_android:
+    name: Build Android
+    type: build
+    params:
+      platform: android
+      profile: production
+
+  # Build iOS for production
+  build_ios:
+    name: Build iOS
+    type: build
+    params:
+      platform: ios
+      profile: production
+
+  # Submit Android to Play Store (after build completes)
+  submit_android:
+    name: Submit to Play Store
+    needs: [build_android]
+    type: submit
+    params:
+      build_id: ${{ needs.build_android.outputs.build_id }}
+      profile: production
+
+  # Submit iOS to App Store (after build completes)
+  submit_ios:
+    name: Submit to App Store
+    needs: [build_ios]
+    type: submit
+    params:
+      build_id: ${{ needs.build_ios.outputs.build_id }}
+      profile: production
+
+  # Notify on completion (optional - requires slack webhook setup)
+  # notify_slack:
+  #   name: Notify Team
+  #   after: [submit_android, submit_ios]
+  #   type: slack
+  #   params:
+  #     webhook_url: ${{ env.SLACK_WEBHOOK_URL }}
+  #     message: |
+  #       🚀 Production builds completed!
+  #       - Android: ${{ needs.build_android.outputs.app_version }} (build ${{ needs.build_android.outputs.app_build_version }})
+  #       - iOS: ${{ needs.build_ios.outputs.app_version }} (build ${{ needs.build_ios.outputs.app_build_version }})

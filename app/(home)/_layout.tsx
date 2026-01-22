@@ -13,9 +13,24 @@ import { User } from 'firebase/auth';
 
 import CartFAB from '@/components/CartFAB';
 
+// Helper to get storage - lazily evaluated with guard for bundling
+const getStorage = () => {
+  if (Platform.OS === 'web') {
+    if (typeof localStorage === 'undefined') {
+      return {
+        getItem: () => Promise.resolve(null),
+        setItem: () => Promise.resolve(),
+        removeItem: () => Promise.resolve(),
+      };
+    }
+    return localStorage;
+  }
+  return AsyncStorage;
+};
+
 export default function RootLayout() {
   const router = useRouter();
-  const storage = Platform.OS === 'web' ? localStorage : AsyncStorage;
+  const storage = getStorage();
   const [userData, setUser] = useState<User | null>(null);
 
   useEffect(() => {
