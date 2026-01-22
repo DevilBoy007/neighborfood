@@ -38,7 +38,7 @@ const MenuScreen = () => {
         <>
         <View style={styles.container}>
             <View style={styles.header}>
-                <Text style={styles.title}>tiles</Text>
+                <Text style={styles.title}>menu</Text>
                 <View style={styles.neighborhood}>
                     {locationData.area && !locationData.loading && (
                         <Text style={styles.headerText}>
