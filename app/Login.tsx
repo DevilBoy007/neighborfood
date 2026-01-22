@@ -3,7 +3,6 @@ import {
     View,
     Text,
     TextInput,
-    TouchableOpacity,
     StyleSheet,
     ScrollView,
     KeyboardAvoidingView,
@@ -13,6 +12,7 @@ import { EventRegister } from 'react-native-event-listeners';
 import { KeyboardToolbar } from 'react-native-keyboard-controller';
 import { useRouter } from 'expo-router';
 import { useUser } from '@/store/reduxHooks';
+import { SoundTouchableOpacity } from '@/components/SoundTouchableOpacity';
 
 import firebaseService from '@/handlers/firebaseService';
 
@@ -130,20 +130,21 @@ const LoginScreen = () => {
                 </View>
             </ScrollView>
             <View style={styles.buttonContainer}>
-                <TouchableOpacity
+                <SoundTouchableOpacity
                     style={[
                         styles.button,
                         disabled && styles.buttonDisabled,
                     ]}
                     onPress={handleLogin}
                     disabled={disabled}
+                    soundType="click"
                 >
                     <Text style={[
                         styles.buttonText,
                         disabled && styles.buttonTextDisabled]}>
                             Login
                     </Text>
-                </TouchableOpacity>
+                </SoundTouchableOpacity>
             </View>
             <KeyboardToolbar />
         </KeyboardAvoidingView>

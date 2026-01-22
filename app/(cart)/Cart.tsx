@@ -5,7 +5,6 @@ import {
     Text,
     StyleSheet,
     SafeAreaView,
-    TouchableOpacity,
     ScrollView,
     Animated,
     Dimensions,
@@ -13,6 +12,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useCart } from '@/store/reduxHooks';
+import { SoundTouchableOpacity } from '@/components/SoundTouchableOpacity';
 
 const { height } = Dimensions.get('window');
 
@@ -20,12 +20,13 @@ const ShopSection = ({ shopCart, updateItemQuantity, removeFromCart }) => (
     <View style={styles.shopSection}>
         <View style={styles.shopHeader}>
             <Text style={styles.shopName}>{shopCart.shopName}</Text>
-            <TouchableOpacity 
+            <SoundTouchableOpacity 
                 style={styles.clearShopButton}
                 onPress={() => removeFromCart(shopCart.shopId, null, true)}
+                soundType="tap"
             >
                 <Text style={styles.clearShopText}>Clear</Text>
-            </TouchableOpacity>
+            </SoundTouchableOpacity>
         </View>
         
         {shopCart.items.map((item) => (
@@ -36,31 +37,34 @@ const ShopSection = ({ shopCart, updateItemQuantity, removeFromCart }) => (
                 </View>
                 
                 <View style={styles.quantityControls}>
-                    <TouchableOpacity 
+                    <SoundTouchableOpacity 
                         style={styles.quantityButton}
                         onPress={() => updateItemQuantity(shopCart.shopId, item.itemId, item.quantity - 1)}
+                        soundType="tap"
                     >
                         <Ionicons name="remove" size={18} color="#333" />
-                    </TouchableOpacity>
+                    </SoundTouchableOpacity>
                     
                     <Text style={styles.quantityText}>{item.quantity}</Text>
                     
-                    <TouchableOpacity 
+                    <SoundTouchableOpacity 
                         style={styles.quantityButton}
                         onPress={() => updateItemQuantity(shopCart.shopId, item.itemId, item.quantity + 1)}
+                        soundType="tap"
                     >
                         <Ionicons name="add" size={18} color="#333" />
-                    </TouchableOpacity>
+                    </SoundTouchableOpacity>
                 </View>
                 
                 <Text style={styles.itemTotal}>${(item.price * item.quantity).toFixed(2)}</Text>
                 
-                <TouchableOpacity 
+                <SoundTouchableOpacity 
                     style={styles.removeButton}
                     onPress={() => removeFromCart(shopCart.shopId, item.itemId)}
+                    soundType="tap"
                 >
                     <Ionicons name="trash-outline" size={20} color="#FF6B6B" />
-                </TouchableOpacity>
+                </SoundTouchableOpacity>
             </View>
         ))}
         
@@ -117,7 +121,7 @@ const CartScreen = () => {
     return (
         <View style={styles.container}>
             <View style={styles.header}>
-                <TouchableOpacity
+                <SoundTouchableOpacity
                     style={styles.backButton}
                     onPress={() => {
                         // Animate out before navigation
@@ -134,9 +138,10 @@ const CartScreen = () => {
                             })
                         ]).start(() => router.back());
                     }}
+                    soundType="tap"
                 >
                     <Ionicons name="chevron-back" size={24} color="black" />
-                </TouchableOpacity>
+                </SoundTouchableOpacity>
                 <Text style={styles.headerTitle}>your cart</Text>
             </View>
 
@@ -176,23 +181,25 @@ const CartScreen = () => {
                     <View style={styles.emptyCartContainer}>
                         <Ionicons name="cart-outline" size={80} color="#999" />
                         <Text style={styles.emptyCartText}>Your cart is empty</Text>
-                        <TouchableOpacity
+                        <SoundTouchableOpacity
                             style={styles.continueShoppingButton}
                             onPress={() => router.navigate('/Market')}
+                            soundType="tap"
                         >
                             <Text style={styles.continueShoppingText}>Continue Shopping</Text>
-                        </TouchableOpacity>
+                        </SoundTouchableOpacity>
                     </View>
                 )}
             </Animated.ScrollView>
             {shopCarts.length > 0 &&
             <View style={styles.buttonContainer}>
-                <TouchableOpacity
+                <SoundTouchableOpacity
                 style={styles.checkoutButton}
                 onPress={handleCheckout}
+                soundType="tap"
                 >
                     <Text style={styles.checkoutButtonText}>Proceed to Checkout</Text>
-                </TouchableOpacity>
+                </SoundTouchableOpacity>
             </View>
     }
         </View>

@@ -3,7 +3,6 @@ import {
     View,
     Text,
     TextInput,
-    TouchableOpacity,
     StyleSheet,
     ScrollView,
     KeyboardAvoidingView,
@@ -16,6 +15,7 @@ import { EventRegister } from 'react-native-event-listeners';
 import firebaseService from '@/handlers/firebaseService';
 import { useUser, useLocation } from '@/store/reduxHooks';
 import { GeoPoint } from 'firebase/firestore';
+import { SoundTouchableOpacity } from '@/components/SoundTouchableOpacity';
 
 // Conditionally import problematic native-only modules
 const KeyboardControllerImport = Platform.OS !== 'web' ? 
@@ -531,12 +531,13 @@ const RegisterScreen = () => {
                     </View>
                 </ScrollView>
                 <View style={[styles.buttonContainer, Platform.OS === 'ios' && styles.iosButtonContainer]}>
-                    <TouchableOpacity
+                    <SoundTouchableOpacity
                         style={[
                             styles.button,
                             disabled && styles.buttonDisabled,
                         ]}
                         onPress={handleRegister}
+                        soundType="click"
                     >
                         <Text style={[
                             styles.buttonText,
@@ -544,7 +545,7 @@ const RegisterScreen = () => {
                         ]}>
                             Register
                         </Text>
-                    </TouchableOpacity>
+                    </SoundTouchableOpacity>
                 </View>
             </KeyboardAvoidingView>
             {Platform.OS !== 'web' ? <KeyboardToolbar /> : null}

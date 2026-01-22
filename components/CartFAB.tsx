@@ -1,8 +1,9 @@
 import React from 'react';
-import { StyleSheet, View, Text, TouchableOpacity, Platform } from 'react-native';
+import { StyleSheet, View, Text, Platform } from 'react-native';
 import { useRouter, usePathname } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useCart } from '@/store/reduxHooks';
+import { SoundTouchableOpacity } from '@/components/SoundTouchableOpacity';
 
 interface CartFABProps {
     bottom?: number;
@@ -25,10 +26,11 @@ const CartFAB: React.FC<CartFABProps> = ({ bottom = 20 }) => {
     };
     
     return (
-        <TouchableOpacity 
+        <SoundTouchableOpacity 
         style={[styles.fabContainer, { bottom }]} 
         onPress={handlePress}
         activeOpacity={0.8}
+        soundType="tap"
         >
         <View style={styles.fab}>
             <Ionicons name="cart" size={24} color="#FFFFFF" />
@@ -37,7 +39,7 @@ const CartFAB: React.FC<CartFABProps> = ({ bottom = 20 }) => {
         <View style={styles.badge}>
             <Text style={styles.badgeText}>{itemCount}</Text>
         </View>
-        </TouchableOpacity>
+        </SoundTouchableOpacity>
     );
 };
 

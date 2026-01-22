@@ -4,7 +4,6 @@ import {
     Text,
     StyleSheet,
     SafeAreaView,
-    TouchableOpacity,
     ScrollView,
     TextInput,
     Platform,
@@ -15,6 +14,7 @@ import Toast from 'react-native-toast-message';
 import { v4 as uuidv4 } from 'uuid';
 import { useCart, useUser, useOrder } from '@/store/reduxHooks';
 import firebaseService from '@/handlers/firebaseService';
+import { SoundTouchableOpacity } from '@/components/SoundTouchableOpacity';
 
 type DeliveryOption = 'pickup' | 'delivery';
 type PaymentMethod = 'apple_pay' | 'card' | 'venmo' | 'paypal';
@@ -188,19 +188,20 @@ const Checkout = () => {
         return (
             <SafeAreaView style={styles.container}>
                 <View style={styles.header}>
-                    <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+                    <SoundTouchableOpacity style={styles.backButton} onPress={() => router.back()} soundType="tap">
                         <Ionicons name="chevron-back" size={24} color="black" />
-                    </TouchableOpacity>
+                    </SoundTouchableOpacity>
                     <Text style={styles.headerTitle}>checkout</Text>
                 </View>
                 <View style={styles.emptyContainer}>
                     <Text style={styles.emptyText}>Your cart is empty</Text>
-                    <TouchableOpacity
+                    <SoundTouchableOpacity
                         style={styles.continueShoppingButton}
                         onPress={() => router.navigate('/Market')}
+                        soundType="tap"
                     >
                         <Text style={styles.continueShoppingText}>Continue Shopping</Text>
-                    </TouchableOpacity>
+                    </SoundTouchableOpacity>
                 </View>
             </SafeAreaView>
         );
@@ -209,9 +210,9 @@ const Checkout = () => {
     return (
         <View style={styles.container}>
             <View style={styles.header}>
-                <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+                <SoundTouchableOpacity style={styles.backButton} onPress={() => router.back()} soundType="tap">
                     <Ionicons name="chevron-back" size={24} color="black" />
-                </TouchableOpacity>
+                </SoundTouchableOpacity>
                 <Text style={styles.headerTitle}>checkout</Text>
             </View>
 
@@ -240,12 +241,13 @@ const Checkout = () => {
                                 <Text style={styles.deliveryOptionsTitle}>Delivery Option:</Text>
                                 <View style={styles.optionGroup}>
                                     {shopCart.allowPickup && (
-                                        <TouchableOpacity
+                                        <SoundTouchableOpacity
                                             style={[
                                                 styles.shopOption, 
                                                 shopDeliveryOptions[shopCart.shopId] === 'pickup' && styles.selectedShopOption
                                             ]}
                                             onPress={() => updateShopDeliveryOption(shopCart.shopId, 'pickup')}
+                                            soundType="tap"
                                         >
                                             <Ionicons 
                                                 name="storefront" 
@@ -258,16 +260,17 @@ const Checkout = () => {
                                             ]}>
                                                 Pickup
                                             </Text>
-                                        </TouchableOpacity>
+                                        </SoundTouchableOpacity>
                                     )}
                                     
                                     {shopCart.localDelivery && (
-                                        <TouchableOpacity
+                                        <SoundTouchableOpacity
                                             style={[
                                                 styles.shopOption, 
                                                 shopDeliveryOptions[shopCart.shopId] === 'delivery' && styles.selectedShopOption
                                             ]}
                                             onPress={() => updateShopDeliveryOption(shopCart.shopId, 'delivery')}
+                                            soundType="tap"
                                         >
                                             <Ionicons 
                                                 name="bicycle" 
@@ -280,7 +283,7 @@ const Checkout = () => {
                                             ]}>
                                                 Delivery (+$3.99)
                                             </Text>
-                                        </TouchableOpacity>
+                                        </SoundTouchableOpacity>
                                     )}
                                 </View>
                             </View>
@@ -331,10 +334,11 @@ const Checkout = () => {
                             { key: 'venmo', icon: 'logo-venmo', label: 'Venmo' },
                             { key: 'paypal', icon: 'logo-paypal', label: 'PayPal' }
                         ].map((payment) => (
-                            <TouchableOpacity
+                            <SoundTouchableOpacity
                                 key={payment.key}
                                 style={[styles.paymentOption, paymentMethod === payment.key && styles.selectedPayment]}
                                 onPress={() => setPaymentMethod(payment.key as PaymentMethod)}
+                                soundType="tap"
                             >
                                 <Ionicons 
                                     name={payment.icon as any} 
@@ -344,7 +348,7 @@ const Checkout = () => {
                                 <Text style={[styles.paymentLabel, paymentMethod === payment.key && styles.selectedPaymentText]}>
                                     {payment.label}
                                 </Text>
-                            </TouchableOpacity>
+                            </SoundTouchableOpacity>
                         ))}
                     </View>
                 </View>
@@ -389,26 +393,28 @@ const Checkout = () => {
             {/* Place Order Button */}
             <View style={styles.buttonContainer} >
                 {paymentMethod === 'apple_pay' ? (
-                    <TouchableOpacity
+                    <SoundTouchableOpacity
                         style={[styles.applePayButton, isPlacingOrder && styles.disabledButton]}
                         onPress={handlePlaceOrder}
                         disabled={isPlacingOrder}
+                        soundType="click"
                     >
                         <Ionicons name="logo-apple" size={24} color="white" style={styles.applePayIcon} />
                         <Text style={styles.applePayText}>
                             {isPlacingOrder ? 'Processing...' : 'Pay with Apple Pay'}
                         </Text>
-                    </TouchableOpacity>
+                    </SoundTouchableOpacity>
                 ) : (
-                    <TouchableOpacity
+                    <SoundTouchableOpacity
                         style={[styles.placeOrderButton, isPlacingOrder && styles.disabledButton]}
                         onPress={handlePlaceOrder}
                         disabled={isPlacingOrder}
+                        soundType="click"
                     >
                         <Text style={styles.placeOrderText}>
                             {isPlacingOrder ? 'Placing Order...' : 'Place Order'}
                         </Text>
-                    </TouchableOpacity>
+                    </SoundTouchableOpacity>
                 )}
             </View>
         </View>

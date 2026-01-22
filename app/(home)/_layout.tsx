@@ -1,8 +1,9 @@
 import React from 'react';
-import { View, StyleSheet, Platform, TouchableOpacity, Image } from 'react-native';
+import { View, StyleSheet, Platform, Image } from 'react-native';
 import { useEffect, useState, useCallback } from 'react';
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Stack, useRouter } from "expo-router";
+import { SoundTouchableOpacity } from '@/components/SoundTouchableOpacity';
 
 import chatIcon from '../../assets/images/chat.png';
 import pollsIcon from '../../assets/images/surveys.png';
@@ -56,34 +57,34 @@ export default function RootLayout() {
         <View style={styles.container}>
           <Stack.Screen options={{ headerShown: false }} initialParams={{ toggleSettings: toggleSettings }}  />
           {Platform.OS !== 'web'  &&
-            <TouchableOpacity onPress={toggleSettings} style={styles.profileImage}>
+            <SoundTouchableOpacity onPress={toggleSettings} style={styles.profileImage} soundType="tap">
               <Image
                 source={userData?.photoURL ? { uri: userData.photoURL } : profileIcon}
                 style={styles.profileImage}
               />
-            </TouchableOpacity>
+            </SoundTouchableOpacity>
           }
           <View style={styles.content}>
           {Platform.OS === 'web' &&
             <View style={styles.footer}>
-              <TouchableOpacity style={styles.iconButton} onPress={ toggleSettings }>
+              <SoundTouchableOpacity style={styles.iconButton} onPress={ toggleSettings } soundType="tap">
                 <Image
                   source={userData?.photoURL ? { uri: userData.photoURL } : profileIcon}
                   style={[styles.iconButton, styles.profileImage]}
                 />
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.iconButton}>
+              </SoundTouchableOpacity>
+              <SoundTouchableOpacity style={styles.iconButton} soundType="tap">
                 <Image style={[styles.iconButton, styles.icon]} source={chatIcon} />
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.iconButton}>
+              </SoundTouchableOpacity>
+              <SoundTouchableOpacity style={styles.iconButton} soundType="tap">
                 <Image style={[styles.iconButton, styles.icon]} source={pollsIcon} />
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.iconButton} onPress={() => { router.navigate('/Market') }}>
+              </SoundTouchableOpacity>
+              <SoundTouchableOpacity style={styles.iconButton} onPress={() => { router.navigate('/Market') }} soundType="tap">
                 <Image style={[styles.iconButton, styles.icon]} source={marketIcon} />
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.iconButton} onPress={ () => router.navigate('/Menu')}>
+              </SoundTouchableOpacity>
+              <SoundTouchableOpacity style={styles.iconButton} onPress={ () => router.navigate('/Menu')} soundType="tap">
                 <Image style={[styles.iconButton, styles.icon]} source={tileIcon} />
-              </TouchableOpacity>
+              </SoundTouchableOpacity>
             </View>}
             <Stack>
               <Stack.Screen name="Market" options={{ headerShown: false }} />
@@ -93,18 +94,18 @@ export default function RootLayout() {
         </View>
         {Platform.OS !== 'web' &&
         <View style={styles.footer}>
-          <TouchableOpacity style={styles.iconButton}>
+          <SoundTouchableOpacity style={styles.iconButton} soundType="tap">
             <Image style={[styles.iconButton, styles.icon]} source={chatIcon} />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.iconButton}>
+          </SoundTouchableOpacity>
+          <SoundTouchableOpacity style={styles.iconButton} soundType="tap">
             <Image style={[styles.iconButton, styles.icon]} source={pollsIcon} />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.iconButton} onPress={() => { router.navigate('/Market') }}>
+          </SoundTouchableOpacity>
+          <SoundTouchableOpacity style={styles.iconButton} onPress={() => { router.navigate('/Market') }} soundType="tap">
             <Image style={[styles.iconButton, styles.icon]} source={marketIcon} />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.iconButton} onPress={ () => router.navigate('/Menu')}>
+          </SoundTouchableOpacity>
+          <SoundTouchableOpacity style={styles.iconButton} onPress={ () => router.navigate('/Menu')} soundType="tap">
             <Image style={[styles.iconButton, styles.icon]} source={tileIcon} />
-          </TouchableOpacity>
+          </SoundTouchableOpacity>
         </View>}
         <CartFAB bottom={Platform.OS === 'web' ? 20 : 100} />
     </>
