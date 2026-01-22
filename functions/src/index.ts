@@ -176,11 +176,21 @@ interface GetShopsWithItemsRequest {
 interface CreateItemRequest {
     shopId: string;
     itemData: DocumentData;
+    itemId?: string; // Optional: if provided, use as document ID
 }
 
 interface UpdateItemQuantityRequest {
     itemId: string;
     quantityChange: number;
+}
+
+interface UpdateItemDetailsRequest {
+    itemId: string;
+    itemData: DocumentData;
+}
+
+interface DeleteItemRequest {
+    itemId: string;
 }
 
 interface CreateOrderRequest {
@@ -680,7 +690,7 @@ export const getShopsForUser = onCall(async (request: CallableRequest<GetShopsFo
  */
 export const createItemForShop = onCall(async (request: CallableRequest<CreateItemRequest>) => {
     verifyAuth(request);
-    const { shopId, itemData } = request.data;
+    const { shopId, itemData, itemId } = request.data;
     
     if (!shopId || !itemData) {
         throw new HttpsError('invalid-argument', 'Shop ID and item data are required');
@@ -699,18 +709,65 @@ export const createItemForShop = onCall(async (request: CallableRequest<CreateIt
         }
 
         const itemsCollectionRef = db.collection('items');
-        const docRef = await itemsCollectionRef.add({
+        const dataToSave = {
             ...itemData,
-            shopId: shopId, // Store as string - change to array if multi-shop items are needed later
+            shopId: shopId,
             createdAt: FieldValue.serverTimestamp()
-        });
+        };
         
-        console.log('Item created with ID:', docRef.id);
-        return docRef.id;
+        let finalId: string;
+        if (itemId) {
+            // Use provided itemId as document ID (for storage path consistency)
+            await itemsCollectionRef.doc(itemId).set(dataToSave);
+            finalId = itemId;
+        } else {
+            // Auto-generate ID
+            const docRef = await itemsCollectionRef.add(dataToSave);
+            finalId = docRef.id;
+        }
+        
+        console.log('Item created with ID:', finalId);
+        return finalId;
     } catch (error) {
         if (error instanceof HttpsError) throw error;
         console.error('Error creating item:', error);
         throw new HttpsError('internal', 'Error creating item');
+    }
+});
+
+/**
+ * Delete an item
+ */
+export const deleteItem = onCall(async (request: CallableRequest<DeleteItemRequest>) => {
+    verifyAuth(request);
+    const { itemId } = request.data;
+    
+    if (!itemId) {
+        throw new HttpsError('invalid-argument', 'Item ID is required');
+    }
+
+    try {
+        const itemDoc = await db.collection('items').doc(itemId).get();
+        
+        if (!itemDoc.exists) {
+            throw new HttpsError('not-found', `Item with ID ${itemId} not found`);
+        }
+
+        const itemData = itemDoc.data();
+        
+        // Verify user owns this item
+        if (itemData?.userId !== request.auth?.uid) {
+            throw new HttpsError('permission-denied', 'User can only delete their own items');
+        }
+
+        await db.collection('items').doc(itemId).delete();
+        console.log(`Deleted item ${itemId}`);
+        
+        return { success: true };
+    } catch (error) {
+        if (error instanceof HttpsError) throw error;
+        console.error('Error deleting item:', error);
+        throw new HttpsError('internal', 'Error deleting item');
     }
 });
 
@@ -799,6 +856,50 @@ export const updateItemQuantity = onCall(async (request: CallableRequest<UpdateI
         if (error instanceof HttpsError) throw error;
         console.error('Error updating item quantity:', error);
         throw new HttpsError('internal', 'Error updating item quantity');
+    }
+});
+
+/**
+ * Update item details (e.g., shopId array, name, price, etc.)
+ */
+export const updateItemDetails = onCall(async (request: CallableRequest<UpdateItemDetailsRequest>) => {
+    verifyAuth(request);
+    const { itemId, itemData } = request.data;
+    
+    if (!itemId || !itemData) {
+        throw new HttpsError('invalid-argument', 'Item ID and item data are required');
+    }
+
+    try {
+        const itemDoc = await db.collection('items').doc(itemId).get();
+        
+        if (!itemDoc.exists) {
+            throw new HttpsError('not-found', `Item with ID ${itemId} not found`);
+        }
+
+        const existingItem = itemDoc.data();
+        
+        // Verify user owns this item
+        if (existingItem?.userId !== request.auth?.uid) {
+            throw new HttpsError('permission-denied', 'User can only update their own items');
+        }
+
+        // Don't allow changing userId
+        const sanitizedData = { ...itemData };
+        delete sanitizedData.userId;
+        delete sanitizedData.createdAt;
+
+        await db.collection('items').doc(itemId).update({
+            ...sanitizedData,
+            updatedAt: FieldValue.serverTimestamp()
+        });
+        
+        console.log(`Updated item ${itemId} with data:`, Object.keys(sanitizedData));
+        return { success: true };
+    } catch (error) {
+        if (error instanceof HttpsError) throw error;
+        console.error('Error updating item details:', error);
+        throw new HttpsError('internal', 'Error updating item details');
     }
 });
 

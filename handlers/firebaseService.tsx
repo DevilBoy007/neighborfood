@@ -631,16 +631,29 @@ class FirebaseService {
     // Item Operations (via Cloud Functions)
     // =========================================================================
 
-    async createItemForShop(shopId: string, itemData: object): Promise<string> {
+    async createItemForShop(shopId: string, itemData: object, itemId?: string): Promise<string> {
         try {
             const result = await this.callFunction<
-                { shopId: string; itemData: object },
+                { shopId: string; itemData: object; itemId?: string },
                 string
-            >('createItemForShop', { shopId, itemData });
+            >('createItemForShop', { shopId, itemData, itemId });
             console.log("Item created with ID:", result);
             return result;
         } catch (error) {
             console.error("Error creating item:", error);
+            throw error;
+        }
+    }
+    
+    async deleteItem(itemId: string): Promise<void> {
+        try {
+            await this.callFunction<
+                { itemId: string },
+                { success: boolean }
+            >('deleteItem', { itemId });
+            console.log("Item deleted:", itemId);
+        } catch (error) {
+            console.error("Error deleting item:", error);
             throw error;
         }
     }
@@ -678,6 +691,19 @@ class FirebaseService {
             console.log(`Updated item ${itemId} quantity by ${quantityChange}`);
         } catch (error) {
             console.error("Error updating item quantity:", error);
+            throw error;
+        }
+    }
+    
+    async updateItemDetails(itemId: string, itemData: object): Promise<void> {
+        try {
+            await this.callFunction<
+                { itemId: string; itemData: object },
+                { success: boolean }
+            >('updateItemDetails', { itemId, itemData });
+            console.log(`Updated item ${itemId} details`);
+        } catch (error) {
+            console.error("Error updating item details:", error);
             throw error;
         }
     }

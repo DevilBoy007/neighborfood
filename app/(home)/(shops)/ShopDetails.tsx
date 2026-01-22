@@ -179,8 +179,8 @@ export default function ShopDetails() {
             // In this case, we only remove the shop ID from the item's shopId array
             const updatedShopIds = item.shopId.filter(id => id !== selectedShop.id);
             
-            // Update the item with the new shopId array
-            await firebaseService.updateDocument('items', item.id, {
+            // Update the item with the new shopId array using dedicated function
+            await firebaseService.updateItemDetails(item.id, {
                 shopId: updatedShopIds
             });
             

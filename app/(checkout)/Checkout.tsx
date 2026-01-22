@@ -114,7 +114,7 @@ const Checkout = () => {
         setIsPlacingOrder(true);
         const orderId = uuidv4();
         try {
-            // Create orders for each shop
+            // Create orders for each shop using the dedicated createOrder function
             const orderPromises = shopCarts.map(async (shopCart) => {
                 const deliveryOption = shopDeliveryOptions[shopCart.shopId];
                 const orderData = {
@@ -132,7 +132,6 @@ const Checkout = () => {
                     tip: 0, // TODO: implement later
                     total: shopCart.subtotal + (shopCart.subtotal * 0.08) + (deliveryOption === 'delivery' ? 3.99 : 0),
                     status: 'pending' as const,
-                    createdAt: new Date(),
                     estimatedDeliveryTime: new Date(Date.now() + 45 * 60 * 1000), // 45 minutes from now
                     paymentMethod,
                     deliveryAddress: deliveryOption === 'delivery' ? deliveryAddress : 'Pickup',
@@ -140,8 +139,9 @@ const Checkout = () => {
                     deliveryOption,
                     specialInstructions
                 };
-;                
-                await firebaseService.addDocument('orders', orderData, null);
+                
+                // Use dedicated createOrder function instead of generic addDocument
+                await firebaseService.createOrder(orderData);
                 
                 return orderData;
             });

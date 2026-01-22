@@ -291,12 +291,11 @@ export default function AddItemScreen() {
                     unit,
                     negotiable,
                     quantity: parseInt(quantity),
-                    createdAt: new Date()
                 };
                 
                 if (itemId && selectedItem) {
-                    // We're updating an existing item
-                    await firebaseService.updateDocument('items', itemId.toString(), itemData);
+                    // We're updating an existing item - use dedicated updateItemDetails function
+                    await firebaseService.updateItemDetails(itemId.toString(), itemData);
                     
                     // Update the selectedItem in context to reflect changes immediately
                     setSelectedItem({
@@ -342,7 +341,8 @@ export default function AddItemScreen() {
                     }
                 } else {
                     // Create new item with the pre-generated itemId (for storage path consistency)
-                    await firebaseService.addDocument('items', itemData, newItemIdForUpload);
+                    // Use dedicated createItemForShop function with optional itemId
+                    await firebaseService.createItemForShop(shopId, itemData, newItemIdForUpload);
                     
                     const successMessage = 'Item created successfully!';
                     

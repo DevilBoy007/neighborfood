@@ -84,7 +84,8 @@ export default function ManageItems() {
     const deleteItem = async (item) => {
         try {
             setLoading(true);
-            await firebaseService.deleteDocument('items', item.id);
+            // Use dedicated deleteItem function instead of generic deleteDocument
+            await firebaseService.deleteItem(item.id);
             
             // Update the local state to remove the deleted item
             setItems(prevItems => prevItems.filter(i => i.id !== item.id));
