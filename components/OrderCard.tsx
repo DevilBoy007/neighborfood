@@ -14,34 +14,63 @@ const OrderCard = ({ order, onPress }) => {
     const { userData } = useUser();
     const { getStatusColor, getStatusText, buildStatusButtons } = useOrderStatus();
 
-    const [customerName, setCustomerName] = useState<string>('unknown');
+    const [displayName, setDisplayName] = useState<string>('unknown');
+    const [displayLabel, setDisplayLabel] = useState<string>('placed by ');
     const [isPressed, setIsPressed] = useState(false);
     
-    // Track if we've already fetched this customer to avoid redundant calls
-    const lastFetchedCustomerId = useRef<string | null>(null);
+    // Track if we've already fetched this user to avoid redundant calls
+    const lastFetchedUserId = useRef<string | null>(null);
 
     useEffect(() => {
         let isMounted = true;
         
-        // Skip if this is the current user
+        // If buyer is viewing their own placed order, show shop owner instead
         if (order.customerId === userData?.uid) {
-            setCustomerName('you');
-            return;
+            setDisplayLabel('sold by ');
+            
+            // Skip if we already fetched this shop's owner
+            const shopId = order.originalOrder?.shopId;
+            if (lastFetchedUserId.current === shopId && displayName !== 'unknown') {
+                return;
+            }
+            
+            lastFetchedUserId.current = shopId;
+            
+            // Fetch shop to get owner's userId, then fetch owner's username
+            if (shopId) {
+                firebaseService.getDocument('shops', shopId).then((shop: any) => {
+                    if (isMounted && shop?.userId) {
+                        firebaseService.getUserById(shop.userId).then((owner) => {
+                            if (isMounted) {
+                                const username = owner?.username as string | undefined;
+                                setDisplayName(username || 'unknown');
+                            }
+                        });
+                    }
+                });
+            }
+            return () => { isMounted = false; };
         }
+        
+        // Shop owner viewing received order - show customer name
+        setDisplayLabel('placed by ');
         
         // Skip if we already fetched this customer (cache also helps, but this avoids even the cache lookup)
-        if (lastFetchedCustomerId.current === order.customerId && customerName !== 'unknown') {
+        if (lastFetchedUserId.current === order.customerId && displayName !== 'unknown') {
             return;
         }
         
-        lastFetchedCustomerId.current = order.customerId;
+        lastFetchedUserId.current = order.customerId;
         
         // getUserById now uses internal caching
         firebaseService.getUserById(order.customerId).then((customer) => {
-            if (isMounted) setCustomerName(customer?.username || 'unknown');
+            if (isMounted) {
+                const username = customer?.username as string | undefined;
+                setDisplayName(username || 'unknown');
+            }
         });
         return () => { isMounted = false; };
-    }, [order.customerId, userData?.uid]);
+    }, [order.customerId, order.originalOrder?.shopId, userData?.uid]);
 
     const handleStatusPress = (order) => {
         console.log(order)
@@ -61,8 +90,8 @@ const OrderCard = ({ order, onPress }) => {
 
                 <View style={styles.orderDetails}>
                     <View style={styles.detailRow}>
-                        <Text style={[styles.detailLabel, styles.itemsText]}>placed by</Text>
-                        <Text style={[styles.detailValue, styles.itemsText]}>{customerName}</Text>
+                        <Text style={[styles.detailLabel, styles.itemsText]}>{displayLabel}</Text>
+                        <Text style={[styles.detailValue, styles.itemsText]}>{displayName}</Text>
                     </View>
                     <View style={styles.detailRow}>
                         <Text style={styles.detailLabel}>total:</Text>
