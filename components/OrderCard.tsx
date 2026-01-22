@@ -6,7 +6,6 @@ import { useRouter } from 'expo-router';
 import { useOrder, useUser, OrderStatus } from '@/store/reduxHooks';
 import firebaseService from '@/handlers/firebaseService'
 import { useOrderStatus } from '@/hooks/useOrderStatus';
-import { SoundTouchableOpacity } from '@/components/SoundTouchableOpacity';
 
 const OrderCard = ({ order, onPress }) => {
     const router = useRouter();
@@ -40,7 +39,7 @@ const OrderCard = ({ order, onPress }) => {
 
     return (
         <>
-            <SoundTouchableOpacity style={styles.orderCard} onPress={onPress}>
+            <TouchableOpacity style={styles.orderCard} onPress={onPress}>
                 <View style={styles.orderHeader}>
                     <Text style={styles.dateText}>{date}</Text>
                     <Ionicons name="chevron-forward" size={24} color="black" />
@@ -65,7 +64,7 @@ const OrderCard = ({ order, onPress }) => {
 
                     <Text style={styles.itemsText}>items: {items}</Text>
                 </View>
-            </SoundTouchableOpacity>
+            </TouchableOpacity>
             <View style={styles.statusMetaContainer}>
                 { isPressed && (
                     <View>
@@ -76,11 +75,11 @@ const OrderCard = ({ order, onPress }) => {
                                 router.push('/success');
                             }
                         }).map((button) => (
-                            <SoundTouchableOpacity key={button.key} onPress={button.onPress}>
+                            <TouchableOpacity key={button.key} onPress={button.onPress}>
                                 <View style={{ backgroundColor: button.color }}>
                                     <Text style={styles.statusText}>{button.label}</Text>
                                 </View>
-                            </SoundTouchableOpacity>
+                            </TouchableOpacity>
                         ))}
                     </View>
                 )}
