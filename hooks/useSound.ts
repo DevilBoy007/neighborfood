@@ -5,7 +5,6 @@ import clickSound from '@/assets/sounds/click.mp3';
 import tapSound from '@/assets/sounds/tap.wav';
 
 export const useSound = () => {
-
   const clickPlayer = useAudioPlayer(clickSound);
   const tapPlayer = useAudioPlayer(tapSound);
 

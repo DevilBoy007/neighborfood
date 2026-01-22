@@ -5,6 +5,7 @@
 **Neighborfood** is a React Native mobile application built with Expo that connects users with local food vendors. It's a food marketplace app where users can browse shops, order items, manage carts, and complete checkouts with location-based services.
 
 ### Tech Stack
+
 - **Framework**: React Native 0.79.6 with Expo SDK 53
 - **Language**: TypeScript 5.8.3
 - **Routing**: Expo Router 5.1.10 (file-based routing)
@@ -16,20 +17,24 @@
 - **Build Tool**: Metro bundler
 
 ### Firebase Architecture
+
 The app uses a hybrid Firebase architecture following best practices:
 
 **Client-Side (in `handlers/firebaseService.tsx`):**
+
 - **Authentication**: Login, register, logout remain client-side (Firebase recommendation for token management)
 - **Storage**: File uploads use client-side SDK for direct file access
   - `uploadProductImage(file, shopId, itemId)` → `product_images/{shopId}/{itemId}/{filename}`
   - `uploadUserProfileImage(file, userId)` → `user_profile_images/{userId}/{filename}`
 
 **Server-Side (in `functions/src/index.ts`):**
+
 - All Firestore CRUD operations use Cloud Functions via `httpsCallable`
 - Provides server-side validation and permission checks
 - 30+ callable functions for shops, items, orders, users, and generic CRUD
 
 **Deploying Cloud Functions:**
+
 ```bash
 npx firebase login
 cp .firebaserc.example .firebaserc  # add your project ID
@@ -40,6 +45,7 @@ npx firebase deploy --only functions
 ## Build & Run Instructions
 
 ### Prerequisites
+
 - Node.js and npm (versions not specified in package.json)
 - Expo CLI (installed via npx)
 - For iOS: Xcode and iOS Simulator
@@ -47,12 +53,15 @@ npx firebase deploy --only functions
 - For Cloud Functions: Firebase CLI (installed as `firebase-tools` dependency)
 
 ### Installation
+
 **Always run `npm install` before building or running the project.**
+
 ```bash
 npm install
 ```
 
 **Followed by `npx expo install` to ensure Expo-compatible versions of dependencies are installed.**
+
 ```bash
 npx expo install
 ```
@@ -60,15 +69,17 @@ npx expo install
 **Don't attempt to upgrade dependencies unless necessary to fix bugs or add critical features.**
 
 ### Development Commands
-| Command | Description |
-|---------|-------------|
-| `npx expo install {package-name}` | Install a package with Expo-compatible version |
-| `npx expo start` | Start Expo development server |
-| `npx expo run android` | Run on Android emulator/device (requires pre-built native app) |
-| `npx expo run ios` | Run on iOS simulator/device (requires pre-built native app) |
-| `npx expo run web` | Run web version using Metro bundler |
+
+| Command                           | Description                                                    |
+| --------------------------------- | -------------------------------------------------------------- |
+| `npx expo install {package-name}` | Install a package with Expo-compatible version                 |
+| `npx expo start`                  | Start Expo development server                                  |
+| `npx expo run android`            | Run on Android emulator/device (requires pre-built native app) |
+| `npx expo run ios`                | Run on iOS simulator/device (requires pre-built native app)    |
+| `npx expo run web`                | Run web version using Metro bundler                            |
 
 ### Important Notes
+
 - The entry point is `index.js` which registers the app using expo-router
 - Main app structure is in `app/` directory using file-based routing
 - Use `npx expo start` to get options for opening in development build, emulator, or Expo Go
@@ -76,6 +87,7 @@ npx expo install
 ## Project Architecture
 
 ### Directory Structure
+
 ```
 /app/                   # Main application code (file-based routing)
   /_layout.tsx          # Root layout with providers
@@ -121,7 +133,8 @@ npx expo install
 ```
 
 ### Configuration Files
-- **tsconfig.json**: TypeScript config with strict mode, path aliases (@/*)
+
+- **tsconfig.json**: TypeScript config with strict mode, path aliases (@/\*)
 - **babel.config.js**: Uses babel-preset-expo
 - **metro.config.js**: Custom Metro config with .cjs support and web alias for react-native-maps → react-native-web-maps
 - **app.json**: Expo config with plugins for expo-router, expo-location, expo-media-library
@@ -130,6 +143,7 @@ npx expo install
 - **.firebaserc.example**: Template for Firebase project linking
 
 ### Key Architectural Elements
+
 1. **Entry Point**: `index.js` → registers root component via expo-router
 2. **Root Layout**: `app/_layout.tsx` contains:
    - Redux Provider with persisted store
@@ -144,7 +158,7 @@ npx expo install
    - Grouped routes use (folder) syntax: `(home)`, `(cart)`, `(checkout)`
    - `_layout.tsx` files define nested layouts
 
-4. **Maps Integration**: 
+4. **Maps Integration**:
    - Native: react-native-maps
    - Web: react-native-web-maps (aliased via Metro config)
    - Google Maps API loader for web
@@ -155,47 +169,49 @@ npx expo install
    - Client-side: Storage uploads (`uploadProductImage`, `uploadUserProfileImage`)
    - Cloud Functions: All Firestore operations via `callFunction<T, R>()` helper
 
-### Firestore schemas*
+### Firestore schemas\*
 
 ===================
-Collection: `users` 
--------------------
+Collection: `users`
 
- --data()--
- createdAt: DateTime,
- dob: string (YYYY-MM-DD),
- first: string,
- last: string,
- location: {
-    address: string, 
-    city: string, 
-    coords: Geopoint, 
-    state: string, 
-    zip: string
- },
- phone: string,
- username: string
- --Firebase Auth provided fields--
- uid: string (same as `id`, auto-generated Document ID)
- email: string,
- displayName: string,
- signedIn: DateTime,
- providerData: array[UserInfo: {
-    providerId: string,
-    uid: 'string', (specific to provider, not Firestore uid),
-    displayName: string,
-    email: string,
-    phoneNumber: string,
-    photoURL: string
- }],
- metadata: {
-    creationTime: string (ISO 8601 timestamp),
-    lastSignInTime: string, (ISO 8601 timestamp)
- }
+---
+
+--data()--
+createdAt: DateTime,
+dob: string (YYYY-MM-DD),
+first: string,
+last: string,
+location: {
+address: string,
+city: string,
+coords: Geopoint,
+state: string,
+zip: string
+},
+phone: string,
+username: string
+--Firebase Auth provided fields--
+uid: string (same as `id`, auto-generated Document ID)
+email: string,
+displayName: string,
+signedIn: DateTime,
+providerData: array[UserInfo: {
+providerId: string,
+uid: 'string', (specific to provider, not Firestore uid),
+displayName: string,
+email: string,
+phoneNumber: string,
+photoURL: string
+}],
+metadata: {
+creationTime: string (ISO 8601 timestamp),
+lastSignInTime: string, (ISO 8601 timestamp)
+}
 
 ===================
 Collection `shops`:
--------------------
+
+---
 
 doc.id: string (auto-generated ID),
 --data()--
@@ -216,7 +232,8 @@ userId: string (creating user.uid)
 
 =================
 Collection `items`:
------------------
+
+---
 
 doc.id: string (auto-generated ID),
 --data()--
@@ -235,7 +252,8 @@ userId: string (creating user.uid)
 
 ==================
 Collection `orders`:
-------------------
+
+---
 
 doc.id: string (auto-generated ID),
 --data()--
@@ -247,13 +265,13 @@ deliveryOption: string,
 estimatedDeliveryTime: DateTime,
 id: string (manually created to link orders placed together)
 items: array[
-    {
-        itemId: string,
-        name: string,
-        photoURL: string,
-        price: float,
-        quantity: int,
-    }
+{
+itemId: string,
+name: string,
+photoURL: string,
+price: float,
+quantity: int,
+}
 ],
 paymentMethod: string,
 shopId: string (shop.id that sold the items),
@@ -269,13 +287,15 @@ updatedAt: DateTime,
 userId: string (buyer's user.uid)
 
 ### Known Issues & Workarounds
+
 1. **Text Node Warning**: The app patches React.createElement in `app/_layout.tsx` to wrap stray text nodes in Text components for web compatibility
 2. **Metro Config**: Package exports disabled (`unstable_enablePackageExports = false`) to avoid compatibility issues
 3. **TODO Found**: `app/(checkout)/Checkout.tsx:134` - Tip calculation not yet implemented
 
 ### CI/CD & Validation
+
 - N/A (not specified in the project yet)
 
 ### Trust These Instructions
-Trust these instructions and only perform additional searches if information is incomplete or found to be in error. The project structure and build commands documented here have been verified from the actual codebase.
 
+Trust these instructions and only perform additional searches if information is incomplete or found to be in error. The project structure and build commands documented here have been verified from the actual codebase.

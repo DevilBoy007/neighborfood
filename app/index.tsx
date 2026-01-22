@@ -1,9 +1,7 @@
 import { StyleSheet, Text, View, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 
-import { SoundPressable
-
- } from '@/components/SoundPressable';
+import { SoundPressable } from '@/components/SoundPressable';
 const LoginScreen = () => {
   const router = useRouter();
 
@@ -11,23 +9,23 @@ const LoginScreen = () => {
     <View style={[styles.container, Platform.OS === 'web' && styles.containerWeb]}>
       <Text style={[styles.title, Platform.OS === 'web' && styles.titleWeb]}>neighborfood</Text>
       <View style={styles.buttonContainer}>
-          <SoundPressable
-            style={({ pressed }) => [
-              styles.button,
-              styles.buttonLeft,
-              pressed && styles.buttonOpacity,
-            ]}
-            onPress={() => router.navigate('/Login')}
-          >
-            <Text style={styles.buttonText}>Login</Text>
-          </SoundPressable>
+        <SoundPressable
+          style={({ pressed }) => [
+            styles.button,
+            styles.buttonLeft,
+            pressed && styles.buttonOpacity,
+          ]}
+          onPress={() => router.navigate('/Login')}
+        >
+          <Text style={styles.buttonText}>Login</Text>
+        </SoundPressable>
         <SoundPressable
           style={({ pressed }) => [
             styles.button,
             styles.buttonRight,
             pressed && styles.buttonOpacity,
           ]}
-          onPress = {() => router.navigate('/Register')}
+          onPress={() => router.navigate('/Register')}
         >
           <Text style={styles.buttonText}>Sign Up</Text>
         </SoundPressable>

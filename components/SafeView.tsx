@@ -8,7 +8,7 @@ import { View, ViewProps } from 'react-native';
 export const SafeView: React.FC<ViewProps> = ({ children, ...props }) => {
   // Convert any direct string children to array first
   const childrenArray = React.Children.toArray(children);
-  
+
   // Process each child to ensure no direct text nodes
   const processedChildren = childrenArray.map((child, index) => {
     // If child is a string or number (React treats these as text nodes)
@@ -17,7 +17,7 @@ export const SafeView: React.FC<ViewProps> = ({ children, ...props }) => {
     }
     return child;
   });
-  
+
   return <View {...props}>{processedChildren}</View>;
 };
 

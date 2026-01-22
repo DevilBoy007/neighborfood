@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { View, StyleSheet, Platform, Image } from 'react-native';
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { Stack, useRouter } from "expo-router";
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Stack, useRouter } from 'expo-router';
 import { SoundTouchableOpacity } from '@/components/SoundTouchableOpacity';
 
 import chatIcon from '../../assets/images/chat.png';
@@ -37,7 +37,6 @@ export default function RootLayout() {
 
         setUser(DATA);
         console.log('Loaded user data:', DATA.uid);
-
       } catch (error) {
         console.error('Error checking user:', error);
         router.navigate('/Login');
@@ -45,30 +44,41 @@ export default function RootLayout() {
       }
     };
     checkUser();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const toggleSettings = useCallback(() => {
     router.navigate('/Settings');
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
     <>
-        <View style={styles.container}>
-          <Stack.Screen options={{ headerShown: false }} initialParams={{ toggleSettings: toggleSettings }}  />
-          {Platform.OS !== 'web'  &&
-            <SoundTouchableOpacity onPress={toggleSettings} style={styles.profileImage} soundType="tap">
-              <Image
-                source={userData?.photoURL ? { uri: userData.photoURL } : profileIcon}
-                style={styles.profileImage}
-              />
-            </SoundTouchableOpacity>
-          }
-          <View style={styles.content}>
-          {Platform.OS === 'web' &&
+      <View style={styles.container}>
+        <Stack.Screen
+          options={{ headerShown: false }}
+          initialParams={{ toggleSettings: toggleSettings }}
+        />
+        {Platform.OS !== 'web' && (
+          <SoundTouchableOpacity
+            onPress={toggleSettings}
+            style={styles.profileImage}
+            soundType="tap"
+          >
+            <Image
+              source={userData?.photoURL ? { uri: userData.photoURL } : profileIcon}
+              style={styles.profileImage}
+            />
+          </SoundTouchableOpacity>
+        )}
+        <View style={styles.content}>
+          {Platform.OS === 'web' && (
             <View style={styles.footer}>
-              <SoundTouchableOpacity style={styles.iconButton} onPress={ toggleSettings } soundType="tap">
+              <SoundTouchableOpacity
+                style={styles.iconButton}
+                onPress={toggleSettings}
+                soundType="tap"
+              >
                 <Image
                   source={userData?.photoURL ? { uri: userData.photoURL } : profileIcon}
                   style={[styles.iconButton, styles.profileImage]}
@@ -80,20 +90,31 @@ export default function RootLayout() {
               <SoundTouchableOpacity style={styles.iconButton} soundType="tap">
                 <Image style={[styles.iconButton, styles.icon]} source={pollsIcon} />
               </SoundTouchableOpacity>
-              <SoundTouchableOpacity style={styles.iconButton} onPress={() => { router.navigate('/Market') }} soundType="tap">
+              <SoundTouchableOpacity
+                style={styles.iconButton}
+                onPress={() => {
+                  router.navigate('/Market');
+                }}
+                soundType="tap"
+              >
                 <Image style={[styles.iconButton, styles.icon]} source={marketIcon} />
               </SoundTouchableOpacity>
-              <SoundTouchableOpacity style={styles.iconButton} onPress={ () => router.navigate('/Menu')} soundType="tap">
+              <SoundTouchableOpacity
+                style={styles.iconButton}
+                onPress={() => router.navigate('/Menu')}
+                soundType="tap"
+              >
                 <Image style={[styles.iconButton, styles.icon]} source={tileIcon} />
               </SoundTouchableOpacity>
-            </View>}
-            <Stack>
-              <Stack.Screen name="Market" options={{ headerShown: false }} />
-              <Stack.Screen name="Menu" options={{ headerShown: false }} />
-            </Stack>
-          </View>
+            </View>
+          )}
+          <Stack>
+            <Stack.Screen name="Market" options={{ headerShown: false }} />
+            <Stack.Screen name="Menu" options={{ headerShown: false }} />
+          </Stack>
         </View>
-        {Platform.OS !== 'web' &&
+      </View>
+      {Platform.OS !== 'web' && (
         <View style={styles.footer}>
           <SoundTouchableOpacity style={styles.iconButton} soundType="tap">
             <Image style={[styles.iconButton, styles.icon]} source={chatIcon} />
@@ -101,14 +122,25 @@ export default function RootLayout() {
           <SoundTouchableOpacity style={styles.iconButton} soundType="tap">
             <Image style={[styles.iconButton, styles.icon]} source={pollsIcon} />
           </SoundTouchableOpacity>
-          <SoundTouchableOpacity style={styles.iconButton} onPress={() => { router.navigate('/Market') }} soundType="tap">
+          <SoundTouchableOpacity
+            style={styles.iconButton}
+            onPress={() => {
+              router.navigate('/Market');
+            }}
+            soundType="tap"
+          >
             <Image style={[styles.iconButton, styles.icon]} source={marketIcon} />
           </SoundTouchableOpacity>
-          <SoundTouchableOpacity style={styles.iconButton} onPress={ () => router.navigate('/Menu')} soundType="tap">
+          <SoundTouchableOpacity
+            style={styles.iconButton}
+            onPress={() => router.navigate('/Menu')}
+            soundType="tap"
+          >
             <Image style={[styles.iconButton, styles.icon]} source={tileIcon} />
           </SoundTouchableOpacity>
-        </View>}
-        <CartFAB bottom={Platform.OS === 'web' ? 20 : 100} />
+        </View>
+      )}
+      <CartFAB bottom={Platform.OS === 'web' ? 20 : 100} />
     </>
   );
 }
@@ -122,8 +154,8 @@ const styles = StyleSheet.create({
     ...Platform.select({
       web: {
         flexDirection: 'row',
-      }
-    })
+      },
+    }),
   },
   profileImage: {
     width: 50,
@@ -150,7 +182,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#87CEFA',
     padding: 10,
-    
+
     ...Platform.select({
       ios: {
         position: 'absolute',

@@ -24,7 +24,15 @@ type ShopCart = {
 type CartContextType = {
   shopCarts: ShopCart[];
   isLoadingCart: boolean;
-  addToCart: (item: Omit<CartItem, 'id'> & { shopId: string; shopName: string; shopPhotoURL?: string; allowPickup: boolean; localDelivery: boolean }) => void;
+  addToCart: (
+    item: Omit<CartItem, 'id'> & {
+      shopId: string;
+      shopName: string;
+      shopPhotoURL?: string;
+      allowPickup: boolean;
+      localDelivery: boolean;
+    }
+  ) => void;
   removeFromCart: (shopId: string, itemId: string) => void;
   updateItemQuantity: (shopId: string, itemId: string, quantity: number) => void;
   clearCart: () => void;
@@ -89,16 +97,24 @@ export const CartProvider = ({ children }: CartProviderProps) => {
   }, [shopCarts]);
 
   const calculateSubtotalFromItems = (items: CartItem[]): number => {
-    return items.reduce((total, item) => total + (item.price * item.quantity), 0);
+    return items.reduce((total, item) => total + item.price * item.quantity, 0);
   };
 
-  const addToCart = (item: Omit<CartItem, 'id'> & { shopId: string; shopName: string; shopPhotoURL?: string; allowPickup: boolean; localDelivery: boolean }) => {
+  const addToCart = (
+    item: Omit<CartItem, 'id'> & {
+      shopId: string;
+      shopName: string;
+      shopPhotoURL?: string;
+      allowPickup: boolean;
+      localDelivery: boolean;
+    }
+  ) => {
     const { shopId, shopName, shopPhotoURL, allowPickup, localDelivery, ...itemData } = item;
-    
-    setShopCarts(prevShopCarts => {
+
+    setShopCarts((prevShopCarts) => {
       // Find if we already have a cart for this shop
-      const shopCartIndex = prevShopCarts.findIndex(cart => cart.shopId === shopId);
-      
+      const shopCartIndex = prevShopCarts.findIndex((cart) => cart.shopId === shopId);
+
       // If no cart exists for this shop yet
       if (shopCartIndex === -1) {
         const newShopCart: ShopCart = {
@@ -108,73 +124,73 @@ export const CartProvider = ({ children }: CartProviderProps) => {
           allowPickup,
           localDelivery,
           items: [itemData],
-          subtotal: itemData.price * itemData.quantity
+          subtotal: itemData.price * itemData.quantity,
         };
-        
+
         return [...prevShopCarts, newShopCart];
       }
-      
+
       // Shop cart exists, so update it
       const updatedShopCarts = [...prevShopCarts];
       const shopCart = updatedShopCarts[shopCartIndex];
-      
+
       // Check if the item already exists in the shop cart
       const existingItemIndex = shopCart.items.findIndex(
-        cartItem => cartItem.itemId === itemData.itemId
+        (cartItem) => cartItem.itemId === itemData.itemId
       );
-      
+
       if (existingItemIndex >= 0) {
         // Update the existing item
         const updatedItems = [...shopCart.items];
         updatedItems[existingItemIndex] = {
           ...updatedItems[existingItemIndex],
-          quantity: updatedItems[existingItemIndex].quantity + itemData.quantity
+          quantity: updatedItems[existingItemIndex].quantity + itemData.quantity,
         };
-        
+
         updatedShopCarts[shopCartIndex] = {
           ...shopCart,
           items: updatedItems,
-          subtotal: calculateSubtotalFromItems(updatedItems)
+          subtotal: calculateSubtotalFromItems(updatedItems),
         };
       } else {
         // Add the new item
         const updatedItems = [...shopCart.items, itemData];
-        
+
         updatedShopCarts[shopCartIndex] = {
           ...shopCart,
           items: updatedItems,
-          subtotal: calculateSubtotalFromItems(updatedItems)
+          subtotal: calculateSubtotalFromItems(updatedItems),
         };
       }
-      
+
       return updatedShopCarts;
     });
   };
 
   const removeFromCart = (shopId: string, itemId: string) => {
-    setShopCarts(prevShopCarts => {
-      const shopCartIndex = prevShopCarts.findIndex(cart => cart.shopId === shopId);
-      
+    setShopCarts((prevShopCarts) => {
+      const shopCartIndex = prevShopCarts.findIndex((cart) => cart.shopId === shopId);
+
       // If shop cart doesn't exist, do nothing
       if (shopCartIndex === -1) return prevShopCarts;
-      
+
       const updatedShopCarts = [...prevShopCarts];
       const shopCart = updatedShopCarts[shopCartIndex];
-      
-      const updatedItems = shopCart.items.filter(item => item.itemId !== itemId);
-      
+
+      const updatedItems = shopCart.items.filter((item) => item.itemId !== itemId);
+
       // If there are no items left in this shop's cart, remove the shop cart
       if (updatedItems.length === 0) {
-        return prevShopCarts.filter(cart => cart.shopId !== shopId);
+        return prevShopCarts.filter((cart) => cart.shopId !== shopId);
       }
-      
+
       // Update the shop cart with remaining items
       updatedShopCarts[shopCartIndex] = {
         ...shopCart,
         items: updatedItems,
-        subtotal: calculateSubtotalFromItems(updatedItems)
+        subtotal: calculateSubtotalFromItems(updatedItems),
       };
-      
+
       return updatedShopCarts;
     });
   };
@@ -184,26 +200,26 @@ export const CartProvider = ({ children }: CartProviderProps) => {
       removeFromCart(shopId, itemId);
       return;
     }
-    
-    setShopCarts(prevShopCarts => {
-      const shopCartIndex = prevShopCarts.findIndex(cart => cart.shopId === shopId);
-      
+
+    setShopCarts((prevShopCarts) => {
+      const shopCartIndex = prevShopCarts.findIndex((cart) => cart.shopId === shopId);
+
       // If shop cart doesn't exist, do nothing
       if (shopCartIndex === -1) return prevShopCarts;
-      
+
       const updatedShopCarts = [...prevShopCarts];
       const shopCart = updatedShopCarts[shopCartIndex];
-      
-      const updatedItems = shopCart.items.map(item => 
+
+      const updatedItems = shopCart.items.map((item) =>
         item.itemId === itemId ? { ...item, quantity } : item
       );
-      
+
       updatedShopCarts[shopCartIndex] = {
         ...shopCart,
         items: updatedItems,
-        subtotal: calculateSubtotalFromItems(updatedItems)
+        subtotal: calculateSubtotalFromItems(updatedItems),
       };
-      
+
       return updatedShopCarts;
     });
   };
@@ -213,7 +229,7 @@ export const CartProvider = ({ children }: CartProviderProps) => {
   };
 
   const clearShopCart = (shopId: string) => {
-    setShopCarts(prevShopCarts => prevShopCarts.filter(cart => cart.shopId !== shopId));
+    setShopCarts((prevShopCarts) => prevShopCarts.filter((cart) => cart.shopId !== shopId));
   };
 
   const calculateTotalSubtotal = (): number => {
@@ -221,8 +237,11 @@ export const CartProvider = ({ children }: CartProviderProps) => {
   };
 
   const getItemCount = (): number => {
-    return shopCarts.reduce((count, shopCart) => 
-      count + shopCart.items.reduce((itemCount, item) => itemCount + item.quantity, 0), 0);
+    return shopCarts.reduce(
+      (count, shopCart) =>
+        count + shopCart.items.reduce((itemCount, item) => itemCount + item.quantity, 0),
+      0
+    );
   };
 
   const getShopCount = (): number => {
@@ -230,18 +249,20 @@ export const CartProvider = ({ children }: CartProviderProps) => {
   };
 
   return (
-    <CartContext.Provider value={{
-      shopCarts,
-      isLoadingCart,
-      addToCart,
-      removeFromCart,
-      updateItemQuantity,
-      clearCart,
-      clearShopCart,
-      calculateTotalSubtotal,
-      getItemCount,
-      getShopCount
-    }}>
+    <CartContext.Provider
+      value={{
+        shopCarts,
+        isLoadingCart,
+        addToCart,
+        removeFromCart,
+        updateItemQuantity,
+        clearCart,
+        clearShopCart,
+        calculateTotalSubtotal,
+        getItemCount,
+        getShopCount,
+      }}
+    >
       {children}
     </CartContext.Provider>
   );

@@ -5,10 +5,10 @@ import { Platform } from 'react-native';
 type UserData = {
   uid: string;
   email: string;
-  displayName: string;
-  photoURL: string;
+  displayName: string | null;
+  photoURL: string | null;
   // Additional fields from Firestore
-  createdAt: { seconds: number; nanoseconds: number };
+  createdAt: { seconds: number; nanoseconds: number } | Date | string;
   first: string;
   last: string;
   dob: string;
@@ -87,7 +87,7 @@ export const UserProvider = ({ children }: UserProviderProps) => {
 
   const updateUserData = async (newData: Partial<UserData>) => {
     try {
-      const updatedData = { ...userData, ...newData };
+      const updatedData = { ...userData, ...newData } as UserData;
       setUserData(updatedData);
       await storage.setItem('userData', JSON.stringify(updatedData));
     } catch (error) {
@@ -110,13 +110,15 @@ export const UserProvider = ({ children }: UserProviderProps) => {
   };
 
   return (
-    <UserContext.Provider value={{ 
-      userData, 
-      isLoading, 
-      setUserData, 
-      updateUserData, 
-      clearUserData
-    }}>
+    <UserContext.Provider
+      value={{
+        userData,
+        isLoading,
+        setUserData,
+        updateUserData,
+        clearUserData,
+      }}
+    >
       {children}
     </UserContext.Provider>
   );

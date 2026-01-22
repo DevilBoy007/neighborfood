@@ -6,6 +6,8 @@ This development container provides a complete environment for developing the Ne
 
 - **Node.js 22**: Latest LTS version
 - **npm**: Node package manager
+- **Python 3.12**: For pre-commit hooks
+- **pre-commit**: Git hooks framework for code quality
 - **Expo CLI**: Automatically installed via postCreateCommand
 - **VS Code Extensions**:
   - TypeScript
@@ -19,22 +21,39 @@ This development container provides a complete environment for developing the Ne
 3. Wait for the container to build and dependencies to install
 4. Run `npx expo start` to start the development server
 
+## Pre-commit Hooks
+
+The container automatically installs pre-commit hooks that run on every commit:
+
+- **ESLint**: Linting for TypeScript/JavaScript
+- **Prettier**: Code formatting
+- **TypeScript**: Type checking
+- File hygiene (trailing whitespace, end-of-file fixes, etc.)
+
+To manually run hooks on all files:
+
+```bash
+pre-commit run --all-files
+```
+
 ## Ports
 
 The following ports are automatically forwarded:
+
 - **19000**: Expo DevTools
-- **19001**: Expo Metro Bundler  
+- **19001**: Expo Metro Bundler
 - **19002**: Expo Web (opens browser automatically)
 - **8081**: Metro Bundler (alternative port)
 
 ## Post-Create Setup
 
 The container automatically runs:
+
 ```bash
-npm install && npx expo install
+npm install && npx expo install && pip install pre-commit && pre-commit install
 ```
 
-This ensures all dependencies are installed and Expo SDK versions are aligned.
+This ensures all dependencies are installed, Expo SDK versions are aligned, and git hooks are configured.
 
 ## Usage with GitHub Copilot
 

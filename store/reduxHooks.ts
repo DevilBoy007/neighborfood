@@ -13,11 +13,7 @@ import {
   loadUserData,
   UserData,
 } from './slices/userSlice';
-import {
-  fetchCurrentLocation,
-  updateLocationCoords,
-  formatDistance,
-} from './slices/locationSlice';
+import { fetchCurrentLocation, updateLocationCoords, formatDistance } from './slices/locationSlice';
 import {
   setSelectedShop as setSelectedShopAction,
   clearSelectedShop as clearSelectedShopAction,
@@ -334,7 +330,17 @@ export const useCart = () => {
 
   const addToCart = useCallback(
     (
-      item: Omit<{ itemId: string; name: string; price: number; quantity: number; photoURL?: string; negotiable?: boolean }, 'id'> & {
+      item: Omit<
+        {
+          itemId: string;
+          name: string;
+          price: number;
+          quantity: number;
+          photoURL?: string;
+          negotiable?: boolean;
+        },
+        'id'
+      > & {
         shopId: string;
         shopName: string;
         shopPhotoURL?: string;

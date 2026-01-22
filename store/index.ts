@@ -1,5 +1,14 @@
 import { configureStore, combineReducers, isPlain } from '@reduxjs/toolkit';
-import { persistStore, persistReducer, FLUSH, REHYDRATE, PAUSE, PERSIST, PURGE, REGISTER } from 'redux-persist';
+import {
+  persistStore,
+  persistReducer,
+  FLUSH,
+  REHYDRATE,
+  PAUSE,
+  PERSIST,
+  PURGE,
+  REGISTER,
+} from 'redux-persist';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 
@@ -47,40 +56,25 @@ const persistedReducer = persistReducer(persistConfig, rootReducer);
 const isSerializable = (value: unknown): boolean => {
   // Allow standard serializable values
   if (isPlain(value)) return true;
-  
+
   // Allow Date objects
   if (value instanceof Date) return true;
-  
+
   // Allow Firebase Timestamp objects (have seconds and nanoseconds properties)
-  if (
-    value !== null &&
-    typeof value === 'object' &&
-    'seconds' in value &&
-    'nanoseconds' in value
-  ) {
+  if (value !== null && typeof value === 'object' && 'seconds' in value && 'nanoseconds' in value) {
     return true;
   }
-  
+
   // Allow Firebase GeoPoint objects (have latitude and longitude properties)
-  if (
-    value !== null &&
-    typeof value === 'object' &&
-    'latitude' in value &&
-    'longitude' in value
-  ) {
+  if (value !== null && typeof value === 'object' && 'latitude' in value && 'longitude' in value) {
     return true;
   }
-  
+
   // Allow Firebase DocumentReference objects (have id and path properties)
-  if (
-    value !== null &&
-    typeof value === 'object' &&
-    'id' in value &&
-    'path' in value
-  ) {
+  if (value !== null && typeof value === 'object' && 'id' in value && 'path' in value) {
     return true;
   }
-  
+
   // Allow Firebase DocumentKey objects (internal Firebase structure with path.segments)
   if (
     value !== null &&
@@ -88,11 +82,11 @@ const isSerializable = (value: unknown): boolean => {
     'path' in value &&
     typeof (value as { path: unknown }).path === 'object' &&
     (value as { path: { segments?: unknown } }).path !== null &&
-    'segments' in ((value as { path: object }).path)
+    'segments' in (value as { path: object }).path
   ) {
     return true;
   }
-  
+
   // Allow Firebase internal path objects (have len, offset, segments properties)
   if (
     value !== null &&
@@ -103,7 +97,7 @@ const isSerializable = (value: unknown): boolean => {
   ) {
     return true;
   }
-  
+
   // Allow Firebase Firestore instance objects (have app, databaseId, settings properties)
   if (
     value !== null &&
@@ -114,7 +108,7 @@ const isSerializable = (value: unknown): boolean => {
   ) {
     return true;
   }
-  
+
   // Allow Firebase App objects (have _name, _options, _config properties)
   if (
     value !== null &&
@@ -125,27 +119,17 @@ const isSerializable = (value: unknown): boolean => {
   ) {
     return true;
   }
-  
+
   // Allow Firebase databaseId objects (have database and projectId properties)
-  if (
-    value !== null &&
-    typeof value === 'object' &&
-    'database' in value &&
-    'projectId' in value
-  ) {
+  if (value !== null && typeof value === 'object' && 'database' in value && 'projectId' in value) {
     return true;
   }
-  
+
   // Allow expo-location coords objects
-  if (
-    value !== null &&
-    typeof value === 'object' &&
-    'accuracy' in value &&
-    'altitude' in value
-  ) {
+  if (value !== null && typeof value === 'object' && 'accuracy' in value && 'altitude' in value) {
     return true;
   }
-  
+
   return false;
 };
 

@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import {
-    View,
-    Text,
-    TextInput,
-    Platform,
-    ScrollView,
-    TouchableOpacity,
-    SafeAreaView,
-    KeyboardAvoidingView,
-    StyleSheet,
+  View,
+  Text,
+  TextInput,
+  Platform,
+  ScrollView,
+  TouchableOpacity,
+  SafeAreaView,
+  KeyboardAvoidingView,
+  StyleSheet,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Picker } from '@react-native-picker/picker';
@@ -19,665 +19,677 @@ import Toast from 'react-native-toast-message';
 import firebaseService from '@/handlers/firebaseService';
 import { useUser, useShop } from '@/store/reduxHooks';
 
-const weekDays = Platform.OS === 'web' ? ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'] : ['M', 'T', 'W', 'Th', 'F', 'Sa', 'Su'];
+const weekDays =
+  Platform.OS === 'web'
+    ? ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
+    : ['M', 'T', 'W', 'Th', 'F', 'Sa', 'Su'];
 const seasons = ['spring', 'summer', 'fall', 'winter'];
 
 // Add day mapping for both directions
 const dayMappingFullToShort: Record<string, string> = {
-    'monday': 'M',
-    'tuesday': 'T',
-    'wednesday': 'W',
-    'thursday': 'Th',
-    'friday': 'F',
-    'saturday': 'Sa',
-    'sunday': 'Su'
+  monday: 'M',
+  tuesday: 'T',
+  wednesday: 'W',
+  thursday: 'Th',
+  friday: 'F',
+  saturday: 'Sa',
+  sunday: 'Su',
 };
 
 const dayMappingShortToFull: Record<string, string> = {
-    'M': 'monday',
-    'T': 'tuesday',
-    'W': 'wednesday',
-    'Th': 'thursday',
-    'F': 'friday',
-    'Sa': 'saturday',
-    'Su': 'sunday'
+  M: 'monday',
+  T: 'tuesday',
+  W: 'wednesday',
+  Th: 'thursday',
+  F: 'friday',
+  Sa: 'saturday',
+  Su: 'sunday',
 };
 
 export default function ShopRegistrationScreen() {
-    const router = useRouter();
-    const { selectedShop, setSelectedShop } = useShop();
-    const { shopId } = useLocalSearchParams();
-    const { userData } = useUser();
-    const [name, setName] = useState<string>('');
-    const [description, setDescription] = useState<string>('');
-    const [type, setType] = useState<string>('');
-    const [selectedDays, setSelectedDays] = useState<string[]>([]);
-    const [selectedSeasons, setSelectedSeasons] = useState<string[]>([]);
-    const [openTime, setOpenTime] = useState<string>('');
-    const [closeTime, setCloseTime] = useState<string>('');
-    const [allowPickup, setAllowPickup] = useState<boolean>(false);
-    const [localDelivery, setLocalDelivery] = useState<boolean>(false);
-    const imageUrls = ["https://firebasestorage.googleapis.com/v0/b/neighborfoods/o/banner.JPG?alt=media&token=f47ea7ab-2e7e-4ea5-978e-bee307112bc6", "https://www.datocms-assets.com/75076/1656656339-macgregor_tartan_2.jpeg?auto=format&w=1600"]
-    
-    const [errors, setErrors] = useState({
-        name: '',
-        description: '',
-        type: '',
-        days: '',
-        seasons: '',
-        hours: '',
-        delivery: '',
-    });
+  const router = useRouter();
+  const { selectedShop, setSelectedShop } = useShop();
+  const { shopId } = useLocalSearchParams();
+  const { userData } = useUser();
+  const [name, setName] = useState<string>('');
+  const [description, setDescription] = useState<string>('');
+  const [type, setType] = useState<string>('');
+  const [selectedDays, setSelectedDays] = useState<string[]>([]);
+  const [selectedSeasons, setSelectedSeasons] = useState<string[]>([]);
+  const [openTime, setOpenTime] = useState<string>('');
+  const [closeTime, setCloseTime] = useState<string>('');
+  const [allowPickup, setAllowPickup] = useState<boolean>(false);
+  const [localDelivery, setLocalDelivery] = useState<boolean>(false);
+  const imageUrls = [
+    'https://firebasestorage.googleapis.com/v0/b/neighborfoods/o/banner.JPG?alt=media&token=f47ea7ab-2e7e-4ea5-978e-bee307112bc6',
+    'https://www.datocms-assets.com/75076/1656656339-macgregor_tartan_2.jpeg?auto=format&w=1600',
+  ];
 
-    useEffect(() => {
-        // If shopId matches selectedShop.id, we're editing that shop
-        if (shopId && selectedShop && shopId === selectedShop.id) {
-            // Populate form with selectedShop data
-            setName(selectedShop.name);
-            setDescription(selectedShop.description);
-            setType(selectedShop.type);
-            
-            // Convert full day names to abbreviated versions for mobile
-            if (Platform.OS !== 'web' && selectedShop.days) {
-                const mappedDays = selectedShop.days.map(day => dayMappingFullToShort[day] || day);
-                setSelectedDays(mappedDays);
-            } else {
-                setSelectedDays(selectedShop.days);
-            }
-            
-            setSelectedSeasons(selectedShop.seasons);
-            setOpenTime(selectedShop.openTime);
-            setCloseTime(selectedShop.closeTime);
-            setAllowPickup(selectedShop.allowPickup);
-            setLocalDelivery(selectedShop.localDelivery);
-        }
-    }, [shopId, selectedShop]);
+  const [errors, setErrors] = useState({
+    name: '',
+    description: '',
+    type: '',
+    days: '',
+    seasons: '',
+    hours: '',
+    delivery: '',
+  });
 
-    const toggleDay = (day: string) => {
-        if (selectedDays.includes(day)) {
-            setSelectedDays(selectedDays.filter(d => d !== day));
-        } else {
-            setSelectedDays([...selectedDays, day]);
-        }
+  useEffect(() => {
+    // If shopId matches selectedShop.id, we're editing that shop
+    if (shopId && selectedShop && shopId === selectedShop.id) {
+      // Populate form with selectedShop data
+      setName(selectedShop.name);
+      setDescription(selectedShop.description);
+      setType(selectedShop.type);
+
+      // Convert full day names to abbreviated versions for mobile
+      if (Platform.OS !== 'web' && selectedShop.days) {
+        const mappedDays = selectedShop.days.map((day) => dayMappingFullToShort[day] || day);
+        setSelectedDays(mappedDays);
+      } else {
+        setSelectedDays(selectedShop.days);
+      }
+
+      setSelectedSeasons(selectedShop.seasons);
+      setOpenTime(selectedShop.openTime);
+      setCloseTime(selectedShop.closeTime);
+      setAllowPickup(selectedShop.allowPickup);
+      setLocalDelivery(selectedShop.localDelivery);
+    }
+  }, [shopId, selectedShop]);
+
+  const toggleDay = (day: string) => {
+    if (selectedDays.includes(day)) {
+      setSelectedDays(selectedDays.filter((d) => d !== day));
+    } else {
+      setSelectedDays([...selectedDays, day]);
+    }
+  };
+
+  const toggleSeason = (season: string) => {
+    if (selectedSeasons.includes(season)) {
+      setSelectedSeasons(selectedSeasons.filter((s) => s !== season));
+    } else {
+      setSelectedSeasons([...selectedSeasons, season]);
+    }
+  };
+
+  // Validate time format (24-hour format: HH:MM)
+  const isValidTimeFormat = (time: string): boolean => {
+    const timeRegex = /^([01]?[0-9]|2[0-3]):[0-5][0-9]$/;
+    return timeRegex.test(time);
+  };
+
+  const validateForm = () => {
+    let isValid = true;
+    const newErrors = {
+      name: '',
+      description: '',
+      type: '',
+      days: '',
+      seasons: '',
+      hours: '',
+      delivery: '',
     };
 
-    const toggleSeason = (season: string) => {
-        if (selectedSeasons.includes(season)) {
-            setSelectedSeasons(selectedSeasons.filter(s => s !== season));
-        } else {
-            setSelectedSeasons([...selectedSeasons, season]);
+    if (!name.trim()) {
+      newErrors.name = 'Shop name is required';
+      isValid = false;
+    }
+
+    if (!description.trim()) {
+      newErrors.description = 'Description is required';
+      isValid = false;
+    }
+
+    if (!type) {
+      newErrors.type = 'Please select a shop type';
+      isValid = false;
+    }
+
+    if (selectedDays.length === 0) {
+      newErrors.days = 'Please select at least one day';
+      isValid = false;
+    }
+
+    if (selectedSeasons.length === 0) {
+      newErrors.seasons = 'Please select at least one season';
+      isValid = false;
+    }
+
+    // Validate open and close times
+    if (!openTime.trim() || !closeTime.trim()) {
+      newErrors.hours = 'Please provide both opening and closing times';
+      isValid = false;
+    } else if (!isValidTimeFormat(openTime) || !isValidTimeFormat(closeTime)) {
+      newErrors.hours = 'Times must be in 24-hour format (e.g., 09:00, 17:30)';
+      isValid = false;
+    }
+
+    if (!allowPickup && !localDelivery) {
+      newErrors.delivery = 'Please select at least one delivery option';
+      isValid = false;
+    }
+
+    setErrors(newErrors);
+    return isValid;
+  };
+
+  const mapDaysToFullNames = (selectedDays: string[]): string[] => {
+    if (Platform.OS === 'web') {
+      return selectedDays;
+    }
+
+    return selectedDays.map((day) => dayMappingShortToFull[day] || day);
+  };
+
+  const handleSubmit = async () => {
+    if (validateForm()) {
+      try {
+        // Ensure user is authenticated before creating a shop
+        if (!userData || !userData.uid) {
+          Toast.show({
+            type: 'error',
+            text1: 'Error',
+            text2: 'You must be logged in to create a shop',
+          });
+          return;
         }
-    };
-    
-    // Validate time format (24-hour format: HH:MM)
-    const isValidTimeFormat = (time: string): boolean => {
-        const timeRegex = /^([01]?[0-9]|2[0-3]):[0-5][0-9]$/;
-        return timeRegex.test(time);
-    };
-    
-    const validateForm = () => {
-        let isValid = true;
-        const newErrors = {
-            name: '',
-            description: '',
-            type: '',
-            days: '',
-            seasons: '',
-            hours: '',
-            delivery: '',
+
+        // Get a random image URL from the imageUrls array
+        const randomIndex = Math.floor(Math.random() * imageUrls.length);
+        const randomImageUrl = imageUrls[randomIndex];
+
+        const normalizedDays = mapDaysToFullNames(selectedDays);
+
+        const shopData = {
+          name,
+          description,
+          type,
+          days: normalizedDays,
+          seasons: selectedSeasons,
+          openTime,
+          closeTime,
+          allowPickup,
+          localDelivery,
+          location: new GeoPoint(
+            userData.location.coords.latitude,
+            userData.location.coords.longitude
+          ),
+          marketId: userData.location.zip || '', // Associate shop with user's market
+          userId: userData.uid, // Associate shop with current user
         };
 
-        if (!name.trim()) {
-            newErrors.name = 'Shop name is required';
-            isValid = false;
-        }
+        if (shopId && selectedShop) {
+          // We're updating an existing shop
+          await firebaseService.updateShopDetails(shopId.toString(), shopData);
 
-        if (!description.trim()) {
-            newErrors.description = 'Description is required';
-            isValid = false;
-        }
+          // Update the selectedShop in context to reflect changes immediately
+          setSelectedShop({
+            ...selectedShop,
+            ...shopData,
+            location: selectedShop.location, // Preserve the original location
+            id: selectedShop.id, // Preserve the original ID
+            backgroundImageUrl: selectedShop.backgroundImageUrl, // Preserve the image URL
+            createdAt: selectedShop.createdAt, // Preserve the creation date
+          });
 
-        if (!type) {
-            newErrors.type = 'Please select a shop type';
-            isValid = false;
-        }
-
-        if (selectedDays.length === 0) {
-            newErrors.days = 'Please select at least one day';
-            isValid = false;
-        }
-
-        if (selectedSeasons.length === 0) {
-            newErrors.seasons = 'Please select at least one season';
-            isValid = false;
-        }
-
-        // Validate open and close times
-        if (!openTime.trim() || !closeTime.trim()) {
-            newErrors.hours = 'Please provide both opening and closing times';
-            isValid = false;
-        } else if (!isValidTimeFormat(openTime) || !isValidTimeFormat(closeTime)) {
-            newErrors.hours = 'Times must be in 24-hour format (e.g., 09:00, 17:30)';
-            isValid = false;
-        }
-
-        if (!allowPickup && !localDelivery) {
-            newErrors.delivery = 'Please select at least one delivery option';
-            isValid = false;
-        }
-
-        setErrors(newErrors);
-        return isValid;
-    };
-
-    const mapDaysToFullNames = (selectedDays: string[]): string[] => {
-        if (Platform.OS === 'web') {
-            return selectedDays;
-        }
-
-        return selectedDays.map(day => dayMappingShortToFull[day] || day);
-    };
-
-    const handleSubmit = async () => {
-        if (validateForm()) {
-            try {
-                // Ensure user is authenticated before creating a shop
-                if (!userData || !userData.uid) {
-                    Toast.show({
-                        type: 'error',
-                        text1: 'Error',
-                        text2: 'You must be logged in to create a shop'
-                    });
-                    return;
-                }
-
-                // Get a random image URL from the imageUrls array
-                const randomIndex = Math.floor(Math.random() * imageUrls.length);
-                const randomImageUrl = imageUrls[randomIndex];
-                
-                const normalizedDays = mapDaysToFullNames(selectedDays);
-
-                const shopData = {
-                    name,
-                    description,
-                    type,
-                    days: normalizedDays,
-                    seasons: selectedSeasons,
-                    openTime,
-                    closeTime,
-                    allowPickup,
-                    localDelivery,
-                    location: new GeoPoint(userData.location.coords.latitude, userData.location.coords.longitude),
-                    marketId: userData.location.zip || '',  // Associate shop with user's market
-                    userId: userData.uid,  // Associate shop with current user
-                };
-                
-                if (shopId && selectedShop) {
-                    // We're updating an existing shop
-                    await firebaseService.updateShopDetails(shopId.toString(), shopData);
-                    
-                    // Update the selectedShop in context to reflect changes immediately
-                    setSelectedShop({
-                        ...selectedShop,
-                        ...shopData,
-                        location: selectedShop.location, // Preserve the original location
-                        id: selectedShop.id, // Preserve the original ID
-                        backgroundImageUrl: selectedShop.backgroundImageUrl, // Preserve the image URL
-                        createdAt: selectedShop.createdAt // Preserve the creation date
-                    });
-                    
-                    console.log('Shop updated successfully!');
-                } else {
-                    // We're creating a new shop
-                    // Add creation date and background image for new shops only
-                    shopData.createdAt = new Date();
-                    shopData.backgroundImageUrl = randomImageUrl;
-                    
-                    await firebaseService.createShopForUser(userData.uid, shopData);
-                    console.log('Shop created successfully!');
-                }
-                
-                if (Platform.OS === 'web') {
-                    router.navigate('/success');
-                    setTimeout(() => {
-                        router.back();
-                    }, 2100);
-                } else {
-                    router.navigate('/success');
-                    setTimeout(() => {
-                        router.back();
-                    }, 2000);
-                }
-            } catch {
-                Toast.show({
-                    type: 'error',
-                    text1: 'Error',
-                    text2: shopId ? 'Failed to update shop. Please try again.' : 'Failed to create shop. Please try again.'
-                });
-            }
+          console.log('Shop updated successfully!');
         } else {
-            if (Platform.OS === 'web') {
-                window.scrollTo(0, 0);
-            }
+          // We're creating a new shop
+          // Add creation date and background image for new shops only
+          shopData.createdAt = new Date();
+          shopData.backgroundImageUrl = randomImageUrl;
+
+          await firebaseService.createShopForUser(userData.uid, shopData);
+          console.log('Shop created successfully!');
         }
-    };
 
-    return (
-        <SafeAreaView style={styles.container}>
-            <View style={styles.header}>
-                <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-                    <Ionicons name="chevron-back" size={24} color="black" />
-                </TouchableOpacity>
-                <Text style={styles.sectionTitle}>Manage Shops</Text>
-            </View>
-            <KeyboardAvoidingView
-                style={{ flex: 1 }}
-                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-                keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 20}>
-                
-            <ScrollView 
-                style={styles.container}
-                contentContainerStyle={{ paddingBottom: Platform.OS === 'ios' ? 50 : 50 }}
-                keyboardDismissMode='on-drag'
-                keyboardShouldPersistTaps='handled'
-                showsVerticalScrollIndicator={false}>
-                <View style={styles.formContainer}>
-                    <Text style={styles.sectionTitle}>Shop Info</Text>
-                    <TextInput
-                        style={[styles.input, errors.name ? styles.inputError : null]}
-                        placeholder="shop name"
-                        placeholderTextColor={'#999'}
-                        value={name}
-                        onChangeText={(text) => {
-                            setName(text);
-                            if (text.trim()) setErrors({...errors, name: ''});
-                        }}
-                    />
-                    {errors.name ? <Text style={styles.errorText}>{errors.name}</Text> : null}
-                    
-                    <TextInput
-                        style={[styles.input, styles.textArea, errors.description ? styles.inputError : null]}
-                        placeholder="description"
-                        placeholderTextColor={'#999'}
-                        multiline
-                        minHeight={Platform.OS === 'ios' ? 80 : null}
-                        value={description}
-                        onChangeText={(text) => {
-                            setDescription(text);
-                            if (text.trim()) setErrors({...errors, description: ''});
-                        }}
-                    />
-                    {errors.description ? <Text style={styles.errorText}>{errors.description}</Text> : null}
+        if (Platform.OS === 'web') {
+          router.navigate('/success');
+          setTimeout(() => {
+            router.back();
+          }, 2100);
+        } else {
+          router.navigate('/success');
+          setTimeout(() => {
+            router.back();
+          }, 2000);
+        }
+      } catch {
+        Toast.show({
+          type: 'error',
+          text1: 'Error',
+          text2: shopId
+            ? 'Failed to update shop. Please try again.'
+            : 'Failed to create shop. Please try again.',
+        });
+      }
+    } else {
+      if (Platform.OS === 'web') {
+        window.scrollTo(0, 0);
+      }
+    }
+  };
 
-                    <Text style={styles.sectionTitle}>Market Info</Text>
-                    {Platform.OS === 'web' ? (
-                        <>
-                            <select
-                                style={{
-                                    ...styles.webSelect, 
-                                    ...(errors.type ? styles.webSelectError : {})
-                                }}
-                                value={type}
-                                onChange={(e) => {
-                                    setType(e.target.value);
-                                    if (e.target.value) setErrors({...errors, type: ''});
-                                }}
-                            >
-                                <option value="">type</option>
-                                <option value="general">General</option>
-                                <option value="produce">Produce</option>
-                                <option value="farm">Farm</option>
-                                <option value="grainery">Grainery</option>
-                                <option value="butchery">Butchery</option>
-                                <option value="spices">Spices</option>
-                                <option value="bakery">Bakery</option>
-                                <option value="homemade">Homemade Goods</option>
-                            </select>
-                            {errors.type ? <Text style={styles.errorText}>{errors.type}</Text> : null}
-                        </>
-                    ) : (
-                        <>
-                            <View style={errors.type ? styles.pickerError : null}>
-                                <Picker
-                                    selectedValue={type}
-                                    onValueChange={(value) => {
-                                        setType(value);
-                                        if (value) setErrors({...errors, type: ''});
-                                    }}
-                                    style={styles.picker}
-                                    itemStyle={{ height: 150, fontFamily: 'TextMeOne' }}
-                                >
-                                    <Picker.Item color="#00bfff" label="type" value="" />
-                                    <Picker.Item color="black" label="General" value="general" />
-                                    <Picker.Item color="black" label="Produce" value="produce" />
-                                    <Picker.Item color="black" label="Farm" value="farm" />
-                                    <Picker.Item color="black" label="Grainery" value="grainery" />
-                                    <Picker.Item color="black" label="Butchery" value="butchery" />
-                                    <Picker.Item color="black" label="Spices" value="spices" />
-                                    <Picker.Item color="black" label="Bakery" value="bakery" />
-                                    <Picker.Item color="black" label="Homemade Goods" value="homemade" />
-                                </Picker>
-                            </View>
-                            {errors.type ? <Text style={styles.errorText}>{errors.type}</Text> : null}
-                        </>
-                    )}
+  return (
+    <SafeAreaView style={styles.container}>
+      <View style={styles.header}>
+        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+          <Ionicons name="chevron-back" size={24} color="black" />
+        </TouchableOpacity>
+        <Text style={styles.sectionTitle}>Manage Shops</Text>
+      </View>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 20}
+      >
+        <ScrollView
+          style={styles.container}
+          contentContainerStyle={{ paddingBottom: Platform.OS === 'ios' ? 50 : 50 }}
+          keyboardDismissMode="on-drag"
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.formContainer}>
+            <Text style={styles.sectionTitle}>Shop Info</Text>
+            <TextInput
+              style={[styles.input, errors.name ? styles.inputError : null]}
+              placeholder="shop name"
+              placeholderTextColor={'#999'}
+              value={name}
+              onChangeText={(text) => {
+                setName(text);
+                if (text.trim()) setErrors({ ...errors, name: '' });
+              }}
+            />
+            {errors.name ? <Text style={styles.errorText}>{errors.name}</Text> : null}
 
-                    <Text style={styles.sectionTitle}>Availability</Text>
-                    <Text style={styles.sectionSubtitle}>Days</Text>
-                    <View style={styles.daysContainer}>
-                        {weekDays.map((day) => (
-                            <TouchableOpacity
-                                key={day}
-                                style={[
-                                    styles.dayButton,
-                                    selectedDays.includes(day) && styles.selectedButton
-                                ]}
-                                onPress={() => {
-                                    toggleDay(day);
-                                    if (selectedDays.length > 0 || day) setErrors({...errors, days: ''});
-                                }}
-                            >
-                                <Text style={[
-                                    styles.dayButtonText,
-                                    selectedDays.includes(day) && styles.selectedButtonText
-                                ]}>
-                                    {day}
-                                </Text>
-                            </TouchableOpacity>
-                        ))}
-                    </View>
-                    {errors.days ? <Text style={styles.errorText}>{errors.days}</Text> : null}
+            <TextInput
+              style={[styles.input, styles.textArea, errors.description ? styles.inputError : null]}
+              placeholder="description"
+              placeholderTextColor={'#999'}
+              multiline
+              minHeight={Platform.OS === 'ios' ? 80 : null}
+              value={description}
+              onChangeText={(text) => {
+                setDescription(text);
+                if (text.trim()) setErrors({ ...errors, description: '' });
+              }}
+            />
+            {errors.description ? <Text style={styles.errorText}>{errors.description}</Text> : null}
 
-                    <Text style={styles.sectionSubtitle}>Seasons</Text>
-                    <View style={styles.seasonsContainer}>
-                        {seasons.map((season) => (
-                            <TouchableOpacity
-                                key={season}
-                                style={[
-                                    styles.seasonButton,
-                                    selectedSeasons.includes(season) && styles.selectedButton
-                                ]}
-                                onPress={() => {
-                                    toggleSeason(season);
-                                    if (selectedSeasons.length > 0 || season) setErrors({...errors, seasons: ''});
-                                }}
-                            >
-                                <Text style={[
-                                    styles.seasonButtonText,
-                                    selectedSeasons.includes(season) && styles.selectedButtonText
-                                ]}>
-                                    <Ionicons
-                                    name={
-                                        season === 'spring' ? 'rose-outline' :
-                                        season === 'summer' ? 'sunny-outline' :
-                                        season === 'fall' ? 'leaf-outline' :
-                                        'snow-outline'
-                                    }
-                                    size={18}
-                                    style={selectedSeasons.includes(season) ? {color: '#fff'} : {color: '#333'}}
-                                    />
-                                </Text>
-                            </TouchableOpacity>
-                        ))}
-                    </View>
-                    {errors.seasons ? <Text style={styles.errorText}>{errors.seasons}</Text> : null}
-                    
-                    <Text style={styles.sectionSubtitle}>Hours</Text>
-                    <View style={styles.hoursContainer}>
-                        <View style={styles.timeInput}>
-                            <TextInput
-                                style={[styles.input, errors.hours ? styles.inputError : null]}
-                                placeholder="09:00"
-                                placeholderTextColor={'#999'}
-                                value={openTime}
-                                onChangeText={(text) => {
-                                    setOpenTime(text);
-                                    if (text.trim() || closeTime.trim()) setErrors({...errors, hours: ''});
-                                }}
-                            />
-                            <Text style={styles.timeLabel}>(opening time)</Text>
-                        </View>
-                        <View style={styles.timeInput}>
-                            <TextInput
-                                style={[styles.input, errors.hours ? styles.inputError : null]}
-                                placeholder="17:00"
-                                placeholderTextColor={'#999'}
-                                value={closeTime}
-                                onChangeText={(text) => {
-                                    setCloseTime(text);
-                                    if (openTime.trim() || text.trim()) setErrors({...errors, hours: ''});
-                                }}
-                            />
-                            <Text style={styles.timeLabel}>(closing time)</Text>
-                        </View>
-                    </View>
-                    {errors.hours ? <Text style={styles.errorText}>{errors.hours}</Text> : null}
-                    
-                    <View style={styles.checkboxContainer}>
-                        <TouchableOpacity
-                            style={styles.checkbox}
-                            onPress={() => {
-                                setAllowPickup(!allowPickup);
-                                if (!allowPickup || localDelivery) setErrors({...errors, delivery: ''});
-                            }}
-                        >
-                            <View style={[
-                                styles.checkboxBox,
-                                allowPickup && styles.checkboxChecked
-                            ]} />
-                            <Text style={styles.checkboxLabel}>allow pickup</Text>
-                        </TouchableOpacity>
-
-                        <TouchableOpacity
-                            style={styles.checkbox}
-                            onPress={() => {
-                                setLocalDelivery(!localDelivery);
-                                if (allowPickup || !localDelivery) setErrors({...errors, delivery: ''});
-                            }}
-                        >
-                            <View style={[
-                                styles.checkboxBox,
-                                localDelivery && styles.checkboxChecked
-                            ]} />
-                            <Text style={styles.checkboxLabel}>local delivery</Text>
-                        </TouchableOpacity>
-                        {errors.delivery ? <Text style={styles.errorText}>{errors.delivery}</Text> : null}
-                    </View>
+            <Text style={styles.sectionTitle}>Market Info</Text>
+            {Platform.OS === 'web' ? (
+              <>
+                <select
+                  style={{
+                    ...styles.webSelect,
+                    ...(errors.type ? styles.webSelectError : {}),
+                  }}
+                  value={type}
+                  onChange={(e) => {
+                    setType(e.target.value);
+                    if (e.target.value) setErrors({ ...errors, type: '' });
+                  }}
+                >
+                  <option value="">type</option>
+                  <option value="general">General</option>
+                  <option value="produce">Produce</option>
+                  <option value="farm">Farm</option>
+                  <option value="grainery">Grainery</option>
+                  <option value="butchery">Butchery</option>
+                  <option value="spices">Spices</option>
+                  <option value="bakery">Bakery</option>
+                  <option value="homemade">Homemade Goods</option>
+                </select>
+                {errors.type ? <Text style={styles.errorText}>{errors.type}</Text> : null}
+              </>
+            ) : (
+              <>
+                <View style={errors.type ? styles.pickerError : null}>
+                  <Picker
+                    selectedValue={type}
+                    onValueChange={(value) => {
+                      setType(value);
+                      if (value) setErrors({ ...errors, type: '' });
+                    }}
+                    style={styles.picker}
+                    itemStyle={{ height: 150, fontFamily: 'TextMeOne' }}
+                  >
+                    <Picker.Item color="#00bfff" label="type" value="" />
+                    <Picker.Item color="black" label="General" value="general" />
+                    <Picker.Item color="black" label="Produce" value="produce" />
+                    <Picker.Item color="black" label="Farm" value="farm" />
+                    <Picker.Item color="black" label="Grainery" value="grainery" />
+                    <Picker.Item color="black" label="Butchery" value="butchery" />
+                    <Picker.Item color="black" label="Spices" value="spices" />
+                    <Picker.Item color="black" label="Bakery" value="bakery" />
+                    <Picker.Item color="black" label="Homemade Goods" value="homemade" />
+                  </Picker>
                 </View>
-            </ScrollView>
-            </KeyboardAvoidingView>
-            <View style={[styles.buttonContainer, Platform.OS === 'ios' && styles.iosButtonContainer]}>
-                <TouchableOpacity style={styles.button} onPress={handleSubmit}>
-                    <Text style={styles.buttonText}>{shopId ? 'Save' : 'Create'}</Text>
+                {errors.type ? <Text style={styles.errorText}>{errors.type}</Text> : null}
+              </>
+            )}
+
+            <Text style={styles.sectionTitle}>Availability</Text>
+            <Text style={styles.sectionSubtitle}>Days</Text>
+            <View style={styles.daysContainer}>
+              {weekDays.map((day) => (
+                <TouchableOpacity
+                  key={day}
+                  style={[styles.dayButton, selectedDays.includes(day) && styles.selectedButton]}
+                  onPress={() => {
+                    toggleDay(day);
+                    if (selectedDays.length > 0 || day) setErrors({ ...errors, days: '' });
+                  }}
+                >
+                  <Text
+                    style={[
+                      styles.dayButtonText,
+                      selectedDays.includes(day) && styles.selectedButtonText,
+                    ]}
+                  >
+                    {day}
+                  </Text>
                 </TouchableOpacity>
+              ))}
             </View>
-        </SafeAreaView>
-    );
+            {errors.days ? <Text style={styles.errorText}>{errors.days}</Text> : null}
+
+            <Text style={styles.sectionSubtitle}>Seasons</Text>
+            <View style={styles.seasonsContainer}>
+              {seasons.map((season) => (
+                <TouchableOpacity
+                  key={season}
+                  style={[
+                    styles.seasonButton,
+                    selectedSeasons.includes(season) && styles.selectedButton,
+                  ]}
+                  onPress={() => {
+                    toggleSeason(season);
+                    if (selectedSeasons.length > 0 || season) setErrors({ ...errors, seasons: '' });
+                  }}
+                >
+                  <Text
+                    style={[
+                      styles.seasonButtonText,
+                      selectedSeasons.includes(season) && styles.selectedButtonText,
+                    ]}
+                  >
+                    <Ionicons
+                      name={
+                        season === 'spring'
+                          ? 'rose-outline'
+                          : season === 'summer'
+                            ? 'sunny-outline'
+                            : season === 'fall'
+                              ? 'leaf-outline'
+                              : 'snow-outline'
+                      }
+                      size={18}
+                      style={
+                        selectedSeasons.includes(season) ? { color: '#fff' } : { color: '#333' }
+                      }
+                    />
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            {errors.seasons ? <Text style={styles.errorText}>{errors.seasons}</Text> : null}
+
+            <Text style={styles.sectionSubtitle}>Hours</Text>
+            <View style={styles.hoursContainer}>
+              <View style={styles.timeInput}>
+                <TextInput
+                  style={[styles.input, errors.hours ? styles.inputError : null]}
+                  placeholder="09:00"
+                  placeholderTextColor={'#999'}
+                  value={openTime}
+                  onChangeText={(text) => {
+                    setOpenTime(text);
+                    if (text.trim() || closeTime.trim()) setErrors({ ...errors, hours: '' });
+                  }}
+                />
+                <Text style={styles.timeLabel}>(opening time)</Text>
+              </View>
+              <View style={styles.timeInput}>
+                <TextInput
+                  style={[styles.input, errors.hours ? styles.inputError : null]}
+                  placeholder="17:00"
+                  placeholderTextColor={'#999'}
+                  value={closeTime}
+                  onChangeText={(text) => {
+                    setCloseTime(text);
+                    if (openTime.trim() || text.trim()) setErrors({ ...errors, hours: '' });
+                  }}
+                />
+                <Text style={styles.timeLabel}>(closing time)</Text>
+              </View>
+            </View>
+            {errors.hours ? <Text style={styles.errorText}>{errors.hours}</Text> : null}
+
+            <View style={styles.checkboxContainer}>
+              <TouchableOpacity
+                style={styles.checkbox}
+                onPress={() => {
+                  setAllowPickup(!allowPickup);
+                  if (!allowPickup || localDelivery) setErrors({ ...errors, delivery: '' });
+                }}
+              >
+                <View style={[styles.checkboxBox, allowPickup && styles.checkboxChecked]} />
+                <Text style={styles.checkboxLabel}>allow pickup</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.checkbox}
+                onPress={() => {
+                  setLocalDelivery(!localDelivery);
+                  if (allowPickup || !localDelivery) setErrors({ ...errors, delivery: '' });
+                }}
+              >
+                <View style={[styles.checkboxBox, localDelivery && styles.checkboxChecked]} />
+                <Text style={styles.checkboxLabel}>local delivery</Text>
+              </TouchableOpacity>
+              {errors.delivery ? <Text style={styles.errorText}>{errors.delivery}</Text> : null}
+            </View>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+      <View style={[styles.buttonContainer, Platform.OS === 'ios' && styles.iosButtonContainer]}>
+        <TouchableOpacity style={styles.button} onPress={handleSubmit}>
+          <Text style={styles.buttonText}>{shopId ? 'Save' : 'Create'}</Text>
+        </TouchableOpacity>
+      </View>
+    </SafeAreaView>
+  );
 }
 
 const styles = StyleSheet.create({
-    inputError: {
-        borderWidth: 1,
-        borderColor: 'red',
-    },
-    webSelectError: {
-        borderWidth: 1,
-        borderColor: 'red',
-    },
-    pickerError: {
-        borderWidth: 1,
-        borderColor: 'red',
-        borderRadius: 8,
-        overflow: 'hidden',
-    },
-    errorText: {
-        color: 'red',
-        marginBottom: 10,
-        fontSize: 14,
-    },
-    container: {
-        flex: 1,
-        backgroundColor: '#b7ffb0',
-    },
-    formContainer: {
-        paddingHorizontal: 20,
-        alignSelf: 'center',
-        width: '100%',
-    },
-    backButton: {
-        marginRight: 16,
-    },
-    header: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        padding: 16,
-        borderBottomColor: '#000',
-        borderBottomWidth: 1,
-        ...Platform.select({
-            ios: {
-                justifyContent: 'flex-end',
-            }
-        })
-    },
-    sectionTitle: {
-        fontSize: 24,
-        marginVertical: 15,
-        color: '#fff',
-        fontFamily: 'TitanOne'
-    },
-    sectionSubtitle: {
-        fontSize: 18,
-        marginVertical: 15,
-        color: 'black',
-        fontFamily: 'TitanOne',
-        textAlign: 'right',
-    },
-    input: {
-        backgroundColor: '#fff',
-        padding: 15,
-        borderRadius: 8,
-        marginBottom: 15,
-        fontFamily: 'TextMeOne',
-        fontSize: 16,
-    },
-    textArea: {
-        height: Platform.OS === 'web' ? 100 : null,
-        textAlignVertical: 'top',
-    },
-    webSelect: {
-        backgroundColor: '#fff',
-        height: 50,
-        padding: 15,
-        borderRadius: 3,
-        marginBottom: 15,
-        fontSize: 16,
-        width: '100%',
-        borderWidth: 1,
-        borderColor: '#999',
-    },
-    picker: {
-        color: '#333',
-        backgroundColor: '#fff',
-        marginBottom: 25,
-    },
-    daysContainer: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        marginBottom: 15,
-    },
-    dayButton: {
-        backgroundColor: '#fff',
-        padding: 10,
-        borderRadius: 8,
-        width: 40,
-        alignItems: 'center',
-        ...Platform.select({
-            web: {
-                width: '10%',
-            }
-        })
-    },
-    seasonsContainer: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        marginBottom: 15,
-        flexWrap: 'wrap',
-    },
-    seasonButton: {
-        backgroundColor: '#fff',
-        padding: 10,
-        borderRadius: 8,
-        width: '20%',
-        alignItems: 'center',
-    },
-    selectedButton: {
-        backgroundColor: '#00bfff',
-    },
-    dayButtonText: {
-        color: '#333',
-    },
-    seasonButtonText: {
-        color: '#333',
-    },
-    selectedButtonText: {
-        color: '#fff',
-    },
-    hoursContainer: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        marginBottom: 15,
-    },
-    timeInput: {
-        width: '48%',
-    },
-    timeLabel: {
-        color: '#666',
-        fontSize: 12,
-        textAlign: 'center',
-        marginTop: 5,
-    },
-    checkboxContainer: {
-        marginBottom: 20,
-    },
-    checkbox: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginBottom: 10,
-    },
-    checkboxBox: {
-        width: 20,
-        height: 20,
-        borderWidth: 1,
-        borderColor: '#000',
-        marginRight: 10,
-        borderRadius: 4,
-    },
-    checkboxChecked: {
-        backgroundColor: '#00bfff',
-        borderColor: '#00bfff',
-    },
-    checkboxLabel: {
-        color: '#333',
-        fontSize: 16,
-    },
-    buttonContainer: {
-        bottom: 0,
-        left: 0,
-        right: 0,
-    },
-    iosButtonContainer: {
-        bottom: 30,
-    },
-    button: {
-        width: '100%',
-        padding: 10,
-        paddingBottom: 33,
-        backgroundColor: '#87CEFA',
-    },
-    buttonText: {
-        color: 'white',
-        textAlign: 'center',
-        fontSize: 30,
-        fontFamily: 'TextMeOne',
-    },
+  inputError: {
+    borderWidth: 1,
+    borderColor: 'red',
+  },
+  webSelectError: {
+    borderWidth: 1,
+    borderColor: 'red',
+  },
+  pickerError: {
+    borderWidth: 1,
+    borderColor: 'red',
+    borderRadius: 8,
+    overflow: 'hidden',
+  },
+  errorText: {
+    color: 'red',
+    marginBottom: 10,
+    fontSize: 14,
+  },
+  container: {
+    flex: 1,
+    backgroundColor: '#b7ffb0',
+  },
+  formContainer: {
+    paddingHorizontal: 20,
+    alignSelf: 'center',
+    width: '100%',
+  },
+  backButton: {
+    marginRight: 16,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    borderBottomColor: '#000',
+    borderBottomWidth: 1,
+    ...Platform.select({
+      ios: {
+        justifyContent: 'flex-end',
+      },
+    }),
+  },
+  sectionTitle: {
+    fontSize: 24,
+    marginVertical: 15,
+    color: '#fff',
+    fontFamily: 'TitanOne',
+  },
+  sectionSubtitle: {
+    fontSize: 18,
+    marginVertical: 15,
+    color: 'black',
+    fontFamily: 'TitanOne',
+    textAlign: 'right',
+  },
+  input: {
+    backgroundColor: '#fff',
+    padding: 15,
+    borderRadius: 8,
+    marginBottom: 15,
+    fontFamily: 'TextMeOne',
+    fontSize: 16,
+  },
+  textArea: {
+    height: Platform.OS === 'web' ? 100 : null,
+    textAlignVertical: 'top',
+  },
+  webSelect: {
+    backgroundColor: '#fff',
+    height: 50,
+    padding: 15,
+    borderRadius: 3,
+    marginBottom: 15,
+    fontSize: 16,
+    width: '100%',
+    borderWidth: 1,
+    borderColor: '#999',
+  },
+  picker: {
+    color: '#333',
+    backgroundColor: '#fff',
+    marginBottom: 25,
+  },
+  daysContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 15,
+  },
+  dayButton: {
+    backgroundColor: '#fff',
+    padding: 10,
+    borderRadius: 8,
+    width: 40,
+    alignItems: 'center',
+    ...Platform.select({
+      web: {
+        width: '10%',
+      },
+    }),
+  },
+  seasonsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 15,
+    flexWrap: 'wrap',
+  },
+  seasonButton: {
+    backgroundColor: '#fff',
+    padding: 10,
+    borderRadius: 8,
+    width: '20%',
+    alignItems: 'center',
+  },
+  selectedButton: {
+    backgroundColor: '#00bfff',
+  },
+  dayButtonText: {
+    color: '#333',
+  },
+  seasonButtonText: {
+    color: '#333',
+  },
+  selectedButtonText: {
+    color: '#fff',
+  },
+  hoursContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 15,
+  },
+  timeInput: {
+    width: '48%',
+  },
+  timeLabel: {
+    color: '#666',
+    fontSize: 12,
+    textAlign: 'center',
+    marginTop: 5,
+  },
+  checkboxContainer: {
+    marginBottom: 20,
+  },
+  checkbox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  checkboxBox: {
+    width: 20,
+    height: 20,
+    borderWidth: 1,
+    borderColor: '#000',
+    marginRight: 10,
+    borderRadius: 4,
+  },
+  checkboxChecked: {
+    backgroundColor: '#00bfff',
+    borderColor: '#00bfff',
+  },
+  checkboxLabel: {
+    color: '#333',
+    fontSize: 16,
+  },
+  buttonContainer: {
+    bottom: 0,
+    left: 0,
+    right: 0,
+  },
+  iosButtonContainer: {
+    bottom: 30,
+  },
+  button: {
+    width: '100%',
+    padding: 10,
+    paddingBottom: 33,
+    backgroundColor: '#87CEFA',
+  },
+  buttonText: {
+    color: 'white',
+    textAlign: 'center',
+    fontSize: 30,
+    fontFamily: 'TextMeOne',
+  },
 });
