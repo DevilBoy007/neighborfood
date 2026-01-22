@@ -14,6 +14,7 @@ const LoginScreen = () => {
           <SoundPressable
             style={({ pressed }) => [
               styles.button,
+              styles.buttonLeft,
               pressed && styles.buttonOpacity,
             ]}
             onPress={() => router.navigate('/Login')}
@@ -23,6 +24,7 @@ const LoginScreen = () => {
         <SoundPressable
           style={({ pressed }) => [
             styles.button,
+            styles.buttonRight,
             pressed && styles.buttonOpacity,
           ]}
           onPress = {() => router.navigate('/Register')}
@@ -60,23 +62,31 @@ const styles = StyleSheet.create({
     fontSize: 60,
   },
   buttonContainer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
     flexDirection: 'row',
-    justifyContent: 'space-around',
-    alignItems: 'center',
   },
   button: {
+    width: '50%',
+    padding: 10,
+    paddingBottom: 33,
     backgroundColor: '#00bfff',
-    padding: 15,
-    borderRadius: 5,
-    marginHorizontal: 5,
-    width: 150,
-    marginTop: 20,
+  },
+  buttonLeft: {
+    borderRightWidth: 0.5,
+    borderRightColor: '#000',
+  },
+  buttonRight: {
+    borderLeftWidth: 0.5,
+    borderLeftColor: '#000',
   },
   buttonText: {
     color: 'white',
-    fontSize: 20,
-    fontWeight: 'bold',
     textAlign: 'center',
+    fontSize: 30,
+    fontFamily: 'TextMeOne',
   },
   buttonOpacity: {
     opacity: 0.8,
