@@ -40,6 +40,9 @@ jobs:
       - name: Install Expo SDK dependencies
         run: npx expo install
 
+      - name: Install Firebase Tools
+        run: npm install -g firebase-tools
+
       - name: Verify TypeScript compilation
         run: npx tsc --noEmit
         continue-on-error: true
