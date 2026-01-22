@@ -1,0 +1,20 @@
+# Neighborfood Maestro Configuration
+# See: https://maestro.mobile.dev/getting-started/configuration
+
+# App identifier (update with actual bundle/package ID)
+appId: com.neighborfood.app
+
+# Flows to include by default
+flows:
+  - flows/**/*.yaml
+
+# Default timeout for assertions (milliseconds)
+timeout: 30000
+
+# Tags for filtering tests
+tags:
+  smoke:
+    - flows/app-launch.yaml
+    - flows/login.yaml
+  regression:
+    - flows/**/*.yaml

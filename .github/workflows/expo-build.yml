@@ -1,0 +1,167 @@
+# GitHub Actions Expo Build (Legacy/Manual Fallback)
+#
+# NOTE: Primary builds are now handled by EAS Workflows in .eas/workflows/
+# This workflow is kept for:
+# - Manual triggering via GitHub UI (workflow_dispatch)
+# - Environments without EAS Workflows integration
+# - Web builds (not supported by EAS Workflows)
+#
+# For preview builds, use: eas workflow:run .eas/workflows/preview-build.yml
+# For production builds, use: eas workflow:run .eas/workflows/production-build.yml
+
+name: Expo Build (Manual)
+
+on:
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      platform:
+        description: 'Platform to build for'
+        required: true
+        default: 'web'
+        type: choice
+        options:
+          - web
+          - ios
+          - android
+          - all
+      profile:
+        description: 'Build profile'
+        required: true
+        default: 'preview'
+        type: choice
+        options:
+          - development
+          - preview
+          - production
+
+concurrency:
+  group: expo-build-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+
+jobs:
+  # Web export build (runs locally, no EAS required)
+  build-web:
+    name: Build Web
+    runs-on: ubuntu-latest
+    if: github.event.inputs.platform == 'all' || github.event.inputs.platform == 'web'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Setup Expo
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Export for web
+        run: npx expo export --platform web
+
+      - name: Upload web build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-build
+          path: dist/
+          retention-days: 7
+
+  # Android build using EAS
+  build-android:
+    name: Build Android
+    runs-on: ubuntu-latest
+    if: github.event.inputs.platform == 'all' || github.event.inputs.platform == 'android'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Setup EAS
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Android
+        run: eas build --platform android --profile ${{ github.event.inputs.profile }} --non-interactive --no-wait
+        if: env.EXPO_TOKEN != ''
+
+      - name: Skip build (no token)
+        if: env.EXPO_TOKEN == ''
+        run: |
+          echo "⚠️ Skipping EAS build - EXPO_TOKEN not configured"
+          echo "To configure, add EXPO_TOKEN to repository secrets"
+          exit 1
+
+  # iOS build using EAS
+  build-ios:
+    name: Build iOS
+    runs-on: ubuntu-latest
+    if: github.event.inputs.platform == 'all' || github.event.inputs.platform == 'ios'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Setup EAS
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build iOS
+        run: eas build --platform ios --profile ${{ github.event.inputs.profile }} --non-interactive --no-wait
+        if: env.EXPO_TOKEN != ''
+
+      - name: Skip build (no token)
+        if: env.EXPO_TOKEN == ''
+        run: |
+          echo "⚠️ Skipping EAS build - EXPO_TOKEN not configured"
+          echo "To configure, add EXPO_TOKEN to repository secrets"
+          exit 1
+
+  # Summary
+  build-complete:
+    name: Build Summary
+    runs-on: ubuntu-latest
+    needs: [build-web, build-android, build-ios]
+    if: always()
+    steps:
+      - name: Summary
+        run: |
+          echo "## Build Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Platform | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Web | ${{ needs.build-web.result || 'skipped' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Android | ${{ needs.build-android.result || 'skipped' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| iOS | ${{ needs.build-ios.result || 'skipped' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Note:** EAS builds run asynchronously. Check the [EAS Dashboard](https://expo.dev/) for build status." >> $GITHUB_STEP_SUMMARY

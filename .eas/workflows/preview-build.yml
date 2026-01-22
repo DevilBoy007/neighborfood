@@ -1,0 +1,40 @@
+name: Preview Build (PR)
+
+on:
+  pull_request:
+    branches: ['main', 'develop']
+
+jobs:
+  # Build Android preview for internal testing
+  build_android:
+    name: Build Android Preview
+    type: build
+    params:
+      platform: android
+      profile: preview
+      message: 'PR #${{ github.event.pull_request.number }}: ${{ github.event.pull_request.title }}'
+
+  # Build iOS preview for simulator testing
+  build_ios:
+    name: Build iOS Preview
+    type: build
+    params:
+      platform: ios
+      profile: preview
+      message: 'PR #${{ github.event.pull_request.number }}: ${{ github.event.pull_request.title }}'
+
+  # Publish an OTA update for quick testing
+  publish_update:
+    name: Publish Preview Update
+    type: update
+    params:
+      branch: ${{ github.ref_name }}
+      message: 'PR #${{ github.event.pull_request.number }}: ${{ github.event.pull_request.title }}'
+
+  # Comment on PR with build info and QR codes
+  comment_on_pr:
+    name: Post Preview Links
+    after: [build_android, build_ios, publish_update]
+    type: github-comment
+    params:
+      message: '📱 Preview builds and updates are ready for testing!'

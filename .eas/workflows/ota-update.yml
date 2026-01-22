@@ -1,0 +1,39 @@
+name: OTA Update
+
+on:
+  push:
+    branches: ['main', 'develop']
+    paths:
+      # Only trigger OTA updates when JS/TS code changes (not native code)
+      - 'app/**'
+      - 'components/**'
+      - 'context/**'
+      - 'handlers/**'
+      - 'hooks/**'
+      - 'store/**'
+      - 'constants/**'
+      - 'assets/**'
+      - '!android/**'
+      - '!ios/**'
+      - '!**/*.md'
+
+jobs:
+  # Production updates (main branch)
+  update_production:
+    name: Update Production Channel
+    if: ${{ github.ref_name == 'main' }}
+    type: update
+    environment: production
+    params:
+      channel: production
+      message: '${{ github.event.head_commit.message }}'
+
+  # Staging updates (develop branch)
+  update_staging:
+    name: Update Staging Channel
+    if: ${{ github.ref_name == 'develop' }}
+    type: update
+    environment: preview
+    params:
+      channel: staging
+      message: '${{ github.event.head_commit.message }}'

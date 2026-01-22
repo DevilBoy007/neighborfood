@@ -292,9 +292,73 @@ userId: string (buyer's user.uid)
 2. **Metro Config**: Package exports disabled (`unstable_enablePackageExports = false`) to avoid compatibility issues
 3. **TODO Found**: `app/(checkout)/Checkout.tsx:134` - Tip calculation not yet implemented
 
-### CI/CD & Validation
+### CI/CD & Build Automation
 
-- N/A (not specified in the project yet)
+The project uses a combination of **EAS Workflows** (Expo's native CI/CD) and **GitHub Actions**.
+
+#### EAS Workflows (`.eas/workflows/`)
+
+EAS Workflows handle all native builds and OTA updates. Files are in `.eas/workflows/`:
+
+| Workflow                | Trigger                     | Purpose                                      |
+| ----------------------- | --------------------------- | -------------------------------------------- |
+| `production-build.yml`  | Push to `main` or `v*` tags | Build and submit to app stores               |
+| `preview-build.yml`     | Pull requests               | Preview builds with PR comments and QR codes |
+| `ota-update.yml`        | Push to `main`/`develop`    | OTA updates via EAS Update                   |
+| `development-build.yml` | Manual                      | Development client builds                    |
+| `e2e-tests.yml`         | Manual                      | Maestro E2E testing                          |
+
+**Running EAS Workflows:**
+
+```bash
+# Run production build workflow
+eas workflow:run .eas/workflows/production-build.yml
+
+# Run preview build with inputs
+eas workflow:run .eas/workflows/development-build.yml -F platform=ios
+
+# Run E2E tests
+eas workflow:run .eas/workflows/e2e-tests.yml -F platform=both
+```
+
+#### GitHub Actions (`.github/workflows/`)
+
+GitHub Actions handle code quality checks and web builds:
+
+| Workflow         | Trigger                     | Purpose                                         |
+| ---------------- | --------------------------- | ----------------------------------------------- |
+| `ci.yml`         | Push/PR to `main`/`develop` | Lint, typecheck, format, test, build validation |
+| `expo-build.yml` | Manual                      | Fallback builds via GitHub UI                   |
+| `pre-commit.yml` | Push/PR                     | Pre-commit hook validation                      |
+
+#### Build Profiles (`eas.json`)
+
+| Profile       | Distribution | Channel       | Use Case                          |
+| ------------- | ------------ | ------------- | --------------------------------- |
+| `development` | Internal     | `development` | Dev client with simulator support |
+| `preview`     | Internal     | `staging`     | Internal testing                  |
+| `production`  | Store        | `production`  | App Store/Play Store submission   |
+
+#### E2E Testing with Maestro
+
+Maestro flows are in `/maestro/`:
+
+```bash
+# Install Maestro locally
+curl -Ls "https://get.maestro.mobile.dev" | bash
+
+# Run tests locally
+maestro test maestro/
+
+# Run via EAS Workflows (recommended)
+eas workflow:run .eas/workflows/e2e-tests.yml -F platform=ios
+```
+
+#### Required Secrets
+
+For EAS Workflows and builds to work, configure these secrets:
+
+- **`EXPO_TOKEN`**: Get from https://expo.dev/accounts/[account]/settings/access-tokens
 
 ### Trust These Instructions
 
