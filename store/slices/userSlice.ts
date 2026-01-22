@@ -34,8 +34,21 @@ const initialState: UserState = {
   isLoading: true,
 };
 
-// Helper to get storage - lazily evaluated to avoid localStorage access during bundling
-const getStorage = () => (Platform.OS === 'web' ? localStorage : AsyncStorage);
+// Helper to get storage - lazily evaluated with guard for bundling
+const getStorage = () => {
+  if (Platform.OS === 'web') {
+    if (typeof localStorage === 'undefined') {
+      // Return a no-op storage for SSR/bundling
+      return {
+        getItem: () => Promise.resolve(null),
+        setItem: () => Promise.resolve(),
+        removeItem: () => Promise.resolve(),
+      };
+    }
+    return localStorage;
+  }
+  return AsyncStorage;
+};
 
 export const loadUserData = createAsyncThunk('user/loadUserData', async () => {
   const storage = getStorage();
