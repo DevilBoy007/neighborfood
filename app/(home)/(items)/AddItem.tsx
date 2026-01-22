@@ -17,6 +17,8 @@ import { Picker } from '@react-native-picker/picker';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import Toast from 'react-native-toast-message';
 import * as ImagePicker from 'expo-image-picker';
+import 'react-native-get-random-values';
+import { v4 as uuidv4 } from 'uuid';
 
 import firebaseService from '@/handlers/firebaseService';
 import { useUser, useItem, useShop } from '@/store/reduxHooks';
@@ -124,7 +126,7 @@ export default function AddItemScreen() {
         }
     };
     
-    const uploadImageToFirebase = async (uri: string): Promise<string> => {
+    const uploadImageToFirebase = async (uri: string, targetShopId: string, targetItemId: string): Promise<string> => {
         setUploading(true);
         
         try {
@@ -134,8 +136,10 @@ export default function AddItemScreen() {
             const file = new File([blob], `item_${Date.now()}.jpg`, { type: blob.type });
             
             return new Promise<string>((resolve, reject) => {
-                firebaseService.uploadImage(
+                firebaseService.uploadProductImage(
                     file,
+                    targetShopId,
+                    targetItemId,
                     (progress) => {
                         // You can use progress for a progress bar if desired
                         console.log(`Upload is ${progress}% done`);
@@ -243,11 +247,15 @@ export default function AddItemScreen() {
 
                 setIsLoadingItem(true);
 
+                // For new items, generate the itemId before uploading the image
+                // This ensures the image path matches the storage rules
+                const newItemIdForUpload = itemId ? itemId.toString() : uuidv4();
+
                 // Upload image if it's a new item or if the image has changed
                 let imageUrl = image;
                 if (image && (!itemId || (selectedItem && image !== selectedItem.imageUrl))) {
                     try {
-                        imageUrl = await uploadImageToFirebase(image);
+                        imageUrl = await uploadImageToFirebase(image, shopId, newItemIdForUpload);
                     } catch (uploadError) {
                         Toast.show({
                             type: 'error',
@@ -333,7 +341,8 @@ export default function AddItemScreen() {
                         }, 2000);
                     }
                 } else {
-                    const newItemId = await firebaseService.addDocument('items', itemData, null);
+                    // Create new item with the pre-generated itemId (for storage path consistency)
+                    await firebaseService.addDocument('items', itemData, newItemIdForUpload);
                     
                     const successMessage = 'Item created successfully!';
                     

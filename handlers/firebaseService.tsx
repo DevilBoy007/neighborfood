@@ -6,30 +6,32 @@ import {
     initializeAuth,
     getAuth,
     browserLocalPersistence,
-    getReactNativePersistence,
     createUserWithEmailAndPassword,
     signInWithEmailAndPassword,
     signOut,
     Auth,
-    UserCredential
+    UserCredential,
+    Persistence
 } from 'firebase/auth';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import {
-    getFirestore,
-    Firestore,
-    collection,
-    query,
-    where,
-    getDocs,
-    addDoc,
-    setDoc,
-    updateDoc,
-    deleteDoc,
-    doc,
-    getDoc,
-    arrayUnion,
-} from 'firebase/firestore';
+import { getFunctions, httpsCallable, Functions, HttpsCallableResult } from 'firebase/functions';
 
+// Type declaration for getReactNativePersistence which is available in firebase/auth but not well-typed
+declare function getReactNativePersistence(storage: typeof AsyncStorage): Persistence;
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const { getReactNativePersistence: getReactNativePersistenceImpl } = require('firebase/auth');
+
+/**
+ * FirebaseService - Refactored to use Cloud Functions for Firestore operations
+ * 
+ * Following Firebase best practices:
+ * - Authentication (login, register, logout) remains CLIENT-SIDE as recommended by Firebase
+ * - Storage uploads remain CLIENT-SIDE (requires direct file access)
+ * - All Firestore operations use Cloud Functions for:
+ *   - Better security through server-side validation
+ *   - Reduced client-side bundle size
+ *   - Centralized business logic
+ */
 class FirebaseService {
     private static instance: FirebaseService;
     private firebaseConfig: {
@@ -43,7 +45,7 @@ class FirebaseService {
     private auth: Auth | null;
     private storage: FirebaseStorage | null;
     private analytics: Analytics | null;
-    private db: Firestore | null;
+    private functions: Functions | null;
 
     private constructor() {
         this.firebaseConfig = {
@@ -58,7 +60,7 @@ class FirebaseService {
         this.storage = null;
         this.analytics = null;
         this.auth = null;
-        this.db = null;
+        this.functions = null;
     }
 
     public static getInstance(): FirebaseService {
@@ -72,7 +74,7 @@ class FirebaseService {
         try {
             this.app = null;
             this.auth = null;
-            this.db = null;
+            this.functions = null;
             console.log('Disconnected from Firebase');
             return true;
         } catch (error) {
@@ -84,7 +86,7 @@ class FirebaseService {
     async connect() {
         try {
             // Check if Firebase is already initialized
-            if (this.app && this.auth && this.db && this.storage) {
+            if (this.app && this.auth && this.functions && this.storage) {
                 console.log('Firebase already connected');
                 return true;
             }
@@ -102,10 +104,10 @@ class FirebaseService {
                     this.auth = initializeAuth(this.app, {
                         persistence: Platform.OS === 'web'
                             ? browserLocalPersistence
-                            : getReactNativePersistence(AsyncStorage)
+                            : getReactNativePersistenceImpl(AsyncStorage)
                     });
                 } catch (authError) {
-                    if (authError.code === 'auth/already-initialized') {
+                    if ((authError as { code?: string }).code === 'auth/already-initialized') {
                         this.auth = getAuth(this.app);
                         console.log('Retrieved existing auth instance');
                     } else {
@@ -124,14 +126,15 @@ class FirebaseService {
                 }
             }
 
+            // Initialize Cloud Functions
+            if (!this.functions) {
+                this.functions = getFunctions(this.app);
+                console.log('Initialized Firebase Cloud Functions');
+            }
+
             // Force token refresh on init if user exists
             if (this.auth.currentUser) {
                 await this.auth.currentUser.reload();
-            }
-
-            // Initialize Firestore if not already initialized  
-            if (!this.db) {
-                this.db = getFirestore(this.app);
             }
 
             console.log('Successfully connected to Firebase');
@@ -142,13 +145,21 @@ class FirebaseService {
         }
     }
 
+    // =========================================================================
+    // Authentication Methods (CLIENT-SIDE - Best Practice)
+    // Firebase recommends keeping authentication on the client for:
+    // - Direct token management
+    // - Session persistence
+    // - OAuth flow handling
+    // =========================================================================
+
     async logout() {
         try {
             if (this.auth) { 
                 await signOut(this.auth);
             }
             else { 
-                this.connect();
+                await this.connect();
                 if (this.auth) await signOut(this.auth);
             }
             
@@ -166,7 +177,7 @@ class FirebaseService {
             await this.connect();
             
             if (!this.auth) {
-                this.connect();
+                await this.connect();
                 if (!this.auth) {
                     throw new Error('Firebase Auth is not initialized');
                 }
@@ -177,19 +188,19 @@ class FirebaseService {
             return userCredential;
         } catch (error) {
             console.error('Error logging in:', error);
-            if (error.code === 'auth/already-initialized') {
+            if ((error as { code?: string }).code === 'auth/already-initialized') {
                 // If we get the already-initialized error, try getting auth again
                 try {
                     const { getAuth } = await import('firebase/auth');
-                    this.auth = getAuth(this.app);
-                    const userCredential = await signInWithEmailAndPassword(this.auth, email, password);
+                    this.auth = getAuth(this.app!);
+                    const userCredential = await signInWithEmailAndPassword(this.auth!, email, password);
                     return userCredential;
                 } catch (secondError) {
                     throw secondError;
                 }
             }
             
-            switch (error.code) {
+            switch ((error as { code?: string }).code) {
                 case 'auth/invalid-email':
                     throw new Error('Invalid email');
                 case 'auth/user-not-found':
@@ -205,11 +216,12 @@ class FirebaseService {
     async registerUser(email: string, password: string, username: string): Promise<UserCredential['user']> {
         try {
             if (!this.auth) {
-                this.connect();
+                await this.connect();
                 if (!this.auth) {
                     throw new Error('Error connecting to Firebase Authentication');
                 }
             }
+            // Check if username is taken using Cloud Function
             const users = await this.getDocumentsWhere('users', 'username', '==', username);
             if (users.length > 0) {
                 throw new Error('Username taken');
@@ -220,7 +232,7 @@ class FirebaseService {
             return user;
         } catch (error) {
             console.error('Error registering user:', error);
-            switch (error.code) {
+            switch ((error as { code?: string }).code) {
                 case 'auth/email-already-in-use':
                     throw new Error('Email already in use');
                 case 'auth/invalid-email':
@@ -231,22 +243,33 @@ class FirebaseService {
         }
     }
 
+    // =========================================================================
+    // Cloud Functions Helper
+    // =========================================================================
+
+    private async callFunction<T, R>(functionName: string, data: T): Promise<R> {
+        if (!this.functions) {
+            await this.connect();
+            if (!this.functions) {
+                throw new Error('Error connecting to Firebase Cloud Functions');
+            }
+        }
+        
+        const callable = httpsCallable<T, R>(this.functions, functionName);
+        const result: HttpsCallableResult<R> = await callable(data);
+        return result.data;
+    }
+
+    // =========================================================================
+    // Generic Document Operations (via Cloud Functions)
+    // =========================================================================
+
     async getDocument(collectionPath: string, docId: string) {
         try {
-            if (!this.db) {
-                this.connect();
-                if (!this.db) {
-                    throw new Error('Error connecting to Firestore');
-                }
-            }
-            const docRef = doc(this.db, collectionPath, docId);
-            const snapshot = await getDoc(docRef);
-            
-            if (snapshot.exists()) {
-                return { id: snapshot.id, ...snapshot.data() };
-            } else {
-                return null; // Document not found
-            }
+            return await this.callFunction<
+                { collectionPath: string; docId: string },
+                { id: string; [key: string]: unknown } | null
+            >('getDocument', { collectionPath, docId });
         } catch (error) {
             console.error('Error getting document:', error);
             throw error;
@@ -255,33 +278,22 @@ class FirebaseService {
 
     async getAllDocuments(collectionPath: string) {
         try {
-            if (!this.db) {
-                this.connect();
-                if (!this.db) {
-                    throw new Error('Error connecting to Firestore');
-                }
-            }
-            const collectionRef = collection(this.db, collectionPath);
-            const snapshot = await getDocs(collectionRef);
-            return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            return await this.callFunction<
+                { collectionPath: string },
+                Array<{ id: string; [key: string]: unknown }>
+            >('getAllDocuments', { collectionPath });
         } catch (error) {
             console.error('Error getting all documents:', error);
             throw error;
         }
     }
 
-    async getDocumentsWhere(collectionPath: string, field: string, operator: any, value: any) {
+    async getDocumentsWhere(collectionPath: string, field: string, operator: string, value: unknown) {
         try {
-            if (!this.db) {
-                this.connect();
-                if (!this.db) {
-                    throw new Error('Error connecting to Firestore');
-                }
-            }
-            const collectionRef = collection(this.db, collectionPath);
-            const q = query(collectionRef, where(field, operator, value));
-            const snapshot = await getDocs(q);
-            return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            return await this.callFunction<
+                { collectionPath: string; field: string; operator: string; value: unknown },
+                Array<{ id: string; [key: string]: unknown }>
+            >('getDocumentsWhere', { collectionPath, field, operator, value });
         } catch (error) {
             console.error('Error getting documents with condition:', error);
             throw error;
@@ -290,25 +302,10 @@ class FirebaseService {
 
     async addDocument(collectionPath: string, data: object, id: string | null) {
         try {
-            if (!this.db) {
-                this.connect();
-                if (!this.db) {
-                    throw new Error('Error connecting to Firestore');
-                }
-            }
-
-            // If ID is provided, use it to create a document with that ID
-            if (id) {
-                const docRef = doc(this.db, collectionPath, id);
-                await setDoc(docRef, data);
-                return id;
-            } 
-            // Otherwise create a document with auto-generated ID
-            else {
-                const collectionRef = collection(this.db, collectionPath);
-                const docRef = await addDoc(collectionRef, data);
-                return docRef.id;
-            }
+            return await this.callFunction<
+                { collectionPath: string; data: object; id?: string | null },
+                string
+            >('addDocument', { collectionPath, data, id });
         } catch (error) {
             console.error('Error adding document:', error);
             throw error;
@@ -317,15 +314,10 @@ class FirebaseService {
 
     async updateDocument(collectionPath: string, docId: string, data: object) {
         try {
-            if (!this.db) {
-                this.connect();
-                if (!this.db) {
-                    throw new Error('Error connecting to Firestore');
-                }
-            }
-            const docRef = doc(this.db, collectionPath, docId);
-            await updateDoc(docRef, data);
-            return true;
+            return await this.callFunction<
+                { collectionPath: string; docId: string; data: object },
+                boolean
+            >('updateDocument', { collectionPath, docId, data });
         } catch (error) {
             console.error('Error updating document:', error);
             throw error;
@@ -334,62 +326,40 @@ class FirebaseService {
 
     async deleteDocument(collectionPath: string, docId: string) {
         try {
-            if (!this.db) {
-                this.connect();
-                if (!this.db) {
-                    throw new Error('Error connecting to Firestore');
-                }
-            }
-            const docRef = doc(this.db, collectionPath, docId);
-            await deleteDoc(docRef);
-            return true;
+            return await this.callFunction<
+                { collectionPath: string; docId: string },
+                boolean
+            >('deleteDocument', { collectionPath, docId });
         } catch (error) {
             console.error('Error deleting document:', error);
             throw error;
         }
     }
 
-    async createShopForUser(userId: string, shopData: object): Promise<void> {
-        try {
-            if (!this.db) {
-                await this.connect();
-                if (!this.db) {
-                    throw new Error('Error connecting to Firestore');
-                }
-            }
-            
-            const shopsCollectionRef = collection(this.db, 'shops');
-            const userDocRef = doc(this.db, 'users', userId);
-        
-            // Create the shop document
-            const docRef = await addDoc(shopsCollectionRef, shopData);
-            console.log("Shop created with ID: ", docRef.id);
-        
-            const shopDocRef = doc(this.db, 'shops', docRef.id);
+    // =========================================================================
+    // Shop Operations (via Cloud Functions)
+    // =========================================================================
 
-            // Update the user's 'shops' array with the document reference
-            await updateDoc(userDocRef, {
-                shops: arrayUnion(shopDocRef)
-            });
-        
-            console.log("Shop reference added to user's shops array.");
+    async createShopForUser(userId: string, shopData: object): Promise<string> {
+        try {
+            const result = await this.callFunction<
+                { userId: string; shopData: object },
+                string
+            >('createShopForUser', { userId, shopData });
+            console.log("Shop created with ID:", result);
+            return result;
         } catch (error) {
-            console.error("Error creating shop or updating user: ", error);
+            console.error("Error creating shop or updating user:", error);
             throw error;
         }
     }
 
     async getUserById(userId: string) {
         try {
-            if (!this.db) {
-                await this.connect();
-                if (!this.db) {
-                    throw new Error('Error connecting to Firestore');
-                }
-            }
-            
-            const userDoc = await this.getDocument('users', userId);
-            return userDoc;
+            return await this.callFunction<
+                { userId: string },
+                { id: string; [key: string]: unknown } | null
+            >('getUserById', { userId });
         } catch (error) {
             console.error("Error fetching user by ID:", error);
             throw error;
@@ -398,180 +368,128 @@ class FirebaseService {
 
     async updateShopDetails(shopId: string, shopData: object): Promise<void> {
         try {
-            if (!this.db) {
-                await this.connect();
-                if (!this.db) {
-                    throw new Error('Error connecting to Firestore');
-                }
-            }
-            
-            const shopDocRef = doc(this.db, 'shops', shopId);
-            
-            await updateDoc(shopDocRef, shopData);
-            console.log("Shop updated with ID: ", shopId);
+            await this.callFunction<
+                { shopId: string; shopData: object },
+                boolean
+            >('updateShopDetails', { shopId, shopData });
+            console.log("Shop updated with ID:", shopId);
         } catch (error) {
-            console.error("Error updating shop: ", error);
+            console.error("Error updating shop:", error);
             throw error;
         }
     }
 
-    async getShopsAndItemsForUser(userId: string): Promise<{ shops: any[]; items: any[] }> {
+    async getShopsAndItemsForUser(userId: string): Promise<{ shops: unknown[]; items: unknown[] }> {
         try {
-            if (!this.db) {
-                await this.connect();
-                if (!this.db) {
-                    throw new Error('Error connecting to Firestore');
-                }
-            }
-            // 1. Get the shops for the user
-            const shopsSnapshot = await this.getDocumentsWhere('shops', 'userId', '==', userId);
-            const shops: any[] = [];
-            const shopIds: string[] = [];
-
-            shopsSnapshot.forEach((shopDoc) => {
-                const { id, ...shopData } = shopDoc;
-                console.log('Fetching shop:', shopData.name);
-                shops.push({ id, ...shopData });
-                shopIds.push(shopDoc.id);
-            });
-
-            // 2. Get the items for each shop
-            const items: any[] = [];
-            // Using Promise.all to handle async operations in parallel
-            await Promise.all(shopIds.map(async (shopId) => {
-                // Get all items for this shop
-                console.log('Fetching items for shop ID:', shopId);
-                const itemsForShop = await this.getDocumentsWhere('items', 'shopId', '==', shopId);
-                console.log(`Found ${itemsForShop.length} items for shop ${shopId}`);
-                itemsForShop.forEach(item => {
-                    console.log('Fetching item:', item.name);
-                    items.push(item);
-                });
-            }));
-
-            return { shops, items };
-
+            return await this.callFunction<
+                { userId: string },
+                { shops: unknown[]; items: unknown[] }
+            >('getShopsAndItemsForUser', { userId });
         } catch (error) {
             console.error("Error fetching shops and items:", error);
             throw error;
         }
     }
 
-    async getItemsForShop(shopId: string): Promise<any[]> {
+    async getItemsForShop(shopId: string): Promise<unknown[]> {
         try {
-            if (!this.db) {
-                await this.connect();
-                if (!this.db) {
-                    throw new Error('Error connecting to Firestore');
-                }
-            }
-            const itemsSnapshot = await this.getDocumentsWhere('items', 'shopId', '==', shopId);
-            const items: any[] = [];
-
-            itemsSnapshot.forEach((doc) => {
-                items.push({ ...doc });
-            });
-
-            return items;
+            return await this.callFunction<
+                { shopId: string },
+                unknown[]
+            >('getItemsForShop', { shopId });
         } catch (error) {
             console.error("Error fetching items for shop:", error);
             throw error;
         }
     }
 
-    async getShopsForMarket(marketId: string): Promise<any[]> {
+    async getShopsForMarket(marketId: string): Promise<unknown[]> {
         try {
-            if (!this.db) {
-                await this.connect();
-                if (!this.db) {
-                    throw new Error('Error connecting to Firestore');
-                }
-            }
-            const shopsSnapshot = await this.getDocumentsWhere('shops', 'marketId', '==', marketId);
-            const shops: any[] = [];
-            shopsSnapshot.forEach((shopDoc) => {
-                const { id, ...shopData } = shopDoc;
-                shops.push({ id, ...shopData });
-            });
-            return shops;
+            return await this.callFunction<
+                { marketId: string },
+                unknown[]
+            >('getShopsForMarket', { marketId });
         } catch (error) {
             console.error("Error fetching shops for market:", error);
             throw error;
         }
     }
 
-    async getShopsByZipCodePrefix(zipPrefix: string, userId: string): Promise<any[]> {
+    async getShopsByZipCodePrefix(zipPrefix: string, userId: string): Promise<unknown[]> {
         try {
-            if (!this.db) {
-                await this.connect();
-                if (!this.db) {
-                    throw new Error('Error connecting to Firestore');
-                }
-            }
-            
-            // Query for shops where marketId starts with the zip prefix
-            const collectionRef = collection(this.db, 'shops');
-            
-            // First get all shops with matching zip prefix
-            const q = query(
-                collectionRef,
-                where('marketId', '>=', zipPrefix),
-                where('marketId', '<=', zipPrefix + '\uf8ff')
-            );
-            
-            // Then filter out the user's own shops in the client
-            const shops = await getDocs(q);
-            return shops.docs
-                .map(doc => ({ id: doc.id, ...doc.data() }))
-                .filter(shop => shop.userId !== userId);
+            return await this.callFunction<
+                { zipPrefix: string; userId: string },
+                unknown[]
+            >('getShopsByZipCodePrefix', { zipPrefix, userId });
         } catch (error) {
             console.error('Error getting shops by zip code prefix:', error);
             throw error;
         }
     }
 
-    /**
-     * Get shops by either ZIP code prefix or by coordinates within a radius
-     */
-    async getShopsNearby(zipPrefix, userCoords, userId) {
+    async getShopsForUser(userId: string): Promise<unknown[]> {
         try {
-            let query = collection(this.db, 'shops');
-
-            if (zipPrefix) {
-                // Use the existing ZIP code prefix query
-                query = query.where('zipPrefix', '==', zipPrefix);
-            } else if (userCoords) {
-                // If no ZIP but we have coordinates, we'd use geolocation query
-                // Note: This would require Firestore GeoPoint and geohashing setup
-                // For simplicity, you might just return all shops and filter them client-side for now
-            }
-
-            const querySnapshot = await getDocs(query);
-            const shops = [];
-
-            querySnapshot.forEach((doc) => {
-                const shopData = doc.data();
-                // Don't include the user's own shop
-                if (shopData.ownerId !== userId) {
-                    shops.push({
-                        id: doc.id,
-                        ...shopData
-                    });
-                }
-            });
-
-            return shops;
+            return await this.callFunction<
+                { userId: string },
+                unknown[]
+            >('getShopsForUser', { userId });
         } catch (error) {
-            console.error("Error getting shops:", error);
+            console.error("Error fetching shops for user:", error);
             throw error;
         }
     }
 
-    async uploadImage(
+    // =========================================================================
+    // Storage Operations (CLIENT-SIDE - Best Practice)
+    // File uploads require direct client access to files
+    //
+    // Storage paths must match Firebase Storage rules:
+    // - product_images/{shopId}/{itemId}/{filename} - for item/product images
+    // - user_profile_images/{userId}/{filename} - for user profile images
+    // =========================================================================
+
+    /**
+     * Upload a product image (item image)
+     * Path: product_images/{shopId}/{itemId}/{filename}
+     */
+    async uploadProductImage(
         image: File,
+        shopId: string,
+        itemId: string,
         progressCallback?: (progress: number) => void,
         successCallback?: (downloadURL: string) => void,
-        errorCallback?: (error: any) => void
+        errorCallback?: (error: unknown) => void
+    ) {
+        const fileName = image.name || `item_${Date.now()}.jpg`;
+        const storagePath = `product_images/${shopId}/${itemId}/${fileName}`;
+        return this.uploadToStorage(image, storagePath, progressCallback, successCallback, errorCallback);
+    }
+
+    /**
+     * Upload a user profile image
+     * Path: user_profile_images/{userId}/{filename}
+     */
+    async uploadUserProfileImage(
+        image: File,
+        userId: string,
+        progressCallback?: (progress: number) => void,
+        successCallback?: (downloadURL: string) => void,
+        errorCallback?: (error: unknown) => void
+    ) {
+        const fileName = image.name || `profile_${Date.now()}.jpg`;
+        const storagePath = `user_profile_images/${userId}/${fileName}`;
+        return this.uploadToStorage(image, storagePath, progressCallback, successCallback, errorCallback);
+    }
+
+    /**
+     * Internal method to upload a file to Firebase Storage
+     */
+    private async uploadToStorage(
+        image: File,
+        storagePath: string,
+        progressCallback?: (progress: number) => void,
+        successCallback?: (downloadURL: string) => void,
+        errorCallback?: (error: unknown) => void
     ) {
         if (!this.storage) {
             await this.connect();
@@ -583,9 +501,8 @@ class FirebaseService {
         }
         
         try {
-            // Create a unique filename if needed
-            const fileName = image.name || `image_${Date.now()}`;
-            const storageRef = ref(this.storage, `img/${fileName}`);
+            console.log('Uploading to path:', storagePath);
+            const storageRef = ref(this.storage, storagePath);
             const uploadTask = uploadBytesResumable(storageRef, image);
 
             uploadTask.on('state_changed',
@@ -627,59 +544,42 @@ class FirebaseService {
         }
     }
 
+    // =========================================================================
+    // Item Operations (via Cloud Functions)
+    // =========================================================================
+
     async createItemForShop(shopId: string, itemData: object): Promise<string> {
         try {
-            if (!this.db) {
-                await this.connect();
-                if (!this.db) {
-                    throw new Error('Error connecting to Firestore');
-                }
-            }
-            
-            const itemsCollectionRef = collection(this.db, 'items');
-            
-            // Create the item document
-            const docRef = await addDoc(itemsCollectionRef, {
-                ...itemData,
-                shopId: [shopId], // Store as array for potential multi-shop items in the future
-                createdAt: new Date()
-            });
-            
-            console.log("Item created with ID: ", docRef.id);
-            return docRef.id;
+            const result = await this.callFunction<
+                { shopId: string; itemData: object },
+                string
+            >('createItemForShop', { shopId, itemData });
+            console.log("Item created with ID:", result);
+            return result;
         } catch (error) {
-            console.error("Error creating item: ", error);
+            console.error("Error creating item:", error);
             throw error;
         }
     }
 
     async getItemById(itemId: string) {
         try {
-            if (!this.db) {
-                await this.connect();
-                if (!this.db) {
-                    throw new Error('Error connecting to Firestore');
-                }
-            }
-            
-            const itemDoc = await this.getDocument('items', itemId);
-            return itemDoc;
+            return await this.callFunction<
+                { itemId: string },
+                { id: string; [key: string]: unknown } | null
+            >('getItemById', { itemId });
         } catch (error) {
             console.error("Error fetching item by ID:", error);
             throw error;
         }
     }
 
-    async getAllItemsForUser(userId: string): Promise<any[]> {
+    async getAllItemsForUser(userId: string): Promise<unknown[]> {
         try {
-            if (!this.db) {
-                await this.connect();
-                if (!this.db) {
-                    throw new Error('Error connecting to Firestore');
-                }
-            }
-            const itemsSnapshot = await this.getDocumentsWhere('items', 'userId', '==', userId);
-            return itemsSnapshot;
+            return await this.callFunction<
+                { userId: string },
+                unknown[]
+            >('getAllItemsForUser', { userId });
         } catch (error) {
             console.error("Error fetching items for user:", error);
             throw error;
@@ -688,117 +588,53 @@ class FirebaseService {
 
     async updateItemQuantity(itemId: string, quantityChange: number): Promise<void> {
         try {
-            if (!this.db) {
-                await this.connect();
-                if (!this.db) {
-                    throw new Error('Error connecting to Firestore');
-                }
-            }
-            
-            const item = await this.getItemById(itemId);
-            if (!item) {
-                throw new Error(`Item with ID ${itemId} not found`);
-            }
-
-            const currentQuantity = (item as any).quantity || 0;
-            const newQuantity = currentQuantity + quantityChange;
-            
-            if (newQuantity < 0) {
-                console.warn(`Cannot set negative quantity for item ${itemId}. Current: ${currentQuantity}, Change: ${quantityChange}`);
-                await this.updateDocument('items', itemId, { quantity: 0 });
-                return;
-            }
-
-            await this.updateDocument('items', itemId, { quantity: newQuantity });
-            console.log(`Updated item ${itemId} quantity: ${currentQuantity} -> ${newQuantity}`);
+            await this.callFunction<
+                { itemId: string; quantityChange: number },
+                { success: boolean; newQuantity: number }
+            >('updateItemQuantity', { itemId, quantityChange });
+            console.log(`Updated item ${itemId} quantity by ${quantityChange}`);
         } catch (error) {
             console.error("Error updating item quantity:", error);
             throw error;
         }
     }
 
-    async getShopsForUser(userId: string): Promise<any[]> {
-        try {
-            if (!this.db) {
-                await this.connect();
-                if (!this.db) {
-                    throw new Error('Error connecting to Firestore');
-                }
-            }
-            const shopsSnapshot = await this.getDocumentsWhere('shops', 'userId', '==', userId);
-            const shops: any[] = [];
-            
-            shopsSnapshot.forEach((shopDoc) => {
-                const { id, ...shopData } = shopDoc;
-                shops.push({ id, ...shopData });
-            });
-            
-            return shops;
-        } catch (error) {
-            console.error("Error fetching shops for user:", error);
-            throw error;
-        }
-    }
+    // =========================================================================
+    // Order Operations (via Cloud Functions)
+    // =========================================================================
 
     async createOrder(orderData: object): Promise<string> {
         try {
-            if (!this.db) {
-                await this.connect();
-                if (!this.db) {
-                    throw new Error('Error connecting to Firestore');
-                }
-            }
-            
-            const ordersCollectionRef = collection(this.db, 'orders');
-            const docRef = await addDoc(ordersCollectionRef, {
-                ...orderData,
-                createdAt: new Date()
-            });
-            
-            console.log("Order created with ID: ", docRef.id);
-            return docRef.id;
+            const result = await this.callFunction<
+                { orderData: object },
+                string
+            >('createOrder', { orderData });
+            console.log("Order created with ID:", result);
+            return result;
         } catch (error) {
-            console.error("Error creating order: ", error);
+            console.error("Error creating order:", error);
             throw error;
         }
     }
 
-    async getOrdersFromUser(userId: string): Promise<any[]> {
+    async getOrdersFromUser(userId: string): Promise<unknown[]> {
         try {
-            if (!this.db) {
-                await this.connect();
-                if (!this.db) {
-                    throw new Error('Error connecting to Firestore');
-                }
-            }
-            const ordersSnapshot = await this.getDocumentsWhere('orders', 'userId', '==', userId);
-            return ordersSnapshot.sort((a, b) => {
-                // Sort by creation date, newest first
-                const aTime = a.createdAt?.seconds || 0;
-                const bTime = b.createdAt?.seconds || 0;
-                return bTime - aTime;
-            });
+            return await this.callFunction<
+                { userId: string },
+                unknown[]
+            >('getOrdersFromUser', { userId });
         } catch (error) {
             console.error("Error fetching orders for user:", error);
             throw error;
         }
     }
 
-    async getOrdersForShop(shopId: string): Promise<any[]> {
+    async getOrdersForShop(shopId: string): Promise<unknown[]> {
         try {
-            if (!this.db) {
-                await this.connect();
-                if (!this.db) {
-                    throw new Error('Error connecting to Firestore');
-                }
-            }
-            const ordersSnapshot = await this.getDocumentsWhere('orders', 'shopId', '==', shopId);
-            return ordersSnapshot.sort((a, b) => {
-                // Sort by creation date, newest first
-                const aTime = a.createdAt?.seconds || 0;
-                const bTime = b.createdAt?.seconds || 0;
-                return bTime - aTime;
-            });
+            return await this.callFunction<
+                { shopId: string },
+                unknown[]
+            >('getOrdersForShop', { shopId });
         } catch (error) {
             console.error("Error fetching orders for shop:", error);
             throw error;
@@ -806,24 +642,15 @@ class FirebaseService {
     }
 
     async updateOrderStatus(orderId: string, shopId: string, status: string): Promise<void> {
-        console.log('retrieving order: ', orderId, ' from firebase')
+        console.log('Updating order status:', orderId, 'via Cloud Function');
         try {
-            if (!this.db) {
-                await this.connect();
-                if (!this.db) {
-                    throw new Error('Error connecting to Firestore');
-                }
-            }
-            
-            const orderResult = await this.getOrder(orderId, shopId);
-            await updateDoc(orderResult.ref, {
-                status,
-                updatedAt: new Date()
-            });
-            
-            console.log("Order status updated: ", orderId, status);
+            await this.callFunction<
+                { orderId: string; shopId: string; status: string },
+                boolean
+            >('updateOrderStatus', { orderId, shopId, status });
+            console.log("Order status updated:", orderId, status);
         } catch (error) {
-            console.error("Error updating order status: ", error);
+            console.error("Error updating order status:", error);
             throw error;
         }
     }
@@ -833,36 +660,15 @@ class FirebaseService {
      * Returns both orders placed by the user (as customer) and orders received (as shop owner)
      */
     async getOrdersForUser(userId: string): Promise<{
-        placedOrders: any[];
-        receivedOrders: any[];
-        allOrders: any[];
+        placedOrders: unknown[];
+        receivedOrders: unknown[];
+        allOrders: unknown[];
     }> {
         try {
-            if (!this.db) {
-                await this.connect();
-                if (!this.db) {
-                    throw new Error('Error connecting to Firestore');
-                }
-            }
-
-            // Get orders placed by the user (as customer)
-            const placedOrders = await this.getOrdersFromUser(userId);
-
-            // Get orders received by the user's shops (as shop owner)
-            const receivedOrders = await this.getOrdersForUserShops(userId);
-
-            // Combine and sort all orders by creation date
-            const allOrders = [...placedOrders, ...receivedOrders].sort((a, b) => {
-                const aTime = a.createdAt?.seconds || 0;
-                const bTime = b.createdAt?.seconds || 0;
-                return bTime - aTime;
-            });
-
-            return {
-                placedOrders,
-                receivedOrders,
-                allOrders
-            };
+            return await this.callFunction<
+                { userId: string },
+                { placedOrders: unknown[]; receivedOrders: unknown[]; allOrders: unknown[] }
+            >('getOrdersForUser', { userId });
         } catch (error) {
             console.error("Error fetching comprehensive orders for user:", error);
             throw error;
@@ -872,82 +678,57 @@ class FirebaseService {
     /**
      * Get all orders for shops owned by a user
      */
-    async getOrdersForUserShops(userId: string): Promise<any[]> {
+    async getOrdersForUserShops(userId: string): Promise<unknown[]> {
         try {
-            if (!this.db) {
-                await this.connect();
-                if (!this.db) {
-                    throw new Error('Error connecting to Firestore');
-                }
-            }
-
-            // First, get all shops owned by the user
-            const userShops = await this.getShopsForUser(userId);
-            const shopIds = userShops.map(shop => shop.id);
-
-            if (shopIds.length === 0) {
-                return []; // User has no shops
-            }
-
-            // Get orders for all user's shops
-            const allShopOrders: any[] = [];
-            
-            // Use Promise.all to fetch orders for all shops in parallel
-            const orderPromises = shopIds.map(shopId => this.getOrdersForShop(shopId));
-            const shopOrdersArrays = await Promise.all(orderPromises);
-            
-            // Flatten the arrays and add shop information
-            shopOrdersArrays.forEach((shopOrders, index) => {
-                shopOrders.forEach(order => {
-                    allShopOrders.push({
-                        ...order,
-                        shopOwnerView: true, // Flag to indicate this is from shop owner perspective
-                    });
-                });
-            });
-
-            // Sort by creation date, newest first
-            return allShopOrders.sort((a, b) => {
-                const aTime = a.createdAt?.seconds || 0;
-                const bTime = b.createdAt?.seconds || 0;
-                return bTime - aTime;
-            });
-
+            // Use the comprehensive getOrdersForUser function and extract receivedOrders
+            const result = await this.getOrdersForUser(userId);
+            return result.receivedOrders;
         } catch (error) {
             console.error("Error fetching orders for user shops:", error);
             throw error;
         }
     }
 
-
-    async getOrder(orderId: string, shopId: string): Promise<any> {
-
+    /**
+     * Get a specific order
+     * Note: In the Cloud Functions version, document references are not returned.
+     * The 'ref' property is maintained for API compatibility but will always be null.
+     * Use updateOrderStatus() directly to update orders.
+     */
+    async getOrder(orderId: string, shopId: string): Promise<{ ref: null; data: { id: string; [key: string]: unknown } }> {
         try {
-            if (!this.db) {
-                await this.connect();
-                if (!this.db) {
-                    throw new Error('Error connecting to Firestore');
-                }
-            }
+            const data = await this.callFunction<
+                { orderId: string; shopId: string },
+                { id: string; [key: string]: unknown }
+            >('getOrder', { orderId, shopId });
             
-            const collectionRef = collection(this.db, 'orders');
-            const q = query(collectionRef, 
-                where('id', '==', orderId), 
-                where('shopId', '==', shopId)
-            );
-            const snapshot = await getDocs(q);
-            
-            if (snapshot.empty) {
-                throw new Error('Order not found');
-            }
-            
-            const docSnapshot = snapshot.docs[0];
             return { 
-                ref: docSnapshot.ref, 
-                data: { id: docSnapshot.id, ...docSnapshot.data() } 
+                ref: null, // Document reference not available via Cloud Functions - use updateOrderStatus() instead
+                data 
             };
         } catch (error) {
             console.error("Error fetching order:", error);
+            throw error;
+        }
+    }
+
+    // =========================================================================
+    // Legacy method for backward compatibility
+    // This was used for coordinate-based queries but is not fully implemented
+    // =========================================================================
+    
+    async getShopsNearby(zipPrefix: string | null, userCoords: { latitude: number; longitude: number } | null, userId: string) {
+        try {
+            if (zipPrefix) {
+                return await this.getShopsByZipCodePrefix(zipPrefix, userId);
+            }
+            
+            // If no ZIP but we have coordinates, return all shops
+            // Note: Full geolocation query would require Firestore GeoPoint and geohashing
+            console.warn('Coordinate-based shop search not fully implemented. Using ZIP prefix search.');
+            return [];
+        } catch (error) {
+            console.error("Error getting shops:", error);
             throw error;
         }
     }

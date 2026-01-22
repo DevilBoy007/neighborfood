@@ -6,7 +6,9 @@ notes/
 
 # firebase
 .firebaserc
-firebase.json
+functions/node_modules/
+functions/lib/
+.firebase/
 
 # build outputs
 assets/mascot/
