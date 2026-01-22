@@ -34,10 +34,11 @@ const initialState: UserState = {
   isLoading: true,
 };
 
-// Platform detection done once at module load time
-const storage = Platform.OS === 'web' ? localStorage : AsyncStorage;
+// Helper to get storage - lazily evaluated to avoid localStorage access during bundling
+const getStorage = () => (Platform.OS === 'web' ? localStorage : AsyncStorage);
 
 export const loadUserData = createAsyncThunk('user/loadUserData', async () => {
+  const storage = getStorage();
   const data = await storage.getItem('userData');
   if (data) {
     return JSON.parse(data) as UserData;
@@ -46,6 +47,7 @@ export const loadUserData = createAsyncThunk('user/loadUserData', async () => {
 });
 
 export const saveUserData = createAsyncThunk('user/saveUserData', async (data: UserData | null) => {
+  const storage = getStorage();
   if (data) {
     await storage.setItem('userData', JSON.stringify(data));
   } else {
@@ -55,11 +57,8 @@ export const saveUserData = createAsyncThunk('user/saveUserData', async (data: U
 });
 
 export const clearUserData = createAsyncThunk('user/clearUserData', async () => {
-  if (Platform.OS === 'web') {
-    localStorage.removeItem('userData');
-  } else {
-    await AsyncStorage.removeItem('userData');
-  }
+  const storage = getStorage();
+  await storage.removeItem('userData');
   return null;
 });
 
