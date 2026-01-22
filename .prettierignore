@@ -1,0 +1,18 @@
+# Dependencies
+node_modules/
+functions/node_modules/
+functions/lib/
+
+# Build outputs
+android/
+ios/
+.expo/
+dist/
+build/
+
+# Generated files
+*.lock
+package-lock.json
+
+# Assets
+assets/

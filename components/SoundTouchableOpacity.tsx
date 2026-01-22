@@ -4,18 +4,24 @@ import { useSound } from '@/hooks/useSound';
 
 interface SoundTouchableOpacityProps extends TouchableOpacityProps {
   enableSound?: boolean;
+  soundType?: 'click' | 'tap';
 }
 
 export const SoundTouchableOpacity: React.FC<SoundTouchableOpacityProps> = ({
   onPress,
   enableSound = true,
+  soundType = 'tap',
   ...props
 }) => {
-  const { playTapSound } = useSound();
+  const { playTapSound, playClickSound } = useSound();
 
   const handlePress = (event: any) => {
     if (enableSound) {
-      playTapSound();
+      if (soundType === 'click') {
+        playClickSound();
+      } else {
+        playTapSound();
+      }
     }
     onPress?.(event);
   };

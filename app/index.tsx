@@ -1,9 +1,7 @@
-import { StyleSheet, Text, View, Pressable, Platform } from 'react-native';
+import { StyleSheet, Text, View, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 
-import { SoundPressable
-
- } from '@/components/SoundPressable';
+import { SoundPressable } from '@/components/SoundPressable';
 const LoginScreen = () => {
   const router = useRouter();
 
@@ -11,21 +9,23 @@ const LoginScreen = () => {
     <View style={[styles.container, Platform.OS === 'web' && styles.containerWeb]}>
       <Text style={[styles.title, Platform.OS === 'web' && styles.titleWeb]}>neighborfood</Text>
       <View style={styles.buttonContainer}>
-          <SoundPressable
-            style={({ pressed }) => [
-              styles.button,
-              pressed && styles.buttonOpacity,
-            ]}
-            onPress={() => router.navigate('/Login')}
-          >
-            <Text style={styles.buttonText}>Login</Text>
-          </SoundPressable>
         <SoundPressable
           style={({ pressed }) => [
             styles.button,
+            styles.buttonLeft,
             pressed && styles.buttonOpacity,
           ]}
-          onPress = {() => router.navigate('/Register')}
+          onPress={() => router.navigate('/Login')}
+        >
+          <Text style={styles.buttonText}>Login</Text>
+        </SoundPressable>
+        <SoundPressable
+          style={({ pressed }) => [
+            styles.button,
+            styles.buttonRight,
+            pressed && styles.buttonOpacity,
+          ]}
+          onPress={() => router.navigate('/Register')}
         >
           <Text style={styles.buttonText}>Sign Up</Text>
         </SoundPressable>
@@ -60,23 +60,31 @@ const styles = StyleSheet.create({
     fontSize: 60,
   },
   buttonContainer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
     flexDirection: 'row',
-    justifyContent: 'space-around',
-    alignItems: 'center',
   },
   button: {
+    width: '50%',
+    padding: 10,
+    paddingBottom: 33,
     backgroundColor: '#00bfff',
-    padding: 15,
-    borderRadius: 5,
-    marginHorizontal: 5,
-    width: 150,
-    marginTop: 20,
+  },
+  buttonLeft: {
+    borderRightWidth: 0.5,
+    borderRightColor: '#000',
+  },
+  buttonRight: {
+    borderLeftWidth: 0.5,
+    borderLeftColor: '#000',
   },
   buttonText: {
     color: 'white',
-    fontSize: 20,
-    fontWeight: 'bold',
     textAlign: 'center',
+    fontSize: 30,
+    fontFamily: 'TextMeOne',
   },
   buttonOpacity: {
     opacity: 0.8,

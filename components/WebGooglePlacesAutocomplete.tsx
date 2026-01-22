@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, FlatList, Platform } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, FlatList } from 'react-native';
 import { useGoogleMaps } from './GoogleMapsLoader';
 
 interface PlaceData {
@@ -12,11 +12,11 @@ interface PlaceData {
 }
 
 interface PlaceDetails {
-  address_components: Array<{
+  address_components: {
     long_name: string;
     short_name: string;
     types: string[];
-  }>;
+  }[];
   formatted_address: string;
   geometry: {
     location: {
@@ -49,7 +49,7 @@ const WebGooglePlacesAutocomplete: React.FC<WebGooglePlacesAutocompleteProps> = 
   query,
   styles = {},
   fetchDetails = true,
-  minLength = 4
+  minLength = 4,
 }) => {
   const [inputValue, setInputValue] = useState('');
   const [predictions, setPredictions] = useState<PlaceData[]>([]);
@@ -65,7 +65,9 @@ const WebGooglePlacesAutocomplete: React.FC<WebGooglePlacesAutocompleteProps> = 
   useEffect(() => {
     if (isLoaded && window.google?.maps?.places) {
       // Create a PlacesService instance for place details
-      placesServiceRef.current = new window.google.maps.places.PlacesService(document.createElement('div'));
+      placesServiceRef.current = new window.google.maps.places.PlacesService(
+        document.createElement('div')
+      );
       createNewSessionToken();
     }
   }, [isLoaded]);
@@ -85,17 +87,17 @@ const WebGooglePlacesAutocomplete: React.FC<WebGooglePlacesAutocompleteProps> = 
     }
 
     setLoading(true);
-    
+
     // Use the AutocompleteService
     const autocompleteService = new window.google.maps.places.AutocompleteService();
     autocompleteService.getPlacePredictions(
       {
         input,
-        sessionToken: sessionToken.current
+        sessionToken: sessionToken.current,
       },
       (predictions, status) => {
         setLoading(false);
-        
+
         if (status !== window.google.maps.places.PlacesServiceStatus.OK || !predictions) {
           console.error('Error fetching predictions:', status);
           setPredictions([]);
@@ -121,13 +123,13 @@ const WebGooglePlacesAutocomplete: React.FC<WebGooglePlacesAutocompleteProps> = 
         {
           placeId,
           fields: ['address_components', 'formatted_address', 'geometry'],
-          sessionToken: sessionToken.current
+          sessionToken: sessionToken.current,
         },
         (details: any, status: string) => {
           // Create a new session token for future searches
           // As recommended by Google, create a new token after a getDetails call
           createNewSessionToken();
-          
+
           if (status !== window.google.maps.places.PlacesServiceStatus.OK || !details) {
             console.error('Error fetching place details:', status);
             resolve(null);
@@ -142,11 +144,11 @@ const WebGooglePlacesAutocomplete: React.FC<WebGooglePlacesAutocompleteProps> = 
 
   const handleInputChange = (text: string) => {
     setInputValue(text);
-    
+
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current);
     }
-    
+
     timeoutRef.current = setTimeout(() => {
       fetchPredictions(text);
     }, 300);
@@ -185,19 +187,19 @@ const WebGooglePlacesAutocomplete: React.FC<WebGooglePlacesAutocompleteProps> = 
         onChangeText={handleInputChange}
         {...textInputProps}
       />
-      
+
       {hasError && (
         <View style={defaultStyles.errorContainer}>
           <Text style={defaultStyles.errorText}>Google Maps could not be loaded</Text>
         </View>
       )}
-      
+
       {!isLoaded && (
         <View style={defaultStyles.loadingContainer}>
           <Text style={defaultStyles.loadingText}>Loading Google Maps...</Text>
         </View>
       )}
-      
+
       {showPredictions && predictions.length > 0 ? (
         <View style={defaultStyles.predictionsContainer}>
           <FlatList
@@ -223,7 +225,7 @@ const WebGooglePlacesAutocomplete: React.FC<WebGooglePlacesAutocompleteProps> = 
           />
         </View>
       ) : null}
-      
+
       {loading ? (
         <View style={defaultStyles.loadingContainer}>
           <Text style={defaultStyles.loadingText}>Loading...</Text>
@@ -255,7 +257,7 @@ const defaultStyles = StyleSheet.create({
     boxShadow: '0px 2px 3.84px rgba(0, 0, 0, 0.25)',
     zIndex: 10000,
     maxHeight: 200,
-    overflow: 'visible'
+    overflow: 'visible',
   },
   predictionsList: {
     maxHeight: 200,
@@ -285,7 +287,6 @@ const defaultStyles = StyleSheet.create({
     borderRadius: 8,
     elevation: 3,
     boxShadow: '0px 2px 3.84px rgba(0, 0, 0, 0.25)',
-    
   },
   loadingText: {
     textAlign: 'center',

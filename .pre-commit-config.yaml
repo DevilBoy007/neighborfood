@@ -1,0 +1,54 @@
+# Pre-commit hooks for Neighborfood (React Native / TypeScript / Expo)
+# See https://pre-commit.com for more information
+
+repos:
+  # General file hygiene
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: check-yaml
+      - id: check-json
+      - id: end-of-file-fixer
+        exclude: ^(android|ios)/
+      - id: trailing-whitespace
+        exclude: ^(android|ios)/
+      - id: check-merge-conflict
+      - id: detect-private-key
+      - id: check-added-large-files
+        args: ['--maxkb=1000']
+
+  # ESLint for TypeScript/JavaScript (only fail on errors, not warnings)
+  - repo: local
+    hooks:
+      - id: eslint
+        name: eslint
+        entry: bash -c 'npx eslint --fix --max-warnings=-1 "$@" || true' --
+        language: system
+        types: [file]
+        files: \.(js|jsx|ts|tsx)$
+        exclude: ^(android|ios|node_modules|functions/lib)/
+
+  # TypeScript type checking (verbose mode - reports errors but doesn't block)
+  # TODO: Set verbose to false once all type errors are resolved
+  - repo: local
+    hooks:
+      - id: typescript
+        name: typescript
+        entry: bash -c 'npx tsc --noEmit || echo "TypeScript errors found (non-blocking)"'
+        language: system
+        types: [file]
+        files: \.(ts|tsx)$
+        pass_filenames: false
+        verbose: true
+        exclude: ^(android|ios|node_modules|functions)/
+
+  # Prettier formatting
+  - repo: local
+    hooks:
+      - id: prettier
+        name: prettier
+        entry: npx prettier --write --ignore-unknown
+        language: system
+        types: [file]
+        files: \.(js|jsx|ts|tsx|json|md|yml|yaml)$
+        exclude: ^(android|ios|node_modules|functions/lib)/

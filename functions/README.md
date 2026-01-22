@@ -7,11 +7,14 @@ This directory contains Firebase Cloud Functions that handle Firestore operation
 Following Firebase best practices:
 
 ### Client-Side Operations (Remain in the app)
+
 - **Authentication**: Login, register, logout - Firebase recommends these stay client-side for direct token management and OAuth flow handling
 - **Storage Uploads**: File uploads require direct client access to files
 
 ### Cloud Functions (Server-Side)
+
 All Firestore operations are handled via Cloud Functions for:
+
 - Better security through server-side validation
 - Reduced client-side bundle size
 - Centralized business logic
@@ -80,6 +83,7 @@ npx firebase deploy --only functions
 ## Available Functions
 
 ### Generic Document Operations
+
 - `getDocument` - Get a single document by ID
 - `getAllDocuments` - Get all documents from a collection
 - `getDocumentsWhere` - Query documents with a where clause
@@ -88,6 +92,7 @@ npx firebase deploy --only functions
 - `deleteDocument` - Delete a document
 
 ### Shop Operations
+
 - `createShopForUser` - Create a shop and link it to a user
 - `updateShopDetails` - Update shop information
 - `getShopsAndItemsForUser` - Get all shops and items for a user
@@ -97,12 +102,14 @@ npx firebase deploy --only functions
 - `getShopsForUser` - Get all shops owned by a user
 
 ### Item Operations
+
 - `createItemForShop` - Create an item for a shop
 - `getItemById` - Get a single item
 - `getAllItemsForUser` - Get all items for a user
 - `updateItemQuantity` - Update item stock quantity
 
 ### Order Operations
+
 - `createOrder` - Create a new order
 - `getOrdersFromUser` - Get orders placed by a user
 - `getOrdersForShop` - Get orders for a shop
@@ -111,6 +118,7 @@ npx firebase deploy --only functions
 - `getOrder` - Get a specific order
 
 ### User Operations
+
 - `getUserById` - Get user profile
 
 ## Development
@@ -138,6 +146,7 @@ npm run logs
 ## Security
 
 All Cloud Functions verify user authentication and enforce permission rules:
+
 - Users can only access their own data
 - Shop owners can only modify their own shops
 - Order operations verify both customer and shop owner permissions
@@ -145,13 +154,16 @@ All Cloud Functions verify user authentication and enforce permission rules:
 ## Troubleshooting
 
 ### "Permission denied" errors
+
 - Ensure the user is authenticated before calling functions
 - Check that the user has the correct permissions for the operation
 
 ### "Function not found" errors
+
 - Make sure you've deployed the functions with `firebase deploy --only functions`
 - Check that the function name matches exactly (case-sensitive)
 
 ### Build errors
+
 - Run `npm run build` in the functions directory to check for TypeScript errors
 - Ensure all dependencies are installed with `npm install`

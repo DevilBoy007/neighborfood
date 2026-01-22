@@ -188,11 +188,13 @@ export const selectTotalSubtotal = (state: { cart?: CartState }): number => {
 };
 
 export const selectItemCount = (state: { cart?: CartState }): number => {
-  return state.cart?.shopCarts.reduce(
-    (count, shopCart) =>
-      count + shopCart.items.reduce((itemCount, item) => itemCount + item.quantity, 0),
-    0
-  ) ?? 0;
+  return (
+    state.cart?.shopCarts.reduce(
+      (count, shopCart) =>
+        count + shopCart.items.reduce((itemCount, item) => itemCount + item.quantity, 0),
+      0
+    ) ?? 0
+  );
 };
 
 export const selectShopCount = (state: { cart?: CartState }): number => {

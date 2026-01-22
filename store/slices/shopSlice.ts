@@ -1,12 +1,17 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import { ItemData } from './itemSlice';
 
-type ShopLocation = {
+export type ShopLocation = {
   marketId: string;
   coordinates: {
     latitude: number;
     longitude: number;
   };
+  // Support for direct GeoPoint-style access from Firebase
+  latitude?: number;
+  longitude?: number;
+  _latitude?: number;
+  _longitude?: number;
 };
 
 export type ShopData = {
