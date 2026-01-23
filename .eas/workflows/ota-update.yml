@@ -19,14 +19,14 @@ on:
 
 jobs:
   # Production updates (main branch)
-  update_production:
-    name: Update Production Channel
-    if: ${{ github.ref_name == 'main' }}
-    type: update
-    environment: production
-    params:
-      channel: production
-      message: '${{ github.event.head_commit.message }}'
+  # update_production:
+  #   name: Update Production Channel
+  #   if: ${{ github.ref_name == 'main' }}
+  #   type: update
+  #   environment: production
+  #   params:
+  #     channel: production
+  #     message: '${{ github.event.head_commit.message }}'
 
   # Staging updates (develop branch)
   update_staging:
