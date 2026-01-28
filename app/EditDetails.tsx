@@ -366,9 +366,6 @@ const EditDetails = () => {
           console.log(
             `Updated marketId to ${newMarketId} for ${shops.length} shops and ${items.length} items`
           );
-
-          // Clear the user's shops cache since we just updated them
-          firebaseService.clearUserShopsCache(userData.uid);
         } catch (updateError) {
           console.error('Error updating marketId for shops/items:', updateError);
           // Continue with save even if marketId update fails - user can retry
@@ -636,17 +633,19 @@ const EditDetails = () => {
           </View>
         </View>
       </Modal>
-      <TouchableOpacity
-        style={[styles.saveButton, isLoading && styles.saveButtonDisabled]}
-        onPress={handleSaveClick}
-        disabled={isLoading}
-      >
-        {isLoading ? (
-          <ActivityIndicator color="white" size="small" />
-        ) : (
-          <Text style={styles.saveButtonText}>Save</Text>
-        )}
-      </TouchableOpacity>
+      <View style={styles.buttonContainer}>
+        <TouchableOpacity
+          style={[styles.saveButton, isLoading && styles.saveButtonDisabled]}
+          onPress={handleSaveClick}
+          disabled={isLoading}
+        >
+          {isLoading ? (
+            <ActivityIndicator color="white" size="small" />
+          ) : (
+            <Text style={styles.saveButtonText}>Save</Text>
+          )}
+        </TouchableOpacity>
+      </View>
     </View>
   );
 };
@@ -764,13 +763,18 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     paddingHorizontal: 10,
   },
+  buttonContainer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+  },
   saveButton: {
     backgroundColor: '#00bfff',
     width: '100%',
-    padding: 15,
-    borderRadius: 5,
+    padding: 10,
+    paddingBottom: 33,
     alignItems: 'center',
-    marginBottom: 20,
   },
   saveButtonDisabled: {
     backgroundColor: '#ccc',
