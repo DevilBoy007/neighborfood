@@ -146,7 +146,7 @@ const LoginScreen = () => {
             style={[
               styles.buttonText,
               { color: colors.textOnPrimary },
-              disabled && [styles.buttonTextDisabled, { color: colors.textMuted }],
+              disabled && { color: colors.textMuted },
             ]}
           >
             Login
@@ -209,7 +209,6 @@ const styles = StyleSheet.create({
   buttonDisabled: {
     opacity: 0.7,
   },
-  buttonTextDisabled: {},
   errorText: {
     marginVertical: 2,
     marginHorizontal: 2,

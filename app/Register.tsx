@@ -657,7 +657,7 @@ const RegisterScreen = () => {
               style={[
                 styles.buttonText,
                 { color: colors.textOnPrimary },
-                disabled && [styles.buttonTextDisabled, { color: colors.textMuted }],
+                disabled && { color: colors.textMuted },
               ]}
             >
               Register
@@ -774,7 +774,6 @@ const styles = StyleSheet.create({
   buttonDisabled: {
     opacity: 0.7,
   },
-  buttonTextDisabled: {},
 });
 
 export default RegisterScreen;

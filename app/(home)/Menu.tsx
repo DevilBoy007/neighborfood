@@ -218,7 +218,6 @@ const styles = StyleSheet.create({
       },
     }),
   },
-  link: {},
   boldText: {
     fontWeight: 'bold',
   },

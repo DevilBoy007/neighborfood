@@ -2,11 +2,18 @@ import React, { useEffect, useRef } from 'react';
 import { useRouter } from 'expo-router';
 import { View, Text, StyleSheet, Animated, Dimensions, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useCart } from '@/store/reduxHooks';
+import { useCart, ShopCart, CartItem } from '@/store/reduxHooks';
 import { SoundTouchableOpacity } from '@/components/SoundTouchableOpacity';
 import { useAppColors } from '@/hooks/useAppColors';
 
 const { height } = Dimensions.get('window');
+
+interface ShopSectionProps {
+  shopCart: ShopCart;
+  updateItemQuantityFn: (shopId: string, itemId: string, quantity: number) => void;
+  removeFromCartFn: (shopId: string, itemId: string | null, clearShop?: boolean) => void;
+  colors: ReturnType<typeof useAppColors>;
+}
 
 const CartScreen = () => {
   const router = useRouter();
@@ -41,10 +48,10 @@ const CartScreen = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const handleRemoveItem = (shopId: string, itemId: string, clearShop: boolean = false) => {
+  const handleRemoveItem = (shopId: string, itemId: string | null, clearShop: boolean = false) => {
     if (clearShop) {
       clearShopCart(shopId);
-    } else {
+    } else if (itemId) {
       removeFromCart(shopId, itemId);
     }
   };
@@ -57,53 +64,52 @@ const CartScreen = () => {
     shopCart,
     updateItemQuantityFn,
     removeFromCartFn,
-  }: {
-    shopCart: any;
-    updateItemQuantityFn: any;
-    removeFromCartFn: any;
-  }) => (
+    colors: sectionColors,
+  }: ShopSectionProps) => (
     <View style={styles.shopSection}>
       <View style={styles.shopHeader}>
-        <Text style={[styles.shopName, { color: colors.primary }]}>{shopCart.shopName}</Text>
+        <Text style={[styles.shopName, { color: sectionColors.primary }]}>{shopCart.shopName}</Text>
         <SoundTouchableOpacity
           style={styles.clearShopButton}
           onPress={() => removeFromCartFn(shopCart.shopId, null, true)}
           soundType="tap"
         >
-          <Text style={[styles.clearShopText, { color: colors.error }]}>Clear</Text>
+          <Text style={[styles.clearShopText, { color: sectionColors.error }]}>Clear</Text>
         </SoundTouchableOpacity>
       </View>
 
-      {shopCart.items.map((item: any) => (
+      {shopCart.items.map((item: CartItem) => (
         <View key={item.itemId} style={styles.itemRow}>
           <View style={styles.itemInfo}>
-            <Text style={[styles.itemText, { color: colors.text }]}>{item.name}</Text>
-            <Text style={[styles.itemPrice, { color: colors.textMuted }]}>
+            <Text style={[styles.itemText, { color: sectionColors.text }]}>{item.name}</Text>
+            <Text style={[styles.itemPrice, { color: sectionColors.textMuted }]}>
               @ ${item.price.toFixed(2)}
             </Text>
           </View>
 
           <View style={styles.quantityControls}>
             <SoundTouchableOpacity
-              style={[styles.quantityButton, { backgroundColor: colors.inputBackground }]}
+              style={[styles.quantityButton, { backgroundColor: sectionColors.inputBackground }]}
               onPress={() => updateItemQuantityFn(shopCart.shopId, item.itemId, item.quantity - 1)}
               soundType="tap"
             >
-              <Ionicons name="remove" size={18} color={colors.text} />
+              <Ionicons name="remove" size={18} color={sectionColors.text} />
             </SoundTouchableOpacity>
 
-            <Text style={[styles.quantityText, { color: colors.text }]}>{item.quantity}</Text>
+            <Text style={[styles.quantityText, { color: sectionColors.text }]}>
+              {item.quantity}
+            </Text>
 
             <SoundTouchableOpacity
-              style={[styles.quantityButton, { backgroundColor: colors.inputBackground }]}
+              style={[styles.quantityButton, { backgroundColor: sectionColors.inputBackground }]}
               onPress={() => updateItemQuantityFn(shopCart.shopId, item.itemId, item.quantity + 1)}
               soundType="tap"
             >
-              <Ionicons name="add" size={18} color={colors.text} />
+              <Ionicons name="add" size={18} color={sectionColors.text} />
             </SoundTouchableOpacity>
           </View>
 
-          <Text style={[styles.itemTotal, { color: colors.primary }]}>
+          <Text style={[styles.itemTotal, { color: sectionColors.primary }]}>
             ${(item.price * item.quantity).toFixed(2)}
           </Text>
 
@@ -112,14 +118,14 @@ const CartScreen = () => {
             onPress={() => removeFromCartFn(shopCart.shopId, item.itemId)}
             soundType="tap"
           >
-            <Ionicons name="trash-outline" size={20} color={colors.error} />
+            <Ionicons name="trash-outline" size={20} color={sectionColors.error} />
           </SoundTouchableOpacity>
         </View>
       ))}
 
-      <View style={[styles.shopSubtotal, { borderTopColor: colors.divider }]}>
-        <Text style={[styles.subtotalLabel, { color: colors.text }]}>Shop subtotal:</Text>
-        <Text style={[styles.subtotalAmount, { color: colors.text }]}>
+      <View style={[styles.shopSubtotal, { borderTopColor: sectionColors.divider }]}>
+        <Text style={[styles.subtotalLabel, { color: sectionColors.text }]}>Shop subtotal:</Text>
+        <Text style={[styles.subtotalAmount, { color: sectionColors.text }]}>
           ${shopCart.subtotal.toFixed(2)}
         </Text>
       </View>
@@ -170,6 +176,7 @@ const CartScreen = () => {
                 shopCart={shopCart}
                 updateItemQuantityFn={updateItemQuantity}
                 removeFromCartFn={handleRemoveItem}
+                colors={colors}
               />
             ))}
 

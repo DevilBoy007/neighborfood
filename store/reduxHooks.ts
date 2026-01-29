@@ -54,6 +54,8 @@ import {
   selectTotalSubtotal,
   selectItemCount,
   selectShopCount,
+  ShopCart,
+  CartItem,
 } from './slices/cartSlice';
 import {
   setThemePreset as setThemePresetAction,
@@ -454,4 +456,5 @@ export type { UserData } from './slices/userSlice';
 export type { ShopData } from './slices/shopSlice';
 export type { ItemData } from './slices/itemSlice';
 export type { OrderData, OrderStatus } from './slices/orderSlice';
+export type { ShopCart, CartItem } from './slices/cartSlice';
 export type { ThemePresetName } from '@/constants/Colors';

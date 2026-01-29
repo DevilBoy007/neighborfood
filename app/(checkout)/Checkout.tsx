@@ -269,10 +269,10 @@ const Checkout = () => {
                       style={[
                         styles.shopOption,
                         { borderColor: colors.divider, backgroundColor: colors.inputBackground },
-                        shopDeliveryOptions[shopCart.shopId] === 'pickup' && [
-                          styles.selectedShopOption,
-                          { borderColor: colors.primary, backgroundColor: colors.surface },
-                        ],
+                        shopDeliveryOptions[shopCart.shopId] === 'pickup' && {
+                          borderColor: colors.primary,
+                          backgroundColor: colors.surface,
+                        },
                       ]}
                       onPress={() => updateShopDeliveryOption(shopCart.shopId, 'pickup')}
                       soundType="tap"
@@ -305,10 +305,10 @@ const Checkout = () => {
                       style={[
                         styles.shopOption,
                         { borderColor: colors.divider, backgroundColor: colors.inputBackground },
-                        shopDeliveryOptions[shopCart.shopId] === 'delivery' && [
-                          styles.selectedShopOption,
-                          { borderColor: colors.primary, backgroundColor: colors.surface },
-                        ],
+                        shopDeliveryOptions[shopCart.shopId] === 'delivery' && {
+                          borderColor: colors.primary,
+                          backgroundColor: colors.surface,
+                        },
                       ]}
                       onPress={() => updateShopDeliveryOption(shopCart.shopId, 'delivery')}
                       soundType="tap"
@@ -399,10 +399,10 @@ const Checkout = () => {
                 style={[
                   styles.paymentOption,
                   { borderColor: colors.divider, backgroundColor: colors.inputBackground },
-                  paymentMethod === payment.key && [
-                    styles.selectedPayment,
-                    { borderColor: colors.primary, backgroundColor: colors.surface },
-                  ],
+                  paymentMethod === payment.key && {
+                    borderColor: colors.primary,
+                    backgroundColor: colors.surface,
+                  },
                 ]}
                 onPress={() => setPaymentMethod(payment.key as PaymentMethod)}
                 soundType="tap"
@@ -481,7 +481,7 @@ const Checkout = () => {
       <View style={styles.buttonContainer}>
         {paymentMethod === 'apple_pay' ? (
           <SoundTouchableOpacity
-            style={[styles.applePayButton, isPlacingOrder && styles.disabledButton]}
+            style={[styles.applePayButton, isPlacingOrder && { opacity: 0.7 }]}
             onPress={handlePlaceOrder}
             disabled={isPlacingOrder}
             soundType="click"
@@ -496,7 +496,10 @@ const Checkout = () => {
             style={[
               styles.placeOrderButton,
               { backgroundColor: colors.buttonPrimary },
-              isPlacingOrder && [styles.disabledButton, { backgroundColor: colors.buttonDisabled }],
+              isPlacingOrder && {
+                opacity: 0.7,
+                backgroundColor: colors.buttonDisabled,
+              },
             ]}
             onPress={handlePlaceOrder}
             disabled={isPlacingOrder}
@@ -605,7 +608,6 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     borderWidth: 2,
   },
-  selectedOption: {},
   optionContent: {
     marginLeft: 12,
     flex: 1,
@@ -615,7 +617,6 @@ const styles = StyleSheet.create({
     fontFamily: 'TextMeOne',
     fontWeight: 'bold',
   },
-  selectedOptionText: {},
   optionSubtitle: {
     fontSize: 14,
     fontFamily: 'TextMeOne',
@@ -644,7 +645,6 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     minWidth: '45%',
   },
-  selectedPayment: {},
   paymentLabel: {
     marginLeft: 8,
     fontSize: 14,
@@ -722,7 +722,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontSize: 30,
   },
-  disabledButton: {},
   emptyContainer: {
     flex: 1,
     alignItems: 'center',
@@ -764,7 +763,6 @@ const styles = StyleSheet.create({
     marginRight: 8,
     marginBottom: 4,
   },
-  selectedShopOption: {},
   shopOptionText: {
     marginLeft: 6,
     fontSize: 12,
