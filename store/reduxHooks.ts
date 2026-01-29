@@ -55,6 +55,13 @@ import {
   selectItemCount,
   selectShopCount,
 } from './slices/cartSlice';
+import {
+  setThemePreset as setThemePresetAction,
+  saveUserTheme,
+  loadUserTheme,
+  resetToDefaultTheme,
+} from './slices/themeSlice';
+import { ThemePresetName } from '@/constants/Colors';
 import * as Location from 'expo-location';
 
 /**
@@ -404,8 +411,45 @@ export const useCart = () => {
   };
 };
 
+/**
+ * Hook that provides theme management functionality
+ */
+export const useTheme = () => {
+  const dispatch = useAppDispatch();
+  const currentPreset = useAppSelector((state) => state.theme?.currentPreset ?? 'default');
+  const userThemes = useAppSelector((state) => state.theme?.userThemes ?? {});
+  const isLoading = useAppSelector((state) => state.theme?.isLoading ?? false);
+  const userId = useAppSelector((state) => state.user?.userData?.uid ?? null);
+
+  const setThemePreset = useCallback(
+    async (preset: ThemePresetName) => {
+      dispatch(setThemePresetAction(preset));
+      await dispatch(saveUserTheme({ userId, preset }));
+    },
+    [dispatch, userId]
+  );
+
+  const loadUserThemePreference = useCallback(async () => {
+    await dispatch(loadUserTheme(userId));
+  }, [dispatch, userId]);
+
+  const resetTheme = useCallback(() => {
+    dispatch(resetToDefaultTheme());
+  }, [dispatch]);
+
+  return {
+    currentPreset: currentPreset as ThemePresetName,
+    userThemes,
+    isLoading,
+    setThemePreset,
+    loadUserThemePreference,
+    resetTheme,
+  };
+};
+
 // Re-export types for convenience
 export type { UserData } from './slices/userSlice';
 export type { ShopData } from './slices/shopSlice';
 export type { ItemData } from './slices/itemSlice';
 export type { OrderData, OrderStatus } from './slices/orderSlice';
+export type { ThemePresetName } from '@/constants/Colors';
