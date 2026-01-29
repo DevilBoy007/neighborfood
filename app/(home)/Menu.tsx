@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useLocation } from '@/store/reduxHooks';
+import { useAppColors } from '@/hooks/useAppColors';
 
 import shopIcon from '@/assets/images/shop.png';
 import receiptIcon from '@/assets/images/receipt.png';
@@ -21,6 +22,7 @@ import manageItemIcon from '@/assets/images/manageItemsIcon.png';
 const MenuScreen = () => {
   const router = useRouter();
   const { locationData } = useLocation();
+  const colors = useAppColors();
 
   const MenuButton = ({
     icon,
@@ -34,21 +36,27 @@ const MenuScreen = () => {
     if (typeof icon !== 'string') {
       return (
         <TouchableOpacity
-          style={styles.menuButton}
+          style={[
+            styles.menuButton,
+            { backgroundColor: colors.surface, borderColor: colors.border },
+          ]}
           onPress={() => router.navigate(`/(home)/${destination}`)}
         >
           <Image source={icon} style={styles.icon} />
-          <Text style={styles.menuButtonText}>{title}</Text>
+          <Text style={[styles.menuButtonText, { color: colors.textMuted }]}>{title}</Text>
         </TouchableOpacity>
       );
     } else {
       return (
         <TouchableOpacity
-          style={styles.menuButton}
+          style={[
+            styles.menuButton,
+            { backgroundColor: colors.surface, borderColor: colors.border },
+          ]}
           onPress={() => destination && router.navigate(`/(home)/${destination}`)}
         >
-          <Text style={styles.menuButtonIcon}>{icon}</Text>
-          <Text style={styles.menuButtonText}>{title}</Text>
+          <Text style={[styles.menuButtonIcon, { color: colors.textMuted }]}>{icon}</Text>
+          <Text style={[styles.menuButtonText, { color: colors.textMuted }]}>{title}</Text>
         </TouchableOpacity>
       );
     }
@@ -56,16 +64,24 @@ const MenuScreen = () => {
 
   return (
     <>
-      <View style={styles.container}>
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
         <View style={styles.header}>
-          <Text style={styles.title}>menu</Text>
-          <View style={styles.neighborhood}>
+          <Text style={[styles.title, { color: colors.textOnPrimary }]}>menu</Text>
+          <View style={[styles.neighborhood, { borderColor: colors.border }]}>
             {locationData.area && !locationData.loading && (
-              <Text style={styles.headerText}>📍 neighborhood: {locationData.area}</Text>
+              <Text style={[styles.headerText, { color: colors.text }]}>
+                📍 neighborhood: {locationData.area}
+              </Text>
             )}
-            {locationData.loading && <Text style={styles.headerText}>📍 Loading location...</Text>}
+            {locationData.loading && (
+              <Text style={[styles.headerText, { color: colors.text }]}>
+                📍 Loading location...
+              </Text>
+            )}
             {locationData.error && !locationData.loading && (
-              <Text style={styles.headerText}>📍 Location unavailable</Text>
+              <Text style={[styles.headerText, { color: colors.text }]}>
+                📍 Location unavailable
+              </Text>
             )}
           </View>
         </View>
@@ -97,7 +113,6 @@ const styles = StyleSheet.create({
     height: '100%',
     paddingTop: Platform.OS === 'web' ? 0 : 70,
     flex: 1,
-    backgroundColor: '#B7FFB0',
   },
   scrollContent: {
     flexGrow: 1,
@@ -118,7 +133,6 @@ const styles = StyleSheet.create({
     fontSize: Platform.select({ ios: 30, web: 80 }),
     fontWeight: 'bold',
     fontFamily: 'TitanOne',
-    color: '#fff',
     paddingBottom: 10,
   },
   headerText: {
@@ -136,7 +150,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: Platform.OS === 'web' ? 20 : 0,
     paddingHorizontal: Platform.OS === 'web' ? 40 : 5,
-    borderColor: 'black',
     borderWidth: 1,
     borderRadius: 10,
     minHeight: Platform.OS === 'web' ? 80 : 50,
@@ -165,12 +178,10 @@ const styles = StyleSheet.create({
   menuButton: {
     width: '45%',
     aspectRatio: 1,
-    backgroundColor: 'white',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 10,
     borderRadius: 10,
-    borderColor: 'black',
     borderWidth: 1,
     ...Platform.select({
       web: {
@@ -182,7 +193,6 @@ const styles = StyleSheet.create({
   menuButtonIcon: {
     fontSize: 24,
     marginBottom: 5,
-    color: '#888',
     ...Platform.select({
       web: {
         fontSize: 32,
@@ -192,7 +202,6 @@ const styles = StyleSheet.create({
   menuButtonText: {
     fontSize: 12,
     fontFamily: 'TextMeOne',
-    color: '#888',
     ...Platform.select({
       web: {
         fontSize: 16,
@@ -209,9 +218,7 @@ const styles = StyleSheet.create({
       },
     }),
   },
-  link: {
-    color: '#00bfff',
-  },
+  link: {},
   boldText: {
     fontWeight: 'bold',
   },

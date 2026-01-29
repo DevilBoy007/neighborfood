@@ -3,6 +3,7 @@ import { View, StyleSheet, Platform, Image } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Stack, useRouter } from 'expo-router';
 import { SoundTouchableOpacity } from '@/components/SoundTouchableOpacity';
+import { useAppColors } from '@/hooks/useAppColors';
 
 import chatIcon from '../../assets/images/chat.png';
 import pollsIcon from '../../assets/images/surveys.png';
@@ -32,6 +33,7 @@ export default function RootLayout() {
   const router = useRouter();
   const storage = getStorage();
   const [userData, setUser] = useState<User | null>(null);
+  const colors = useAppColors();
 
   useEffect(() => {
     const checkUser = async () => {
@@ -88,7 +90,7 @@ export default function RootLayout() {
         )}
         <View style={styles.content}>
           {Platform.OS === 'web' && (
-            <View style={styles.footer}>
+            <View style={[styles.footer, { backgroundColor: colors.navBackground }]}>
               <SoundTouchableOpacity
                 style={styles.iconButton}
                 onPress={toggleSettings}
@@ -130,7 +132,12 @@ export default function RootLayout() {
         </View>
       </View>
       {Platform.OS !== 'web' && (
-        <View style={styles.footer}>
+        <View
+          style={[
+            styles.footer,
+            { backgroundColor: colors.navBackground, borderTopColor: colors.border },
+          ]}
+        >
           <SoundTouchableOpacity style={styles.iconButton} soundType="tap">
             <Image style={[styles.iconButton, styles.icon]} source={chatIcon} />
           </SoundTouchableOpacity>
@@ -195,7 +202,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-evenly',
     alignItems: 'center',
-    backgroundColor: '#87CEFA',
     padding: 10,
 
     ...Platform.select({
@@ -206,7 +212,6 @@ const styles = StyleSheet.create({
         right: 0,
         height: 75,
         borderTopWidth: 1,
-        borderTopColor: '#000',
       },
       web: {
         flexDirection: 'column',
@@ -214,7 +219,6 @@ const styles = StyleSheet.create({
         height: '100%',
         justifyContent: 'center',
         borderRightWidth: 1,
-        borderRightColor: '#000',
       },
     }),
   },

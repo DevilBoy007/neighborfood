@@ -67,6 +67,8 @@ export interface ThemePreset {
     inputBackground: string;
     inputBorder: string;
     placeholder: string;
+    // Navigation elements
+    navBackground: string;
   };
 }
 
@@ -107,6 +109,8 @@ export const ThemePresets: Record<ThemePresetName, ThemePreset> = {
       inputBackground: '#ffffff',
       inputBorder: '#000000',
       placeholder: '#ffffff',
+      // Navigation elements
+      navBackground: '#87CEFA',
     },
   },
   simpleDark: {
@@ -145,6 +149,8 @@ export const ThemePresets: Record<ThemePresetName, ThemePreset> = {
       inputBackground: '#374151',
       inputBorder: '#4B5563',
       placeholder: '#9CA3AF',
+      // Navigation elements
+      navBackground: '#111827',
     },
   },
   neoModern: {
@@ -183,6 +189,8 @@ export const ThemePresets: Record<ThemePresetName, ThemePreset> = {
       inputBackground: '#FFFFFF',
       inputBorder: '#D6D3D1',
       placeholder: '#A8A29E',
+      // Navigation elements
+      navBackground: '#DDD6FE',
     },
   },
   midnight: {
@@ -221,6 +229,8 @@ export const ThemePresets: Record<ThemePresetName, ThemePreset> = {
       inputBackground: '#0D1117',
       inputBorder: '#30363D',
       placeholder: '#8B949E',
+      // Navigation elements
+      navBackground: '#010409',
     },
   },
   spring: {
@@ -259,6 +269,8 @@ export const ThemePresets: Record<ThemePresetName, ThemePreset> = {
       inputBackground: '#FFFFFF',
       inputBorder: '#FDE68A',
       placeholder: '#D97706',
+      // Navigation elements
+      navBackground: '#FBBF24',
     },
   },
 };

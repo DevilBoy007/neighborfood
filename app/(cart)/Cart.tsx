@@ -4,72 +4,15 @@ import { View, Text, StyleSheet, Animated, Dimensions, Platform } from 'react-na
 import { Ionicons } from '@expo/vector-icons';
 import { useCart } from '@/store/reduxHooks';
 import { SoundTouchableOpacity } from '@/components/SoundTouchableOpacity';
+import { useAppColors } from '@/hooks/useAppColors';
 
 const { height } = Dimensions.get('window');
-
-const ShopSection = ({ shopCart, updateItemQuantity, removeFromCart }) => (
-  <View style={styles.shopSection}>
-    <View style={styles.shopHeader}>
-      <Text style={styles.shopName}>{shopCart.shopName}</Text>
-      <SoundTouchableOpacity
-        style={styles.clearShopButton}
-        onPress={() => removeFromCart(shopCart.shopId, null, true)}
-        soundType="tap"
-      >
-        <Text style={styles.clearShopText}>Clear</Text>
-      </SoundTouchableOpacity>
-    </View>
-
-    {shopCart.items.map((item) => (
-      <View key={item.itemId} style={styles.itemRow}>
-        <View style={styles.itemInfo}>
-          <Text style={styles.itemText}>{item.name}</Text>
-          <Text style={styles.itemPrice}>@ ${item.price.toFixed(2)}</Text>
-        </View>
-
-        <View style={styles.quantityControls}>
-          <SoundTouchableOpacity
-            style={styles.quantityButton}
-            onPress={() => updateItemQuantity(shopCart.shopId, item.itemId, item.quantity - 1)}
-            soundType="tap"
-          >
-            <Ionicons name="remove" size={18} color="#333" />
-          </SoundTouchableOpacity>
-
-          <Text style={styles.quantityText}>{item.quantity}</Text>
-
-          <SoundTouchableOpacity
-            style={styles.quantityButton}
-            onPress={() => updateItemQuantity(shopCart.shopId, item.itemId, item.quantity + 1)}
-            soundType="tap"
-          >
-            <Ionicons name="add" size={18} color="#333" />
-          </SoundTouchableOpacity>
-        </View>
-
-        <Text style={styles.itemTotal}>${(item.price * item.quantity).toFixed(2)}</Text>
-
-        <SoundTouchableOpacity
-          style={styles.removeButton}
-          onPress={() => removeFromCart(shopCart.shopId, item.itemId)}
-          soundType="tap"
-        >
-          <Ionicons name="trash-outline" size={20} color="#FF6B6B" />
-        </SoundTouchableOpacity>
-      </View>
-    ))}
-
-    <View style={styles.shopSubtotal}>
-      <Text style={styles.subtotalLabel}>Shop subtotal:</Text>
-      <Text style={styles.subtotalAmount}>${shopCart.subtotal.toFixed(2)}</Text>
-    </View>
-  </View>
-);
 
 const CartScreen = () => {
   const router = useRouter();
   const slideAnim = useRef(new Animated.Value(height)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
+  const colors = useAppColors();
   const {
     shopCarts,
     updateItemQuantity,
@@ -110,9 +53,82 @@ const CartScreen = () => {
     router.navigate('/Checkout');
   };
 
+  const ShopSection = ({
+    shopCart,
+    updateItemQuantityFn,
+    removeFromCartFn,
+  }: {
+    shopCart: any;
+    updateItemQuantityFn: any;
+    removeFromCartFn: any;
+  }) => (
+    <View style={styles.shopSection}>
+      <View style={styles.shopHeader}>
+        <Text style={[styles.shopName, { color: colors.primary }]}>{shopCart.shopName}</Text>
+        <SoundTouchableOpacity
+          style={styles.clearShopButton}
+          onPress={() => removeFromCartFn(shopCart.shopId, null, true)}
+          soundType="tap"
+        >
+          <Text style={[styles.clearShopText, { color: colors.error }]}>Clear</Text>
+        </SoundTouchableOpacity>
+      </View>
+
+      {shopCart.items.map((item: any) => (
+        <View key={item.itemId} style={styles.itemRow}>
+          <View style={styles.itemInfo}>
+            <Text style={[styles.itemText, { color: colors.text }]}>{item.name}</Text>
+            <Text style={[styles.itemPrice, { color: colors.textMuted }]}>
+              @ ${item.price.toFixed(2)}
+            </Text>
+          </View>
+
+          <View style={styles.quantityControls}>
+            <SoundTouchableOpacity
+              style={[styles.quantityButton, { backgroundColor: colors.inputBackground }]}
+              onPress={() => updateItemQuantityFn(shopCart.shopId, item.itemId, item.quantity - 1)}
+              soundType="tap"
+            >
+              <Ionicons name="remove" size={18} color={colors.text} />
+            </SoundTouchableOpacity>
+
+            <Text style={[styles.quantityText, { color: colors.text }]}>{item.quantity}</Text>
+
+            <SoundTouchableOpacity
+              style={[styles.quantityButton, { backgroundColor: colors.inputBackground }]}
+              onPress={() => updateItemQuantityFn(shopCart.shopId, item.itemId, item.quantity + 1)}
+              soundType="tap"
+            >
+              <Ionicons name="add" size={18} color={colors.text} />
+            </SoundTouchableOpacity>
+          </View>
+
+          <Text style={[styles.itemTotal, { color: colors.primary }]}>
+            ${(item.price * item.quantity).toFixed(2)}
+          </Text>
+
+          <SoundTouchableOpacity
+            style={styles.removeButton}
+            onPress={() => removeFromCartFn(shopCart.shopId, item.itemId)}
+            soundType="tap"
+          >
+            <Ionicons name="trash-outline" size={20} color={colors.error} />
+          </SoundTouchableOpacity>
+        </View>
+      ))}
+
+      <View style={[styles.shopSubtotal, { borderTopColor: colors.divider }]}>
+        <Text style={[styles.subtotalLabel, { color: colors.text }]}>Shop subtotal:</Text>
+        <Text style={[styles.subtotalAmount, { color: colors.text }]}>
+          ${shopCart.subtotal.toFixed(2)}
+        </Text>
+      </View>
+    </View>
+  );
+
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={[styles.header, { borderBottomColor: colors.border }]}>
         <SoundTouchableOpacity
           style={styles.backButton}
           onPress={() => {
@@ -132,9 +148,9 @@ const CartScreen = () => {
           }}
           soundType="tap"
         >
-          <Ionicons name="chevron-back" size={24} color="black" />
+          <Ionicons name="chevron-back" size={24} color={colors.text} />
         </SoundTouchableOpacity>
-        <Text style={styles.headerTitle}>your cart</Text>
+        <Text style={[styles.headerTitle, { color: colors.textOnPrimary }]}>your cart</Text>
       </View>
 
       <Animated.ScrollView
@@ -147,35 +163,41 @@ const CartScreen = () => {
         ]}
       >
         {shopCarts.length > 0 ? (
-          <View style={styles.cartContent}>
+          <View style={[styles.cartContent, { backgroundColor: colors.surface }]}>
             {shopCarts.map((shopCart) => (
               <ShopSection
                 key={shopCart.shopId}
                 shopCart={shopCart}
-                updateItemQuantity={updateItemQuantity}
-                removeFromCart={handleRemoveItem}
+                updateItemQuantityFn={updateItemQuantity}
+                removeFromCartFn={handleRemoveItem}
               />
             ))}
 
-            <View style={styles.divider} />
+            <View style={[styles.divider, { backgroundColor: colors.border }]} />
 
             <View style={styles.totalSection}>
-              <Text style={styles.totalLabel}>total:</Text>
-              <Text style={styles.totalAmount}>${totalAmount.toFixed(2)}</Text>
+              <Text style={[styles.totalLabel, { color: colors.text }]}>total:</Text>
+              <Text style={[styles.totalAmount, { color: colors.primary }]}>
+                ${totalAmount.toFixed(2)}
+              </Text>
             </View>
 
-            <Text style={styles.itemCount}>items: {itemCount}</Text>
+            <Text style={[styles.itemCount, { color: colors.textMuted }]}>items: {itemCount}</Text>
           </View>
         ) : (
-          <View style={styles.emptyCartContainer}>
-            <Ionicons name="cart-outline" size={80} color="#999" />
-            <Text style={styles.emptyCartText}>Your cart is empty</Text>
+          <View style={[styles.emptyCartContainer, { backgroundColor: colors.surface }]}>
+            <Ionicons name="cart-outline" size={80} color={colors.textMuted} />
+            <Text style={[styles.emptyCartText, { color: colors.textMuted }]}>
+              Your cart is empty
+            </Text>
             <SoundTouchableOpacity
-              style={styles.continueShoppingButton}
+              style={[styles.continueShoppingButton, { backgroundColor: colors.primary }]}
               onPress={() => router.navigate('/Market')}
               soundType="tap"
             >
-              <Text style={styles.continueShoppingText}>Continue Shopping</Text>
+              <Text style={[styles.continueShoppingText, { color: colors.textOnPrimary }]}>
+                Continue Shopping
+              </Text>
             </SoundTouchableOpacity>
           </View>
         )}
@@ -183,11 +205,13 @@ const CartScreen = () => {
       {shopCarts.length > 0 && (
         <View style={styles.buttonContainer}>
           <SoundTouchableOpacity
-            style={styles.checkoutButton}
+            style={[styles.checkoutButton, { backgroundColor: colors.buttonPrimary }]}
             onPress={handleCheckout}
             soundType="tap"
           >
-            <Text style={styles.checkoutButtonText}>Proceed to Checkout</Text>
+            <Text style={[styles.checkoutButtonText, { color: colors.textOnPrimary }]}>
+              Proceed to Checkout
+            </Text>
           </SoundTouchableOpacity>
         </View>
       )}
@@ -198,7 +222,6 @@ const CartScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#b7ffb0',
     paddingTop: Platform.OS === 'ios' ? 60 : 0,
   },
   header: {
@@ -206,7 +229,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 24,
     borderBottomWidth: 1,
-    borderBottomColor: '#000',
     fontFamily: 'TextMeOne',
     ...Platform.select({
       ios: {
@@ -221,7 +243,6 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: '400',
     fontFamily: 'TitanOne',
-    color: '#fff',
     ...Platform.select({
       web: {
         fontSize: 32,
@@ -233,7 +254,6 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   cartContent: {
-    backgroundColor: 'white',
     borderRadius: 12,
     padding: 16,
     shadowColor: '#000',
@@ -259,13 +279,11 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontFamily: 'TextMeOne',
     fontWeight: 'bold',
-    color: '#00bfff',
   },
   clearShopButton: {
     padding: 4,
   },
   clearShopText: {
-    color: '#FF6B6B',
     fontFamily: 'TextMeOne',
   },
   itemRow: {
@@ -285,7 +303,6 @@ const styles = StyleSheet.create({
   },
   itemPrice: {
     fontSize: 14,
-    color: '#666',
     fontFamily: 'TextMeOne',
   },
   quantityControls: {
@@ -296,7 +313,6 @@ const styles = StyleSheet.create({
     marginRight: 15,
   },
   quantityButton: {
-    backgroundColor: '#f0f0f0',
     borderRadius: 15,
     width: 20,
     height: 20,
@@ -325,7 +341,6 @@ const styles = StyleSheet.create({
     marginTop: 8,
     paddingTop: 8,
     borderTopWidth: 1,
-    borderTopColor: '#eee',
   },
   subtotalLabel: {
     fontSize: 14,
@@ -339,7 +354,6 @@ const styles = StyleSheet.create({
   },
   divider: {
     height: 1,
-    backgroundColor: '#000',
     marginVertical: 16,
   },
   totalSection: {
@@ -356,11 +370,9 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontFamily: 'TextMeOne',
     fontWeight: 'bold',
-    color: '#40C4FF',
   },
   itemCount: {
     fontSize: 14,
-    color: '#999',
     fontFamily: 'TextMeOne',
     marginBottom: 24,
   },
@@ -380,10 +392,8 @@ const styles = StyleSheet.create({
     marginBottom: 0,
     padding: 10,
     paddingBottom: 33,
-    backgroundColor: '#00bfff',
   },
   checkoutButtonText: {
-    color: 'white',
     textAlign: 'center',
     fontSize: 30,
     fontFamily: 'TextMeOne',
@@ -392,7 +402,6 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'white',
     borderRadius: 12,
     padding: 32,
     marginTop: 32,
@@ -401,10 +410,8 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontFamily: 'TextMeOne',
     marginVertical: 16,
-    color: '#666',
   },
   continueShoppingButton: {
-    backgroundColor: '#40C4FF',
     borderRadius: 30,
     padding: 16,
     alignItems: 'center',
@@ -413,7 +420,6 @@ const styles = StyleSheet.create({
     width: '80%',
   },
   continueShoppingText: {
-    color: 'white',
     fontSize: 16,
     fontFamily: 'TextMeOne',
     fontWeight: 'bold',

@@ -13,6 +13,7 @@ import { KeyboardToolbar } from 'react-native-keyboard-controller';
 import { useRouter } from 'expo-router';
 import { useUser } from '@/store/reduxHooks';
 import { SoundTouchableOpacity } from '@/components/SoundTouchableOpacity';
+import { useAppColors } from '@/hooks/useAppColors';
 
 import firebaseService from '@/handlers/firebaseService';
 
@@ -22,6 +23,7 @@ const LoginScreen = () => {
   const [error, setError] = useState('');
   const [disabled, setDisabled] = useState<boolean>(false);
   const router = useRouter();
+  const colors = useAppColors();
 
   // Use the user context
   const { userData, setUserData } = useUser();
@@ -104,39 +106,51 @@ const LoginScreen = () => {
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={styles.container}
+      style={[styles.container, { backgroundColor: colors.background }]}
       keyboardVerticalOffset={Platform.select({ ios: -350, android: -350 })}
     >
       <ScrollView scrollEnabled={false}>
-        <Text style={styles.title}>Login</Text>
+        <Text style={[styles.title, { color: colors.textOnPrimary }]}>Login</Text>
         <View style={styles.inputContainer}>
           <TextInput
             autoCapitalize="none"
-            style={styles.input}
+            style={[styles.input, { borderBottomColor: colors.border }]}
             placeholder="email"
-            placeholderTextColor={'#fff'}
+            placeholderTextColor={colors.placeholder}
             value={email}
             onChangeText={setEmail}
           />
           <TextInput
-            style={styles.input}
+            style={[styles.input, { borderBottomColor: colors.border }]}
             placeholder="password"
-            placeholderTextColor={'#fff'}
+            placeholderTextColor={colors.placeholder}
             value={password}
             onChangeText={setPassword}
             secureTextEntry
           />
-          <Text style={styles.errorText}>{error}</Text>
+          <Text style={[styles.errorText, { color: colors.error }]}>{error}</Text>
         </View>
       </ScrollView>
       <View style={styles.buttonContainer}>
         <SoundTouchableOpacity
-          style={[styles.button, disabled && styles.buttonDisabled]}
+          style={[
+            styles.button,
+            { backgroundColor: colors.buttonPrimary },
+            disabled && [styles.buttonDisabled, { backgroundColor: colors.buttonDisabled }],
+          ]}
           onPress={handleLogin}
           disabled={disabled}
           soundType="click"
         >
-          <Text style={[styles.buttonText, disabled && styles.buttonTextDisabled]}>Login</Text>
+          <Text
+            style={[
+              styles.buttonText,
+              { color: colors.textOnPrimary },
+              disabled && [styles.buttonTextDisabled, { color: colors.textMuted }],
+            ]}
+          >
+            Login
+          </Text>
         </SoundTouchableOpacity>
       </View>
       <KeyboardToolbar />
@@ -147,13 +161,11 @@ const LoginScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#B7FFB0',
   },
   title: {
     fontFamily: 'TitanOne',
     fontSize: 36,
     fontWeight: 'bold',
-    color: '#fff',
     marginTop: 100,
     textAlign: 'center',
     paddingBottom: 75,
@@ -169,7 +181,6 @@ const styles = StyleSheet.create({
     margin: 12,
     borderBottomWidth: 1,
     padding: 10,
-    color: 'fff',
     fontSize: 20,
   },
   buttonContainer: {
@@ -189,23 +200,17 @@ const styles = StyleSheet.create({
     width: '100%',
     padding: 10,
     paddingBottom: 33,
-    backgroundColor: '#00bfff',
   },
   buttonText: {
-    color: 'white',
     textAlign: 'center',
     fontSize: 30,
     fontFamily: 'TextMeOne',
   },
   buttonDisabled: {
-    backgroundColor: '#ccc',
     opacity: 0.7,
   },
-  buttonTextDisabled: {
-    color: '#666',
-  },
+  buttonTextDisabled: {},
   errorText: {
-    color: 'red',
     marginVertical: 2,
     marginHorizontal: 2,
     fontFamily: 'TextMeOne',

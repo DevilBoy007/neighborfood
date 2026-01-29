@@ -17,12 +17,14 @@ import { useRouter } from 'expo-router';
 import ShopCard from '@/components/ShopCard';
 import firebaseService from '@/handlers/firebaseService';
 import { useUser } from '@/store/reduxHooks';
+import { useAppColors } from '@/hooks/useAppColors';
 
 export default function Shops() {
   const { userData } = useUser();
   const [shops, setShops] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const colors = useAppColors();
 
   async function fetchShopsAndItems() {
     if (!userData?.uid) {
@@ -71,15 +73,15 @@ export default function Shops() {
 
   const router = useRouter();
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-          <Ionicons name="chevron-back" size={24} color="black" />
+          <Ionicons name="chevron-back" size={24} color={colors.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>menu</Text>
+        <Text style={[styles.headerTitle, { color: colors.textOnPrimary }]}>menu</Text>
       </View>
       <View>
-        <Text style={styles.title}>Available Shops</Text>
+        <Text style={[styles.title, { color: colors.textOnPrimary }]}>Available Shops</Text>
       </View>
 
       <ScrollView
@@ -88,23 +90,31 @@ export default function Shops() {
           <RefreshControl
             refreshing={loading}
             onRefresh={memoizedFetchShopsAndItems}
-            tintColor={'#00bfff'}
+            tintColor={colors.primary}
             title="Fetching shops..."
-            titleColor={'#00bfff'}
-            colors={['#00bfff', '#000']}
+            titleColor={colors.primary}
+            colors={[colors.primary, colors.text]}
           />
         }
       >
         {!loading && error ? (
-          <Text style={styles.errorText}>Error: {error}</Text>
+          <Text style={[styles.errorText, { color: colors.error }]}>Error: {error}</Text>
         ) : !loading && shops.length === 0 ? (
-          <Text style={styles.noShopsText}>No shops available</Text>
+          <Text style={[styles.noShopsText, { color: colors.textMuted }]}>No shops available</Text>
         ) : (
           !loading && shops.map((shop) => <ShopCard name={shop.name} shop={shop} key={shop.id} />)
         )}
-        <TouchableOpacity style={styles.addShopButton} onPress={() => router.push('/AddShop')}>
-          <Ionicons name="add-circle-outline" size={24} color="#fff" style={styles.buttonIcon} />
-          <Text style={styles.addShopButtonText}>Add Shop</Text>
+        <TouchableOpacity
+          style={[styles.addShopButton, { backgroundColor: colors.buttonPrimary }]}
+          onPress={() => router.push('/AddShop')}
+        >
+          <Ionicons
+            name="add-circle-outline"
+            size={24}
+            color={colors.textOnPrimary}
+            style={styles.buttonIcon}
+          />
+          <Text style={[styles.addShopButtonText, { color: colors.textOnPrimary }]}>Add Shop</Text>
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
@@ -114,7 +124,6 @@ export default function Shops() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#b7ffb0',
     // backgroundColor: '#c2f7d7', "mint"
   },
   header: {
@@ -132,7 +141,6 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     fontWeight: '400',
     fontFamily: 'TitanOne',
-    color: '#fff',
     ...Platform.select({
       web: {
         fontSize: 32,
@@ -146,7 +154,6 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: '400',
     fontFamily: 'TitanOne',
-    color: '#fff',
     ...Platform.select({
       web: {
         fontSize: 32,
@@ -158,7 +165,6 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   addShopButton: {
-    backgroundColor: '#00bfff',
     padding: 16,
     borderRadius: 8,
     marginTop: 16,
@@ -168,7 +174,6 @@ const styles = StyleSheet.create({
   },
   addShopButtonText: {
     fontSize: 24,
-    color: '#fff',
     fontFamily: 'TextMeOne',
   },
   buttonIcon: {
@@ -178,7 +183,6 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
   errorText: {
-    color: 'red',
     textAlign: 'center',
     marginTop: 20,
     fontSize: 16,
@@ -187,6 +191,5 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 20,
     fontSize: 16,
-    color: '#555',
   },
 });

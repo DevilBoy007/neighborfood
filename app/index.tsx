@@ -2,32 +2,53 @@ import { StyleSheet, Text, View, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 
 import { SoundPressable } from '@/components/SoundPressable';
+import { useAppColors } from '@/hooks/useAppColors';
+
 const LoginScreen = () => {
   const router = useRouter();
+  const colors = useAppColors();
 
   return (
-    <View style={[styles.container, Platform.OS === 'web' && styles.containerWeb]}>
-      <Text style={[styles.title, Platform.OS === 'web' && styles.titleWeb]}>neighborfood</Text>
+    <View
+      style={[
+        styles.container,
+        { backgroundColor: colors.background },
+        Platform.OS === 'web' && styles.containerWeb,
+      ]}
+    >
+      <Text
+        style={[
+          styles.title,
+          { color: colors.textOnPrimary },
+          Platform.OS === 'web' && styles.titleWeb,
+        ]}
+      >
+        neighborfood
+      </Text>
       <View style={styles.buttonContainer}>
         <SoundPressable
           style={({ pressed }) => [
             styles.button,
+            { backgroundColor: colors.buttonPrimary },
             styles.buttonLeft,
+            { borderRightColor: colors.border },
             pressed && styles.buttonOpacity,
           ]}
           onPress={() => router.navigate('/Login')}
         >
-          <Text style={styles.buttonText}>Login</Text>
+          <Text style={[styles.buttonText, { color: colors.textOnPrimary }]}>Login</Text>
         </SoundPressable>
         <SoundPressable
           style={({ pressed }) => [
             styles.button,
+            { backgroundColor: colors.buttonPrimary },
             styles.buttonRight,
+            { borderLeftColor: colors.border },
             pressed && styles.buttonOpacity,
           ]}
           onPress={() => router.navigate('/Register')}
         >
-          <Text style={styles.buttonText}>Sign Up</Text>
+          <Text style={[styles.buttonText, { color: colors.textOnPrimary }]}>Sign Up</Text>
         </SoundPressable>
       </View>
     </View>
@@ -37,7 +58,6 @@ const LoginScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#B7FFB0',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingVertical: 40,
@@ -52,7 +72,6 @@ const styles = StyleSheet.create({
     fontSize: 36,
     fontWeight: 'bold',
     fontFamily: 'TitanOne',
-    color: '#fff',
     marginTop: 40,
   },
   titleWeb: {
@@ -70,18 +89,14 @@ const styles = StyleSheet.create({
     width: '50%',
     padding: 10,
     paddingBottom: 33,
-    backgroundColor: '#00bfff',
   },
   buttonLeft: {
     borderRightWidth: 0.5,
-    borderRightColor: '#000',
   },
   buttonRight: {
     borderLeftWidth: 0.5,
-    borderLeftColor: '#000',
   },
   buttonText: {
-    color: 'white',
     textAlign: 'center',
     fontSize: 30,
     fontFamily: 'TextMeOne',
