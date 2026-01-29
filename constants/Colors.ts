@@ -207,8 +207,8 @@ export const ThemePresets: Record<ThemePresetName, ThemePreset> = {
     description: 'GitHub-inspired dark blue palette',
     colors: {
       // Primary colors - GitHub blue palette
-      primary: '#58A6FF',
-      secondary: '#1F6FEB',
+      primary: '#1F6FEB',
+      secondary: '#58A6FF',
       accent: '#79C0FF',
       // Background colors
       background: '#0D1117',
@@ -218,19 +218,19 @@ export const ThemePresets: Record<ThemePresetName, ThemePreset> = {
       text: '#F0F6FC',
       textSecondary: '#C9D1D9',
       textMuted: '#8B949E',
-      textOnPrimary: '#0D1117',
+      textOnPrimary: '#fff',
       // State colors
       success: '#3FB950',
       warning: '#D29922',
       error: '#F85149',
       info: '#58A6FF',
       // UI elements
-      border: '#30363D',
+      border: '#1F6FEB',
       divider: '#21262D',
       icon: '#C9D1D9',
       iconMuted: '#8B949E',
       // Interactive elements
-      buttonPrimary: '#238636',
+      buttonPrimary: '#1f6feb',
       buttonSecondary: '#21262D',
       buttonDisabled: '#30363D',
       // Input elements
