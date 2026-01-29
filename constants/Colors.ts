@@ -110,7 +110,7 @@ export const ThemePresets: Record<ThemePresetName, ThemePreset> = {
       // Input elements
       inputBackground: '#ffffff',
       inputBorder: '#000000',
-      placeholder: '#ffffff',
+      placeholder: '#999',
       // Navigation elements
       navBackground: '#87CEFA',
       navIcon: '#000000',
