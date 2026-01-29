@@ -66,7 +66,7 @@ const MenuScreen = () => {
     <>
       <View style={[styles.container, { backgroundColor: colors.background }]}>
         <View style={styles.header}>
-          <Text style={[styles.title, { color: colors.textOnPrimary }]}>menu</Text>
+          <Text style={[styles.title, { color: colors.navText }]}>menu</Text>
           <View style={[styles.neighborhood, { borderColor: colors.border }]}>
             {locationData.area && !locationData.loading && (
               <Text style={[styles.headerText, { color: colors.text }]}>

@@ -161,7 +161,7 @@ const MarketScreen = () => {
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={styles.header}>
-        <Text style={[styles.title, { color: colors.textOnPrimary }]}>market</Text>
+        <Text style={[styles.title, { color: colors.navText }]}>market</Text>
       </View>
 
       <View style={styles.searchContainer}>
