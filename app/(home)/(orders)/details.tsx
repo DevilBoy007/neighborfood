@@ -14,21 +14,26 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useOrder } from '@/store/reduxHooks';
 import { useOrderStatus } from '@/hooks/useOrderStatus';
+import { useAppColors } from '@/hooks/useAppColors';
 
 const { height } = Dimensions.get('window');
 
-const ShopSection = ({ shop, items }: { shop: string; items: any[] }) => (
+const ShopSection = ({ shop, items, colors }: { shop: string; items: any[]; colors: any }) => (
   <View style={styles.shopSection}>
-    <Text style={styles.shopName}>{shop}</Text>
+    <Text style={[styles.shopName, { color: colors.text }]}>{shop}</Text>
     {items.map((item, index) => (
       <View key={index} style={styles.itemRow}>
         <View style={styles.itemInfo}>
-          <Text style={styles.itemText}>
+          <Text style={[styles.itemText, { color: colors.text }]}>
             {item.name} x {item.quantity}
           </Text>
-          <Text style={styles.itemPrice}>@ ${item.price.toFixed(2)}</Text>
+          <Text style={[styles.itemPrice, { color: colors.textMuted }]}>
+            @ ${item.price.toFixed(2)}
+          </Text>
         </View>
-        <Text style={styles.itemTotal}>${(item.price * item.quantity).toFixed(2)}</Text>
+        <Text style={[styles.itemTotal, { color: colors.accent }]}>
+          ${(item.price * item.quantity).toFixed(2)}
+        </Text>
       </View>
     ))}
   </View>
@@ -38,6 +43,7 @@ const OrderDetailScreen = () => {
   const router = useRouter();
   const { selectedOrder, setSelectedOrder } = useOrder();
   const { getStatusColor, getStatusText } = useOrderStatus();
+  const colors = useAppColors();
   const slideAnim = useRef(new Animated.Value(height)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
@@ -86,15 +92,15 @@ const OrderDetailScreen = () => {
 
   if (!formattedOrder) {
     return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.header}>
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+        <View style={[styles.header, { borderBottomColor: colors.border }]}>
           <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-            <Ionicons name="chevron-back" size={24} color="black" />
+            <Ionicons name="chevron-back" size={24} color={colors.icon} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>order details</Text>
+          <Text style={[styles.headerTitle, { color: colors.navText }]}>order details</Text>
         </View>
         <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText}>
+          <Text style={[styles.loadingText, { color: colors.textMuted }]}>
             {selectedOrder ? 'Loading order details...' : 'No order selected'}
           </Text>
         </View>
@@ -103,8 +109,8 @@ const OrderDetailScreen = () => {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={[styles.header, { borderBottomColor: colors.border }]}>
         <TouchableOpacity
           style={styles.backButton}
           onPress={() => {
@@ -123,9 +129,9 @@ const OrderDetailScreen = () => {
             ]).start(() => router.back());
           }}
         >
-          <Ionicons name="chevron-back" size={24} color="black" />
+          <Ionicons name="chevron-back" size={24} color={colors.icon} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>order details</Text>
+        <Text style={[styles.headerTitle, { color: colors.navText }]}>order details</Text>
       </View>
 
       <Animated.ScrollView
@@ -137,21 +143,29 @@ const OrderDetailScreen = () => {
           },
         ]}
       >
-        <Text style={styles.dateText}>{formattedOrder.date}</Text>
+        <Text style={[styles.dateText, { color: colors.text }]}>{formattedOrder.date}</Text>
 
-        <View style={styles.orderContent}>
-          <ShopSection shop={formattedOrder.shopName} items={formattedOrder.items} />
+        <View style={[styles.orderContent, { backgroundColor: colors.card }]}>
+          <ShopSection
+            shop={formattedOrder.shopName}
+            items={formattedOrder.items}
+            colors={colors}
+          />
 
-          <View style={styles.divider} />
+          <View style={[styles.divider, { backgroundColor: colors.divider }]} />
 
           <View style={styles.totalSection}>
-            <Text style={styles.totalLabel}>total:</Text>
-            <Text style={styles.totalAmount}>${formattedOrder.total.toFixed(2)}</Text>
+            <Text style={[styles.totalLabel, { color: colors.text }]}>total:</Text>
+            <Text style={[styles.totalAmount, { color: colors.text }]}>
+              ${formattedOrder.total.toFixed(2)}
+            </Text>
           </View>
 
-          <Text style={styles.itemCount}>items: {formattedOrder.items.length}</Text>
+          <Text style={[styles.itemCount, { color: colors.textMuted }]}>
+            items: {formattedOrder.items.length}
+          </Text>
 
-          <View style={styles.statusSection}>
+          <View style={[styles.statusSection, { borderTopColor: colors.divider }]}>
             <View
               style={[
                 styles.statusBadge,
@@ -170,14 +184,12 @@ const OrderDetailScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#b7ffb0',
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 24,
     borderBottomWidth: 1,
-    borderBottomColor: '#000',
     fontFamily: 'TextMeOne',
     ...Platform.select({
       ios: {
@@ -192,7 +204,6 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: '400',
     fontFamily: 'TitanOne',
-    color: '#fff',
     ...Platform.select({
       web: {
         fontSize: 32,
@@ -210,7 +221,6 @@ const styles = StyleSheet.create({
     fontFamily: 'TextMeOne',
   },
   orderContent: {
-    backgroundColor: 'white',
     borderRadius: 12,
     padding: 16,
     shadowColor: '#000',
@@ -248,17 +258,14 @@ const styles = StyleSheet.create({
   },
   itemPrice: {
     fontSize: 16,
-    color: '#666',
     fontFamily: 'TextMeOne',
   },
   itemTotal: {
     fontSize: 16,
-    color: '#40C4FF',
     fontFamily: 'TextMeOne',
   },
   divider: {
     height: 1,
-    backgroundColor: '#000',
     marginVertical: 16,
   },
   totalSection: {
@@ -277,7 +284,6 @@ const styles = StyleSheet.create({
   },
   itemCount: {
     fontSize: 14,
-    color: '#999',
     fontFamily: 'TextMeOne',
   },
   loadingContainer: {
@@ -288,7 +294,6 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontSize: 16,
-    color: '#666',
     textAlign: 'center',
   },
   statusSection: {
@@ -296,7 +301,6 @@ const styles = StyleSheet.create({
     marginTop: 12,
     paddingVertical: 8,
     borderTopWidth: 1,
-    borderTopColor: '#eee',
   },
   statusBadge: {
     borderRadius: 12,
@@ -320,7 +324,6 @@ const styles = StyleSheet.create({
   statusLabel: {
     fontSize: 16,
     fontFamily: 'TextMeOne',
-    color: '#666',
   },
   statusValue: {
     fontSize: 16,
