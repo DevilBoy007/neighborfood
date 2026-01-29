@@ -1064,6 +1064,89 @@ class FirebaseService {
       throw error;
     }
   }
+
+  // =========================================================================
+  // Push Notification Operations (via Cloud Functions)
+  // =========================================================================
+
+  /**
+   * Register a push notification token for the current user
+   */
+  async registerPushToken(token: string, platform: 'ios' | 'android' | 'web'): Promise<boolean> {
+    try {
+      return await this.callFunction<{ token: string; platform: string }, boolean>(
+        'registerPushToken',
+        { token, platform }
+      );
+    } catch (error) {
+      console.error('Error registering push token:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Send a notification for a new message
+   */
+  async sendMessageNotification(
+    threadId: string,
+    recipientId: string,
+    senderName: string,
+    messagePreview: string,
+    messageType: 'text' | 'order'
+  ): Promise<boolean> {
+    try {
+      return await this.callFunction<
+        {
+          threadId: string;
+          recipientId: string;
+          senderName: string;
+          messagePreview: string;
+          messageType: 'text' | 'order';
+        },
+        boolean
+      >('sendMessageNotification', {
+        threadId,
+        recipientId,
+        senderName,
+        messagePreview,
+        messageType,
+      });
+    } catch (error) {
+      console.error('Error sending message notification:', error);
+      // Don't throw - notification failure shouldn't break the message flow
+      return false;
+    }
+  }
+
+  /**
+   * Send a notification for an order status update
+   */
+  async sendOrderStatusNotification(
+    orderId: string,
+    recipientId: string,
+    shopName: string,
+    newStatus: string
+  ): Promise<boolean> {
+    try {
+      return await this.callFunction<
+        {
+          orderId: string;
+          recipientId: string;
+          shopName: string;
+          newStatus: string;
+        },
+        boolean
+      >('sendOrderStatusNotification', {
+        orderId,
+        recipientId,
+        shopName,
+        newStatus,
+      });
+    } catch (error) {
+      console.error('Error sending order status notification:', error);
+      return false;
+    }
+  }
 }
 
 const firebaseService = FirebaseService.getInstance();

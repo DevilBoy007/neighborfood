@@ -1672,3 +1672,211 @@ export const markThreadAsRead = onCall(
     }
   }
 );
+
+// =============================================================================
+// Push Notification Operations
+// =============================================================================
+
+interface RegisterPushTokenRequest {
+  token: string;
+  platform: 'ios' | 'android' | 'web';
+}
+
+interface SendPushNotificationRequest {
+  userId: string;
+  title: string;
+  body: string;
+  data?: Record<string, unknown>;
+}
+
+/**
+ * Register a push notification token for a user
+ */
+export const registerPushToken = onCall(
+  async (request: CallableRequest<RegisterPushTokenRequest>) => {
+    verifyAuth(request);
+    const { token, platform } = request.data;
+
+    if (!token || !platform) {
+      throw new HttpsError('invalid-argument', 'Token and platform are required');
+    }
+
+    try {
+      const userId = request.auth!.uid;
+
+      await db
+        .collection('users')
+        .doc(userId)
+        .update({
+          [`pushTokens.${platform}`]: token,
+          [`pushTokens.updatedAt`]: FieldValue.serverTimestamp(),
+        });
+
+      console.log(`Push token registered for user ${userId} on ${platform}`);
+      return true;
+    } catch (error) {
+      console.error('Error registering push token:', error);
+      throw new HttpsError('internal', 'Error registering push token');
+    }
+  }
+);
+
+/**
+ * Send a push notification to a specific user
+ * This is called internally by other functions, not directly by clients
+ */
+async function sendPushNotificationToUser(
+  userId: string,
+  title: string,
+  body: string,
+  data?: Record<string, unknown>
+): Promise<boolean> {
+  try {
+    // Get user's push tokens
+    const userDoc = await db.collection('users').doc(userId).get();
+    if (!userDoc.exists) {
+      console.log('User not found for push notification:', userId);
+      return false;
+    }
+
+    const userData = userDoc.data();
+    const pushTokens = userData?.pushTokens;
+
+    if (!pushTokens) {
+      console.log('No push tokens found for user:', userId);
+      return false;
+    }
+
+    // Collect all valid tokens
+    const tokens: string[] = [];
+    if (pushTokens.ios) tokens.push(pushTokens.ios);
+    if (pushTokens.android) tokens.push(pushTokens.android);
+    if (pushTokens.web) tokens.push(pushTokens.web);
+
+    if (tokens.length === 0) {
+      console.log('No valid push tokens for user:', userId);
+      return false;
+    }
+
+    // Send notification via Expo's push service
+    const messages = tokens.map((token) => ({
+      to: token,
+      sound: 'default' as const,
+      title,
+      body,
+      data: data || {},
+    }));
+
+    // Use fetch to send to Expo's push notification service
+    const response = await fetch('https://exp.host/--/api/v2/push/send', {
+      method: 'POST',
+      headers: {
+        Accept: 'application/json',
+        'Accept-encoding': 'gzip, deflate',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(messages),
+    });
+
+    const result = await response.json();
+    console.log('Push notification sent:', result);
+
+    return true;
+  } catch (error) {
+    console.error('Error sending push notification:', error);
+    return false;
+  }
+}
+
+/**
+ * Send notification when a new message is received
+ * Called after sendMessage succeeds
+ */
+export const sendMessageNotification = onCall(
+  async (
+    request: CallableRequest<{
+      threadId: string;
+      recipientId: string;
+      senderName: string;
+      messagePreview: string;
+      messageType: 'text' | 'order';
+    }>
+  ) => {
+    verifyAuth(request);
+    const { threadId, recipientId, senderName, messagePreview, messageType } = request.data;
+
+    if (!threadId || !recipientId || !senderName) {
+      throw new HttpsError(
+        'invalid-argument',
+        'Thread ID, recipient ID, and sender name are required'
+      );
+    }
+
+    try {
+      const title = messageType === 'order' ? `New order from ${senderName}` : senderName;
+      const body =
+        messageType === 'order' ? 'You have a new order! Tap to view details.' : messagePreview;
+
+      await sendPushNotificationToUser(recipientId, title, body, {
+        type: 'message',
+        threadId,
+        senderId: request.auth!.uid,
+        senderName,
+        messagePreview,
+      });
+
+      return true;
+    } catch (error) {
+      console.error('Error sending message notification:', error);
+      // Don't throw - notification failure shouldn't break the message flow
+      return false;
+    }
+  }
+);
+
+/**
+ * Send notification when order status changes
+ */
+export const sendOrderStatusNotification = onCall(
+  async (
+    request: CallableRequest<{
+      orderId: string;
+      recipientId: string;
+      shopName: string;
+      newStatus: string;
+    }>
+  ) => {
+    verifyAuth(request);
+    const { orderId, recipientId, shopName, newStatus } = request.data;
+
+    if (!orderId || !recipientId || !shopName || !newStatus) {
+      throw new HttpsError(
+        'invalid-argument',
+        'Order ID, recipient ID, shop name, and status are required'
+      );
+    }
+
+    try {
+      const statusMessages: Record<string, string> = {
+        preparing: `${shopName} is preparing your order!`,
+        ready: `Your order from ${shopName} is ready for pickup!`,
+        'in-delivery': `Your order from ${shopName} is on its way!`,
+        completed: `Your order from ${shopName} has been delivered!`,
+        cancelled: `Your order from ${shopName} has been cancelled.`,
+      };
+
+      const body = statusMessages[newStatus] || `Order status updated to: ${newStatus}`;
+
+      await sendPushNotificationToUser(recipientId, 'Order Update', body, {
+        type: 'order_update',
+        orderId,
+        status: newStatus,
+      });
+
+      return true;
+    } catch (error) {
+      console.error('Error sending order status notification:', error);
+      return false;
+    }
+  }
+);

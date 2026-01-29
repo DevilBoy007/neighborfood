@@ -17,6 +17,7 @@ import { useFocusEffect } from '@react-navigation/native';
 
 import { SafeView } from '@/components/SafeView';
 import { useMessage, useUser, MessageData, ThreadData } from '@/store/reduxHooks';
+import firebaseService from '@/handlers/firebaseService';
 
 const formatMessageTime = (timestamp: { seconds: number; nanoseconds: number } | undefined) => {
   if (!timestamp) return '';
@@ -162,6 +163,22 @@ export default function MessageThreadScreen() {
       type: 'text',
       content: messageContent,
     });
+
+    // Send push notification to the other participant
+    if (otherUserId && userData) {
+      try {
+        await firebaseService.sendMessageNotification(
+          threadId,
+          otherUserId,
+          userData.displayName || userData.first || 'Someone',
+          messageContent,
+          'text'
+        );
+      } catch (error) {
+        // Don't fail the message send if notification fails
+        console.warn('Failed to send push notification:', error);
+      }
+    }
 
     // Reload messages after sending
     loadMessages(threadId);

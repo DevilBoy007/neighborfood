@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
 import { router } from 'expo-router';
 import firebaseService from '@/handlers/firebaseService';
+import notificationService from '@/handlers/notificationService';
 import { useUser } from '@/store/reduxHooks';
 
 const Settings = () => {
@@ -10,6 +11,12 @@ const Settings = () => {
 
   const handleLogout = async () => {
     try {
+      // Remove push notification token before logout
+      if (userData?.uid) {
+        await notificationService.removeTokenFromUser(userData.uid);
+      }
+      notificationService.cleanup();
+
       // First logout from Firebase
       await firebaseService.logout();
 
