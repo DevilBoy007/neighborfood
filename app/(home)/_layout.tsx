@@ -137,10 +137,10 @@ export default function RootLayout() {
           ]}
         >
           <SoundTouchableOpacity style={styles.iconButton} soundType="tap">
-            <Ionicons name="chatbubbles-outline" size={40} color={colors.navIcon} />
+            <Ionicons name="chatbubbles-outline" size={35} color={colors.navIcon} />
           </SoundTouchableOpacity>
           <SoundTouchableOpacity style={styles.iconButton} soundType="tap">
-            <Ionicons name="stats-chart-outline" size={40} color={colors.navIcon} />
+            <Ionicons name="stats-chart-outline" size={35} color={colors.navIcon} />
           </SoundTouchableOpacity>
           <SoundTouchableOpacity
             style={styles.iconButton}
@@ -156,7 +156,7 @@ export default function RootLayout() {
             onPress={() => router.navigate('/Menu')}
             soundType="tap"
           >
-            <Ionicons name="grid-outline" size={40} color={colors.navIcon} />
+            <Ionicons name="grid-outline" size={35} color={colors.navIcon} />
           </SoundTouchableOpacity>
         </View>
       )}
