@@ -3,11 +3,10 @@ import { View, StyleSheet, Platform, Image } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Stack, useRouter } from 'expo-router';
 import { SoundTouchableOpacity } from '@/components/SoundTouchableOpacity';
+import { useAppColors } from '@/hooks/useAppColors';
+import { Ionicons } from '@expo/vector-icons';
 
-import chatIcon from '../../assets/images/chat.png';
-import pollsIcon from '../../assets/images/surveys.png';
 import marketIcon from '../../assets/images/market.png';
-import tileIcon from '../../assets/images/tiles.png';
 import profileIcon from '../../assets/images/user.png';
 import { User } from 'firebase/auth';
 
@@ -32,6 +31,7 @@ export default function RootLayout() {
   const router = useRouter();
   const storage = getStorage();
   const [userData, setUser] = useState<User | null>(null);
+  const colors = useAppColors();
 
   useEffect(() => {
     const checkUser = async () => {
@@ -88,7 +88,7 @@ export default function RootLayout() {
         )}
         <View style={styles.content}>
           {Platform.OS === 'web' && (
-            <View style={styles.footer}>
+            <View style={[styles.footer, { backgroundColor: colors.navBackground }]}>
               <SoundTouchableOpacity
                 style={styles.iconButton}
                 onPress={toggleSettings}
@@ -100,10 +100,10 @@ export default function RootLayout() {
                 />
               </SoundTouchableOpacity>
               <SoundTouchableOpacity style={styles.iconButton} soundType="tap">
-                <Image style={[styles.iconButton, styles.icon]} source={chatIcon} />
+                <Ionicons name="chatbubbles-outline" size={50} color={colors.navIcon} />
               </SoundTouchableOpacity>
               <SoundTouchableOpacity style={styles.iconButton} soundType="tap">
-                <Image style={[styles.iconButton, styles.icon]} source={pollsIcon} />
+                <Ionicons name="stats-chart-outline" size={50} color={colors.navIcon} />
               </SoundTouchableOpacity>
               <SoundTouchableOpacity
                 style={styles.iconButton}
@@ -119,7 +119,7 @@ export default function RootLayout() {
                 onPress={() => router.navigate('/Menu')}
                 soundType="tap"
               >
-                <Image style={[styles.iconButton, styles.icon]} source={tileIcon} />
+                <Ionicons name="grid-outline" size={50} color={colors.navIcon} />
               </SoundTouchableOpacity>
             </View>
           )}
@@ -130,12 +130,17 @@ export default function RootLayout() {
         </View>
       </View>
       {Platform.OS !== 'web' && (
-        <View style={styles.footer}>
+        <View
+          style={[
+            styles.footer,
+            { backgroundColor: colors.navBackground, borderTopColor: colors.border },
+          ]}
+        >
           <SoundTouchableOpacity style={styles.iconButton} soundType="tap">
-            <Image style={[styles.iconButton, styles.icon]} source={chatIcon} />
+            <Ionicons name="chatbubbles-outline" size={35} color={colors.navIcon} />
           </SoundTouchableOpacity>
           <SoundTouchableOpacity style={styles.iconButton} soundType="tap">
-            <Image style={[styles.iconButton, styles.icon]} source={pollsIcon} />
+            <Ionicons name="stats-chart-outline" size={35} color={colors.navIcon} />
           </SoundTouchableOpacity>
           <SoundTouchableOpacity
             style={styles.iconButton}
@@ -151,7 +156,7 @@ export default function RootLayout() {
             onPress={() => router.navigate('/Menu')}
             soundType="tap"
           >
-            <Image style={[styles.iconButton, styles.icon]} source={tileIcon} />
+            <Ionicons name="grid-outline" size={35} color={colors.navIcon} />
           </SoundTouchableOpacity>
         </View>
       )}
@@ -195,7 +200,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-evenly',
     alignItems: 'center',
-    backgroundColor: '#87CEFA',
     padding: 10,
 
     ...Platform.select({
@@ -206,7 +210,6 @@ const styles = StyleSheet.create({
         right: 0,
         height: 75,
         borderTopWidth: 1,
-        borderTopColor: '#000',
       },
       web: {
         flexDirection: 'column',
@@ -214,7 +217,6 @@ const styles = StyleSheet.create({
         height: '100%',
         justifyContent: 'center',
         borderRightWidth: 1,
-        borderRightColor: '#000',
       },
     }),
   },

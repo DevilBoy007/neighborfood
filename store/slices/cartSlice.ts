@@ -2,7 +2,7 @@ import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 
-type CartItem = {
+export type CartItem = {
   itemId: string;
   name: string;
   price: number;
@@ -11,7 +11,7 @@ type CartItem = {
   negotiable?: boolean;
 };
 
-type ShopCart = {
+export type ShopCart = {
   shopId: string;
   shopName: string;
   shopPhotoURL?: string;
