@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, Platform } from 'react-native';
+import { View, Text, StyleSheet, Platform, TouchableOpacity } from 'react-native';
 import { router } from 'expo-router';
 import ThemeSelector from '@/components/ThemeSelector';
 import { useAppColors } from '@/hooks/useAppColors';
@@ -18,9 +18,15 @@ const Appearance = () => {
           <View style={[styles.dragBarImage, { backgroundColor: colors.textMuted }]} />
         )}
         {Platform.OS === 'web' && (
-          <Text onPress={handleClose} style={[styles.closeIcon, { color: colors.text }]}>
-            X
-          </Text>
+          <TouchableOpacity
+            onPress={handleClose}
+            style={styles.closeButton}
+            accessibilityRole="button"
+            accessibilityLabel="Close"
+            accessibilityHint="Close appearance settings"
+          >
+            <Text style={[styles.closeIcon, { color: colors.text }]}>X</Text>
+          </TouchableOpacity>
         )}
       </View>
 
@@ -44,11 +50,13 @@ const styles = StyleSheet.create({
     height: 5,
     borderRadius: 2.5,
   },
-  closeIcon: {
+  closeButton: {
     position: 'absolute',
-    right: 20,
-    fontSize: 24,
+    right: 10,
     padding: 10,
+  },
+  closeIcon: {
+    fontSize: 24,
   },
 });
 

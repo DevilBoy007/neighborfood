@@ -1,7 +1,12 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
-import { ThemePresetName, DEFAULT_THEME_PRESET } from '@/constants/Colors';
+import {
+  ThemePresetName,
+  DEFAULT_THEME_PRESET,
+  ThemePresets,
+  getThemePresetNames,
+} from '@/constants/Colors';
 
 type ThemeState = {
   currentPreset: ThemePresetName;
@@ -30,9 +35,41 @@ const getStorage = () => {
         removeItem: () => Promise.resolve(),
       };
     }
-    return localStorage;
+    // Wrap localStorage methods in Promises to match AsyncStorage API
+    return {
+      getItem: (key: string) => Promise.resolve(localStorage.getItem(key)),
+      setItem: (key: string, value: string) => {
+        localStorage.setItem(key, value);
+        return Promise.resolve();
+      },
+      removeItem: (key: string) => {
+        localStorage.removeItem(key);
+        return Promise.resolve();
+      },
+    };
   }
   return AsyncStorage;
+};
+
+/**
+ * Validate if a string is a valid theme preset name
+ */
+const isValidThemePreset = (preset: string | null): preset is ThemePresetName => {
+  if (!preset) return false;
+  return getThemePresetNames().includes(preset as ThemePresetName);
+};
+
+/**
+ * Safely parse JSON with error handling
+ */
+const safeJsonParse = <T>(data: string | null, fallback: T): T => {
+  if (!data) return fallback;
+  try {
+    return JSON.parse(data) as T;
+  } catch {
+    console.warn('Failed to parse stored theme data, using default');
+    return fallback;
+  }
 };
 
 /**
@@ -41,10 +78,7 @@ const getStorage = () => {
 export const loadUserThemes = createAsyncThunk('theme/loadUserThemes', async () => {
   const storage = getStorage();
   const data = await storage.getItem(USER_THEMES_STORAGE_KEY);
-  if (data) {
-    return JSON.parse(data) as Record<string, ThemePresetName>;
-  }
-  return {};
+  return safeJsonParse<Record<string, ThemePresetName>>(data, {});
 });
 
 /**
@@ -62,11 +96,10 @@ export const loadUserTheme = createAsyncThunk(
     const key = THEME_STORAGE_KEY_PREFIX + userId;
     const data = await storage.getItem(key);
 
-    if (data) {
-      return { userId, preset: data as ThemePresetName };
-    }
+    // Validate the loaded preset
+    const preset = isValidThemePreset(data) ? data : DEFAULT_THEME_PRESET;
 
-    return { userId, preset: DEFAULT_THEME_PRESET };
+    return { userId, preset };
   }
 );
 
@@ -76,6 +109,11 @@ export const loadUserTheme = createAsyncThunk(
 export const saveUserTheme = createAsyncThunk(
   'theme/saveUserTheme',
   async ({ userId, preset }: { userId: string | null; preset: ThemePresetName }) => {
+    // Validate the preset before saving
+    if (!isValidThemePreset(preset)) {
+      throw new Error(`Invalid theme preset: ${preset}`);
+    }
+
     const storage = getStorage();
 
     if (userId) {
@@ -85,7 +123,7 @@ export const saveUserTheme = createAsyncThunk(
 
       // Update user themes map
       const mapData = await storage.getItem(USER_THEMES_STORAGE_KEY);
-      const userThemes = mapData ? JSON.parse(mapData) : {};
+      const userThemes = safeJsonParse<Record<string, ThemePresetName>>(mapData, {});
       userThemes[userId] = preset;
       await storage.setItem(USER_THEMES_STORAGE_KEY, JSON.stringify(userThemes));
     }
@@ -147,6 +185,10 @@ const themeSlice = createSlice({
         if (userId) {
           state.userThemes[userId] = preset;
         }
+      })
+      .addCase(saveUserTheme.rejected, (state, action) => {
+        // Log error but keep current state - UI already shows the selected theme
+        console.warn('Failed to save theme preference:', action.error.message);
       });
   },
 });

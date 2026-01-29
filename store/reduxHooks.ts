@@ -433,9 +433,11 @@ export const useTheme = () => {
     await dispatch(loadUserTheme(userId));
   }, [dispatch, userId]);
 
-  const resetTheme = useCallback(() => {
+  const resetTheme = useCallback(async () => {
     dispatch(resetToDefaultTheme());
-  }, [dispatch]);
+    // Also persist the reset to storage
+    await dispatch(saveUserTheme({ userId, preset: 'default' }));
+  }, [dispatch, userId]);
 
   return {
     currentPreset: currentPreset as ThemePresetName,

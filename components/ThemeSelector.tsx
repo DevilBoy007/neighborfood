@@ -26,9 +26,15 @@ const ThemePreview: React.FC<ThemePreviewProps> = ({ presetName, isSelected, onS
       ]}
       onPress={() => onSelect(presetName)}
       activeOpacity={0.7}
+      accessibilityRole="button"
+      accessibilityLabel={`${preset.displayName} theme. ${preset.description}`}
+      accessibilityState={{ selected: isSelected }}
+      accessibilityHint={
+        isSelected ? 'Currently selected theme' : 'Double tap to select this theme'
+      }
     >
       {/* Color swatches */}
-      <View style={styles.swatchRow}>
+      <View style={styles.swatchRow} accessibilityElementsHidden>
         <View style={[styles.swatch, { backgroundColor: preset.colors.primary }]} />
         <View style={[styles.swatch, { backgroundColor: preset.colors.secondary }]} />
         <View style={[styles.swatch, { backgroundColor: preset.colors.accent }]} />
@@ -51,7 +57,14 @@ const ThemePreview: React.FC<ThemePreviewProps> = ({ presetName, isSelected, onS
   );
 };
 
+/**
+ * Props for the ThemeSelector component.
+ */
 interface ThemeSelectorProps {
+  /**
+   * Optional callback function called when the user closes the selector.
+   * When provided, a "Done" button will be displayed.
+   */
   onClose?: () => void;
 }
 
@@ -67,14 +80,16 @@ const ThemeSelector: React.FC<ThemeSelectorProps> = ({ onClose }) => {
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={styles.header}>
-        <Text style={[styles.title, { color: colors.text }]}>Appearance</Text>
+        <Text style={[styles.title, { color: colors.text }]} accessibilityRole="header">
+          Appearance
+        </Text>
         <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
           Choose a color theme for the app
         </Text>
       </View>
 
       <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={false}>
-        <View style={styles.themesGrid}>
+        <View style={styles.themesGrid} accessibilityRole="radiogroup">
           {presetNames.map((presetName) => (
             <ThemePreview
               key={presetName}
@@ -90,6 +105,9 @@ const ThemeSelector: React.FC<ThemeSelectorProps> = ({ onClose }) => {
         <TouchableOpacity
           style={[styles.closeButton, { backgroundColor: colors.buttonPrimary }]}
           onPress={onClose}
+          accessibilityRole="button"
+          accessibilityLabel="Done"
+          accessibilityHint="Close the appearance settings"
         >
           <Text style={[styles.closeButtonText, { color: colors.textOnPrimary }]}>Done</Text>
         </TouchableOpacity>
