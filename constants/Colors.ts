@@ -29,7 +29,7 @@ export const Colors = {
  * Theme Presets for user-switchable appearance settings.
  * Each preset defines a complete color palette for the app.
  */
-export type ThemePresetName = 'default' | 'simpleDark' | 'neoModern' | 'midnight' | 'spring';
+export type ThemePresetName = 'default' | 'simpleDark' | 'neoModern' | 'midnight' | 'fall';
 
 export interface ThemePreset {
   name: ThemePresetName;
@@ -243,10 +243,10 @@ export const ThemePresets: Record<ThemePresetName, ThemePreset> = {
       navText: '#F0F6FC',
     },
   },
-  spring: {
-    name: 'spring',
-    displayName: 'Spring',
-    description: 'Fresh, warm colors inspired by springtime',
+  fall: {
+    name: 'fall',
+    displayName: 'Fall',
+    description: 'Fresh, warm colors inspired by Autumn',
     colors: {
       // Primary colors
       primary: '#FB923C',
@@ -260,14 +260,14 @@ export const ThemePresets: Record<ThemePresetName, ThemePreset> = {
       text: '#451A03',
       textSecondary: '#78350F',
       textMuted: '#92400E',
-      textOnPrimary: '#FFFFFF',
+      textOnPrimary: '#451A03',
       // State colors
       success: '#84CC16',
       warning: '#FACC15',
       error: '#DC2626',
       info: '#0EA5E9',
       // UI elements
-      border: '#FDE68A',
+      border: '#78350F',
       divider: '#FEF3C7',
       icon: '#78350F',
       iconMuted: '#A16207',
