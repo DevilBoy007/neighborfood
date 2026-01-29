@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { ThemePresets, ThemePresetName, getThemePresetNames } from '@/constants/Colors';
 import { useTheme } from '@/store/reduxHooks';
 import { useAppColors } from '@/hooks/useAppColors';
@@ -102,17 +102,15 @@ const ThemeSelector: React.FC<ThemeSelectorProps> = ({ onClose }) => {
       </ScrollView>
 
       {onClose && (
-        <View style={styles.buttonContainer}>
-          <TouchableOpacity
-            style={[styles.closeButton, { backgroundColor: colors.buttonPrimary }]}
-            onPress={onClose}
-            accessibilityRole="button"
-            accessibilityLabel="Done"
-            accessibilityHint="Close the appearance settings"
-          >
-            <Text style={[styles.closeButtonText, { color: colors.textOnPrimary }]}>Done</Text>
-          </TouchableOpacity>
-        </View>
+        <TouchableOpacity
+          style={[styles.closeButton, { backgroundColor: colors.buttonPrimary }]}
+          onPress={onClose}
+          accessibilityRole="button"
+          accessibilityLabel="Done"
+          accessibilityHint="Close the appearance settings"
+        >
+          <Text style={[styles.closeButtonText, { color: colors.textOnPrimary }]}>Done</Text>
+        </TouchableOpacity>
       )}
     </View>
   );
@@ -121,8 +119,7 @@ const ThemeSelector: React.FC<ThemeSelectorProps> = ({ onClose }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingTop: 20,
-    paddingHorizontal: 20,
+    padding: 20,
   },
   header: {
     marginBottom: 20,
@@ -140,7 +137,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   themesGrid: {
-    paddingBottom: 100,
+    paddingBottom: 20,
   },
   previewCard: {
     borderRadius: 12,
@@ -186,28 +183,16 @@ const styles = StyleSheet.create({
     fontFamily: 'TextMeOne',
     fontWeight: '600',
   },
-  buttonContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-  },
   closeButton: {
-    width: '100%',
-    padding: 10,
-    paddingBottom: 33,
+    padding: 16,
+    borderRadius: 12,
     alignItems: 'center',
-    ...Platform.select({
-      web: {
-        paddingBottom: 20,
-      },
-    }),
+    marginTop: 10,
   },
   closeButtonText: {
-    fontSize: 30,
+    fontSize: 18,
     fontFamily: 'TextMeOne',
+    fontWeight: '600',
   },
 });
 
