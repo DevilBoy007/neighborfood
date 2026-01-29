@@ -12,6 +12,7 @@ import profileIcon from '../../assets/images/user.png';
 import { User } from 'firebase/auth';
 
 import CartFAB from '@/components/CartFAB';
+import { useMessage } from '@/store/reduxHooks';
 
 // Helper to get storage - lazily evaluated with guard for bundling
 const getStorage = () => {
@@ -32,6 +33,7 @@ export default function RootLayout() {
   const router = useRouter();
   const storage = getStorage();
   const [userData, setUser] = useState<User | null>(null);
+  const { loadThreads } = useMessage();
 
   useEffect(() => {
     const checkUser = async () => {
@@ -52,6 +54,9 @@ export default function RootLayout() {
 
         setUser(DATA);
         console.log('Loaded user data:', DATA.uid);
+
+        // Pre-load message threads in the background
+        loadThreads(DATA.uid);
       } catch (error) {
         console.error('Error checking user:', error);
         router.navigate('/Login');
@@ -64,6 +69,11 @@ export default function RootLayout() {
 
   const toggleSettings = useCallback(() => {
     router.navigate('/Settings');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const navigateToMessages = useCallback(() => {
+    router.push('/(home)/(messages)' as any);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -99,7 +109,11 @@ export default function RootLayout() {
                   style={[styles.iconButton, styles.profileImage]}
                 />
               </SoundTouchableOpacity>
-              <SoundTouchableOpacity style={styles.iconButton} soundType="tap">
+              <SoundTouchableOpacity
+                style={styles.iconButton}
+                onPress={navigateToMessages}
+                soundType="tap"
+              >
                 <Image style={[styles.iconButton, styles.icon]} source={chatIcon} />
               </SoundTouchableOpacity>
               <SoundTouchableOpacity style={styles.iconButton} soundType="tap">
@@ -131,7 +145,11 @@ export default function RootLayout() {
       </View>
       {Platform.OS !== 'web' && (
         <View style={styles.footer}>
-          <SoundTouchableOpacity style={styles.iconButton} soundType="tap">
+          <SoundTouchableOpacity
+            style={styles.iconButton}
+            onPress={navigateToMessages}
+            soundType="tap"
+          >
             <Image style={[styles.iconButton, styles.icon]} source={chatIcon} />
           </SoundTouchableOpacity>
           <SoundTouchableOpacity style={styles.iconButton} soundType="tap">

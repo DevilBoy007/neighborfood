@@ -17,17 +17,19 @@ import ParallaxScrollView from '@/components/ParallaxScrollView';
 import ItemCard from '@/components/ItemCard';
 import firebaseService from '@/handlers/firebaseService';
 
-import { useLocation, useUser, useShop, ItemData } from '@/store/reduxHooks';
+import { useLocation, useUser, useShop, useMessage, ItemData } from '@/store/reduxHooks';
 
 export default function ShopDetails() {
   const { selectedShop, setSelectedShop } = useShop();
   const { userData } = useUser();
   const { locationData, formatDistance } = useLocation();
+  const { createOrGetThread } = useMessage();
   const [items, setItems] = useState<ItemData[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [uploading, setUploading] = useState<boolean>(false);
   const [uploadProgress, setUploadProgress] = useState<number>(0);
   const [shopOwner, setShopOwner] = useState<any>(null);
+  const [isStartingChat, setIsStartingChat] = useState<boolean>(false);
   const router = useRouter();
 
   // Calculate distance between two coordinates in kilometers
@@ -211,6 +213,28 @@ export default function ShopDetails() {
     }
   };
 
+  const handleMessageShopOwner = async () => {
+    if (!userData?.uid || !selectedShop?.userId) return;
+
+    // Don't allow messaging yourself
+    if (userData.uid === selectedShop.userId) return;
+
+    setIsStartingChat(true);
+    try {
+      const thread = await createOrGetThread([userData.uid, selectedShop.userId]);
+      router.push(`/(home)/(messages)/${thread.id}` as any);
+    } catch (error) {
+      console.error('Error starting chat:', error);
+      Toast.show({
+        type: 'error',
+        text1: 'Error',
+        text2: 'Failed to start conversation',
+      });
+    } finally {
+      setIsStartingChat(false);
+    }
+  };
+
   if (!selectedShop) {
     return (
       <View style={styles.container}>
@@ -325,6 +349,20 @@ export default function ShopDetails() {
                   ? shopOwner.username
                   : 'Loading...'}
             </Text>
+            {/* Message button - only show if not the shop owner */}
+            {selectedShop.userId !== userData?.uid && (
+              <TouchableOpacity
+                style={styles.messageOwnerButton}
+                onPress={handleMessageShopOwner}
+                disabled={isStartingChat}
+              >
+                {isStartingChat ? (
+                  <ActivityIndicator size="small" color="#87CEFA" />
+                ) : (
+                  <Ionicons name="chatbubble-outline" size={18} color="#87CEFA" />
+                )}
+              </TouchableOpacity>
+            )}
           </View>
           <Text style={styles.shopDescription}>{selectedShop.description}</Text>
           <View>
@@ -562,6 +600,12 @@ const styles = StyleSheet.create({
     color: '#555',
     fontFamily: 'TextMeOne',
     marginLeft: 4,
+  },
+  messageOwnerButton: {
+    marginLeft: 12,
+    padding: 6,
+    backgroundColor: 'rgba(135, 206, 250, 0.2)',
+    borderRadius: 15,
   },
   shopName: {
     fontSize: Platform.OS === 'web' ? 40 : 30,

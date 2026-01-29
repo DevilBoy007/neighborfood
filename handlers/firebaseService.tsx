@@ -864,6 +864,206 @@ class FirebaseService {
       throw error;
     }
   }
+
+  // =========================================================================
+  // Message Thread Operations (via Cloud Functions)
+  // =========================================================================
+
+  /**
+   * Create or get an existing thread between two users
+   * Ensures only one thread exists between any two users
+   */
+  async createOrGetThread(
+    participantIds: string[],
+    initialMessage?: {
+      type: 'text' | 'order';
+      content?: string;
+      orderId?: string;
+      orderData?: object;
+    }
+  ): Promise<{
+    id: string;
+    participantIds: string[];
+    participantInfo: Record<string, { username: string; photoURL: string | null }>;
+    isNew: boolean;
+    [key: string]: unknown;
+  }> {
+    try {
+      return await this.callFunction<
+        {
+          participantIds: string[];
+          initialMessage?: {
+            type: 'text' | 'order';
+            content?: string;
+            orderId?: string;
+            orderData?: object;
+          };
+        },
+        {
+          id: string;
+          participantIds: string[];
+          participantInfo: Record<string, { username: string; photoURL: string | null }>;
+          isNew: boolean;
+          [key: string]: unknown;
+        }
+      >('createOrGetThread', { participantIds, initialMessage });
+    } catch (error) {
+      console.error('Error creating or getting thread:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get all threads for a user
+   */
+  async getThreadsForUser(userId: string): Promise<
+    {
+      id: string;
+      participantIds: string[];
+      participantInfo: Record<string, { username: string; photoURL: string | null }>;
+      lastMessage?: {
+        type: string;
+        content: string;
+        senderId: string;
+        createdAt: { seconds: number; nanoseconds: number };
+      };
+      updatedAt: { seconds: number; nanoseconds: number };
+      deletedBy?: string[];
+      [key: string]: unknown;
+    }[]
+  > {
+    try {
+      const threads = await this.callFunction<
+        { userId: string },
+        {
+          id: string;
+          participantIds: string[];
+          participantInfo: Record<string, { username: string; photoURL: string | null }>;
+          lastMessage?: {
+            type: string;
+            content: string;
+            senderId: string;
+            createdAt: { seconds: number; nanoseconds: number };
+          };
+          updatedAt: { seconds: number; nanoseconds: number };
+          deletedBy?: string[];
+          [key: string]: unknown;
+        }[]
+      >('getThreadsForUser', { userId });
+
+      // Filter out threads that the user has deleted
+      return threads.filter((thread) => !thread.deletedBy?.includes(userId));
+    } catch (error) {
+      console.error('Error fetching threads for user:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get messages for a thread
+   */
+  async getMessagesForThread(threadId: string): Promise<
+    {
+      id: string;
+      senderId: string;
+      type: 'text' | 'order';
+      content: string;
+      orderId?: string;
+      orderData?: object;
+      createdAt: { seconds: number; nanoseconds: number };
+      read: boolean;
+    }[]
+  > {
+    try {
+      return await this.callFunction<
+        { threadId: string },
+        {
+          id: string;
+          senderId: string;
+          type: 'text' | 'order';
+          content: string;
+          orderId?: string;
+          orderData?: object;
+          createdAt: { seconds: number; nanoseconds: number };
+          read: boolean;
+        }[]
+      >('getMessagesForThread', { threadId });
+    } catch (error) {
+      console.error('Error fetching messages for thread:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Send a message to a thread
+   */
+  async sendMessage(
+    threadId: string,
+    message: {
+      type: 'text' | 'order';
+      content?: string;
+      orderId?: string;
+      orderData?: object;
+    }
+  ): Promise<{
+    id: string;
+    senderId: string;
+    type: 'text' | 'order';
+    content: string;
+    orderId?: string;
+    orderData?: object;
+  }> {
+    try {
+      return await this.callFunction<
+        {
+          threadId: string;
+          message: {
+            type: 'text' | 'order';
+            content?: string;
+            orderId?: string;
+            orderData?: object;
+          };
+        },
+        {
+          id: string;
+          senderId: string;
+          type: 'text' | 'order';
+          content: string;
+          orderId?: string;
+          orderData?: object;
+        }
+      >('sendMessage', { threadId, message });
+    } catch (error) {
+      console.error('Error sending message:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Delete a thread (soft delete - marks as deleted for the user)
+   */
+  async deleteThread(threadId: string): Promise<boolean> {
+    try {
+      return await this.callFunction<{ threadId: string }, boolean>('deleteThread', { threadId });
+    } catch (error) {
+      console.error('Error deleting thread:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Mark a thread as read
+   */
+  async markThreadAsRead(threadId: string): Promise<boolean> {
+    try {
+      return await this.callFunction<{ threadId: string }, boolean>('markThreadAsRead', {
+        threadId,
+      });
+    } catch (error) {
+      console.error('Error marking thread as read:', error);
+      throw error;
+    }
+  }
 }
 
 const firebaseService = FirebaseService.getInstance();
