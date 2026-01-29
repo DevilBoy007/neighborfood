@@ -169,7 +169,7 @@ export const ThemePresets: Record<ThemePresetName, ThemePreset> = {
       secondary: '#F3E8FF',
       accent: '#A78BFA',
       // Background colors
-      background: '#FAFAF9',
+      background: '#D75CF6',
       surface: '#FFFFFF',
       card: '#FFFFFF',
       // Text colors
@@ -183,10 +183,10 @@ export const ThemePresets: Record<ThemePresetName, ThemePreset> = {
       error: '#DC2626',
       info: '#0EA5E9',
       // UI elements
-      border: '#D6D3D1',
+      border: '#26066F',
       divider: '#E7E5E4',
       icon: '#44403C',
-      iconMuted: '#A8A29E',
+      iconMuted: '#26066F',
       // Interactive elements
       buttonPrimary: '#8B5CF6',
       buttonSecondary: '#F3E8FF',
@@ -194,9 +194,9 @@ export const ThemePresets: Record<ThemePresetName, ThemePreset> = {
       // Input elements
       inputBackground: '#FFFFFF',
       inputBorder: '#D6D3D1',
-      placeholder: '#A8A29E',
+      placeholder: '#26066F',
       // Navigation elements
-      navBackground: '#DDD6FE',
+      navBackground: '#A78BFA',
       navIcon: '#44403C',
       navText: '#1C1917',
     },
