@@ -16,6 +16,7 @@ import firebaseService from '@/handlers/firebaseService';
 import { useUser, useLocation } from '@/store/reduxHooks';
 import { GeoPoint } from 'firebase/firestore';
 import { SoundTouchableOpacity } from '@/components/SoundTouchableOpacity';
+import { useAppColors } from '@/hooks/useAppColors';
 
 /* eslint-disable @typescript-eslint/no-require-imports */
 // Conditionally import problematic native-only modules
@@ -57,6 +58,7 @@ const RegisterScreen = () => {
   const { setUserData } = useUser();
   const [, setUser] = useState<User | null>(null);
   const { locationData, fetchCurrentLocation } = useLocation();
+  const colors = useAppColors();
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -429,8 +431,8 @@ const RegisterScreen = () => {
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Register</Text>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <Text style={[styles.title, { color: colors.textOnPrimary }]}>Register</Text>
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -444,22 +446,29 @@ const RegisterScreen = () => {
           showsVerticalScrollIndicator={false}
         >
           {/* Personal Details Section */}
-          <Text style={styles.sectionTitle}>Personal Details</Text>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Personal Details</Text>
           {errorMsg.fields ? (
-            <Text style={[styles.errorText, styles.largeText]}>{errorMsg.fields}</Text>
+            <Text style={[styles.errorText, styles.largeText, { color: colors.error }]}>
+              {errorMsg.fields}
+            </Text>
           ) : null}
           <View style={styles.row}>
             <TextInput
-              style={[styles.input, styles.flex1, styles.marginRight]}
+              style={[
+                styles.input,
+                { backgroundColor: colors.inputBackground },
+                styles.flex1,
+                styles.marginRight,
+              ]}
               placeholder="first name"
-              placeholderTextColor="#999"
+              placeholderTextColor={colors.placeholder}
               value={formData.firstName}
               onChangeText={(text) => handleChange('firstName', text)}
             />
             <TextInput
-              style={[styles.input, styles.flex1]}
+              style={[styles.input, { backgroundColor: colors.inputBackground }, styles.flex1]}
               placeholder="last name"
-              placeholderTextColor="#999"
+              placeholderTextColor={colors.placeholder}
               value={formData.lastName}
               onChangeText={(text) => handleChange('lastName', text)}
             />
@@ -467,21 +476,29 @@ const RegisterScreen = () => {
 
           <View style={styles.row}>
             <TextInput
-              style={[styles.input, styles.flex1, styles.marginRight, styles.thin]}
+              style={[
+                styles.input,
+                { backgroundColor: colors.inputBackground },
+                styles.flex1,
+                styles.marginRight,
+                styles.thin,
+              ]}
               placeholder="email"
-              placeholderTextColor="#999"
+              placeholderTextColor={colors.placeholder}
               keyboardType="email-address"
               autoCapitalize="none"
               value={formData.email}
               onChangeText={(text) => handleChange('email', text)}
             />
-            {errorMsg.email ? <Text style={styles.errorText}>{errorMsg.email}</Text> : null}
+            {errorMsg.email ? (
+              <Text style={[styles.errorText, { color: colors.error }]}>{errorMsg.email}</Text>
+            ) : null}
             {renderDatePicker()}
           </View>
           <TextInput
-            style={styles.input}
+            style={[styles.input, { backgroundColor: colors.inputBackground }]}
             placeholder="phone number"
-            placeholderTextColor="#999"
+            placeholderTextColor={colors.placeholder}
             keyboardType="phone-pad"
             value={formData.phone}
             onChangeText={(text) => handleChange('phone', text)}
@@ -489,12 +506,12 @@ const RegisterScreen = () => {
           {/* Market Info Section */}
           {!errorMsg.location ? (
             <>
-              <Text style={styles.sectionTitle}>Market Info</Text>
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>Market Info</Text>
               <View style={styles.googlePlacesWrapper}>
                 <GooglePlacesAutocomplete
                   placeholder="Enter your address"
                   textInputProps={{
-                    placeholderTextColor: '#999',
+                    placeholderTextColor: colors.placeholder,
                     returnKeyType: 'search',
                   }}
                   onPress={handleLocationSelect}
@@ -528,64 +545,96 @@ const RegisterScreen = () => {
 
               {/* Display selected location details */}
               {formData.location.address ? (
-                <View style={styles.locationDetailsContainer}>
-                  <Text style={styles.locationDetail}>{formData.location.address}</Text>
+                <View
+                  style={[styles.locationDetailsContainer, { backgroundColor: colors.primary }]}
+                >
+                  <Text style={[styles.locationDetail, { color: colors.textOnPrimary }]}>
+                    {formData.location.address}
+                  </Text>
                 </View>
               ) : (
-                <View style={styles.locationDetailsContainer}>
-                  <Text style={styles.locationDetail}>
+                <View
+                  style={[styles.locationDetailsContainer, { backgroundColor: colors.primary }]}
+                >
+                  <Text style={[styles.locationDetail, { color: colors.textOnPrimary }]}>
                     {formData.location.city}, {formData.location.state} {formData.location.zip}
                   </Text>
                 </View>
               )}
             </>
           ) : null}
-          {errorMsg.location ? <Text style={styles.errorText}>{errorMsg.location}</Text> : null}
+          {errorMsg.location ? (
+            <Text style={[styles.errorText, { color: colors.error }]}>{errorMsg.location}</Text>
+          ) : null}
 
           {/* Login Info Section */}
           <View style={{ marginTop: 60 }}>
-            <Text style={styles.sectionTitle}>Login Info</Text>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>Login Info</Text>
             <TextInput
-              style={styles.input}
+              style={[styles.input, { backgroundColor: colors.inputBackground }]}
               placeholder="username"
-              placeholderTextColor="#999"
+              placeholderTextColor={colors.placeholder}
               value={formData.username}
               autoCapitalize="none"
               onChangeText={(text) => handleChange('username', text)}
             />
-            <Text style={[styles.subtitle, styles.marginBottom]}>
+            <Text style={[styles.subtitle, styles.marginBottom, { color: colors.text }]}>
               [{' '}
-              <Text style={errorMsg.username1 === '' ? styles.subtitle : styles.errorText}>
+              <Text
+                style={
+                  errorMsg.username1 === ''
+                    ? [styles.subtitle, { color: colors.text }]
+                    : [styles.errorText, { color: colors.error }]
+                }
+              >
                 must be at least 6 characters
               </Text>{' '}
               |{' '}
-              <Text style={errorMsg.username2 === '' ? styles.subtitle : styles.errorText}>
+              <Text
+                style={
+                  errorMsg.username2 === ''
+                    ? [styles.subtitle, { color: colors.text }]
+                    : [styles.errorText, { color: colors.error }]
+                }
+              >
                 cannot contain special characters
               </Text>{' '}
               ]
             </Text>
             <TextInput
-              style={styles.input}
+              style={[styles.input, { backgroundColor: colors.inputBackground }]}
               placeholder="password"
-              placeholderTextColor="#999"
+              placeholderTextColor={colors.placeholder}
               secureTextEntry
               textContentType="none"
               value={formData.password}
               autoCapitalize="none"
               onChangeText={(text) => handleChange('password', text)}
             />
-            <Text style={[styles.subtitle, styles.marginBottom]}>
+            <Text style={[styles.subtitle, styles.marginBottom, { color: colors.text }]}>
               [{' '}
-              <Text style={errorMsg.password2 ? styles.errorText : styles.subtitle}>
+              <Text
+                style={
+                  errorMsg.password2
+                    ? [styles.errorText, { color: colors.error }]
+                    : [styles.subtitle, { color: colors.text }]
+                }
+              >
                 must be at least 6 characters
               </Text>{' '}
               ]
             </Text>
-            {errorMsg.password1 ? <Text style={styles.errorText}>{errorMsg.password1}</Text> : null}
+            {errorMsg.password1 ? (
+              <Text style={[styles.errorText, { color: colors.error }]}>{errorMsg.password1}</Text>
+            ) : null}
             <TextInput
-              style={[styles.input, styles.marginBottom]}
+              style={[
+                styles.input,
+                { backgroundColor: colors.inputBackground },
+                styles.marginBottom,
+              ]}
               placeholder="confirm password"
-              placeholderTextColor="#999"
+              placeholderTextColor={colors.placeholder}
               secureTextEntry
               textContentType="none"
               value={formData.confirmPassword}
@@ -596,11 +645,23 @@ const RegisterScreen = () => {
         </ScrollView>
         <View style={[styles.buttonContainer, Platform.OS === 'ios' && styles.iosButtonContainer]}>
           <SoundTouchableOpacity
-            style={[styles.button, disabled && styles.buttonDisabled]}
+            style={[
+              styles.button,
+              { backgroundColor: colors.buttonPrimary },
+              disabled && [styles.buttonDisabled, { backgroundColor: colors.buttonDisabled }],
+            ]}
             onPress={handleRegister}
             soundType="click"
           >
-            <Text style={[styles.buttonText, disabled && styles.buttonTextDisabled]}>Register</Text>
+            <Text
+              style={[
+                styles.buttonText,
+                { color: colors.textOnPrimary },
+                disabled && [styles.buttonTextDisabled, { color: colors.textMuted }],
+              ]}
+            >
+              Register
+            </Text>
           </SoundTouchableOpacity>
         </View>
       </KeyboardAvoidingView>
@@ -612,7 +673,6 @@ const RegisterScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#B7FFB0',
   },
   scrollView: {
     flexGrow: 1,
@@ -622,7 +682,6 @@ const styles = StyleSheet.create({
     fontFamily: 'TitanOne',
     fontSize: 36,
     fontWeight: 'bold',
-    color: '#fff',
     marginTop: 40,
     textAlign: 'center',
   },
@@ -637,14 +696,12 @@ const styles = StyleSheet.create({
     fontSize: 10,
     marginLeft: 15,
     fontFamily: 'TextMeOne',
-    color: '#000',
   },
   row: {
     flexDirection: 'row',
     marginBottom: 16,
   },
   input: {
-    backgroundColor: '#fff',
     padding: 12,
     borderRadius: 8,
     fontSize: 16,
@@ -674,16 +731,13 @@ const styles = StyleSheet.create({
     width: '100%',
     padding: 10,
     paddingBottom: 33,
-    backgroundColor: '#00bfff',
   },
   buttonText: {
-    color: 'white',
     textAlign: 'center',
     fontSize: 30,
     fontFamily: 'TextMeOne',
   },
   errorText: {
-    color: 'red',
     fontSize: 10,
     marginVertical: 2,
     fontFamily: 'TextMeOne',
@@ -708,7 +762,6 @@ const styles = StyleSheet.create({
     height: 50,
   },
   locationDetailsContainer: {
-    backgroundColor: '#00bfff',
     padding: 12,
     borderRadius: 8,
     marginBottom: 16,
@@ -716,16 +769,12 @@ const styles = StyleSheet.create({
   },
   locationDetail: {
     fontSize: 18,
-    color: '#fff',
     fontFamily: 'TextMeOne',
   },
   buttonDisabled: {
-    backgroundColor: '#ccc',
     opacity: 0.7,
   },
-  buttonTextDisabled: {
-    color: '#666',
-  },
+  buttonTextDisabled: {},
 });
 
 export default RegisterScreen;
