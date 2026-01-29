@@ -234,7 +234,7 @@ export const ThemePresets: Record<ThemePresetName, ThemePreset> = {
       buttonSecondary: '#21262D',
       buttonDisabled: '#30363D',
       // Input elements
-      inputBackground: '#0D1117',
+      inputBackground: '#1c2430',
       inputBorder: '#30363D',
       placeholder: '#8B949E',
       // Navigation elements
