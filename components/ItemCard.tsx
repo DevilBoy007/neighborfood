@@ -3,6 +3,7 @@ import { useRouter } from 'expo-router';
 import { View, Text, StyleSheet, Image, TouchableOpacity, Alert, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useCart, useItem, ItemData } from '@/store/reduxHooks';
+import { useAppColors } from '@/hooks/useAppColors';
 
 interface ItemCardProps {
   item: ItemData;
@@ -37,6 +38,7 @@ const ItemCard = ({
   const { addToCart } = useCart();
   const { setSelectedItem } = useItem();
   const router = useRouter();
+  const colors = useAppColors();
 
   const handleAddToCart = () => {
     if (!item.shopId) return;
@@ -108,8 +110,8 @@ const ItemCard = ({
       {item.imageUrl ? (
         <Image source={{ uri: item.imageUrl }} style={styles.itemImage} />
       ) : (
-        <View style={styles.noImage}>
-          <Text style={styles.noImageText}>No Image</Text>
+        <View style={[styles.noImage, { backgroundColor: colors.inputBackground }]}>
+          <Text style={[styles.noImageText, { color: colors.textMuted }]}>No Image</Text>
         </View>
       )}
     </View>
@@ -133,16 +135,16 @@ const ItemCard = ({
   // Render common item content
   const renderItemContent = () => (
     <>
-      <Text style={styles.itemName}>{item.name}</Text>
+      <Text style={[styles.itemName, { color: colors.text }]}>{item.name}</Text>
 
       {useManagerStyle && deleteLabel === 'Delete' && (
-        <Text style={styles.itemShop}>
+        <Text style={[styles.itemShop, { color: colors.textMuted }]}>
           {item.shopId && item.shopId.length > 0 ? shopName : 'No shop assigned'}
         </Text>
       )}
 
       {((useManagerStyle && deleteLabel === 'Remove') || !useManagerStyle) && (
-        <Text style={styles.itemDescription}>
+        <Text style={[styles.itemDescription, { color: colors.textMuted }]}>
           {item.description || (!useManagerStyle ? '' : 'No description available')}
         </Text>
       )}
@@ -153,7 +155,11 @@ const ItemCard = ({
         </Text>
       </View>
 
-      {useManagerStyle && <Text style={styles.itemQuantity}>Quantity: {item.quantity || 0}</Text>}
+      {useManagerStyle && (
+        <Text style={[styles.itemQuantity, { color: colors.textMuted }]}>
+          Quantity: {item.quantity || 0}
+        </Text>
+      )}
 
       {item.negotiable && (
         <Text style={useManagerStyle ? styles.negotiableTag : styles.itemNegotiable}>
@@ -167,11 +173,19 @@ const ItemCard = ({
   const renderCartControls = () => (
     <View style={styles.cartControls}>
       <View style={styles.quantityContainer}>
-        <TouchableOpacity onPress={decrementQuantity} style={styles.quantityButton}>
+        <TouchableOpacity
+          onPress={decrementQuantity}
+          style={[styles.quantityButton, { backgroundColor: colors.inputBackground }]}
+        >
           <Ionicons name="remove" size={16} color="#00bfff" />
         </TouchableOpacity>
-        <Text style={styles.quantityText}>{Math.min(quantity, item.quantity)}</Text>
-        <TouchableOpacity onPress={incrementQuantity} style={styles.quantityButton}>
+        <Text style={[styles.quantityText, { color: colors.text }]}>
+          {Math.min(quantity, item.quantity)}
+        </Text>
+        <TouchableOpacity
+          onPress={incrementQuantity}
+          style={[styles.quantityButton, { backgroundColor: colors.inputBackground }]}
+        >
           <Ionicons name="add" size={16} color="#00bfff" />
         </TouchableOpacity>
       </View>
@@ -195,7 +209,12 @@ const ItemCard = ({
   );
 
   return (
-    <View style={useManagerStyle ? styles.manageItemCard : styles.itemCard}>
+    <View
+      style={[
+        useManagerStyle ? styles.manageItemCard : styles.itemCard,
+        { backgroundColor: colors.surface },
+      ]}
+    >
       {renderItemImage()}
       {renderItemDetails()}
       {useManagerStyle && renderItemActions()}
@@ -206,7 +225,6 @@ const ItemCard = ({
 const styles = StyleSheet.create({
   // Base card styles
   itemCard: {
-    backgroundColor: 'white',
     borderRadius: 8,
     padding: 16,
     marginBottom: 16,
@@ -218,7 +236,6 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   manageItemCard: {
-    backgroundColor: 'white',
     borderRadius: 10,
     padding: 15,
     marginBottom: 16,
@@ -250,12 +267,10 @@ const styles = StyleSheet.create({
   noImage: {
     width: '100%',
     height: '100%',
-    backgroundColor: '#f0f0f0',
     justifyContent: 'center',
     alignItems: 'center',
   },
   noImageText: {
-    color: '#999',
     fontSize: 12,
   },
 
@@ -294,19 +309,16 @@ const styles = StyleSheet.create({
   },
   itemDescription: {
     fontSize: 14,
-    color: '#666',
     fontFamily: 'TextMeOne',
     marginBottom: 4,
   },
   itemShop: {
     fontSize: 14,
-    color: '#666',
     marginBottom: 5,
     fontFamily: 'TextMeOne',
   },
   itemQuantity: {
     fontSize: 14,
-    color: '#666',
     fontFamily: 'TextMeOne',
   },
   itemNegotiable: {
@@ -331,7 +343,6 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   quantityButton: {
-    backgroundColor: '#f0f0f0',
     borderRadius: 12,
     width: 24,
     height: 24,
