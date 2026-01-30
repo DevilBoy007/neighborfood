@@ -109,7 +109,7 @@ const ThemeSelector: React.FC<ThemeSelectorProps> = ({ onClose }) => {
           accessibilityLabel="Done"
           accessibilityHint="Close the appearance settings"
         >
-          <Text style={[styles.closeButtonText, { color: colors.textOnPrimary }]}>Done</Text>
+          <Text style={[styles.closeButtonText, { color: colors.buttonText }]}>Done</Text>
         </TouchableOpacity>
       )}
     </View>

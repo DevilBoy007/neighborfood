@@ -58,7 +58,7 @@ const Settings = () => {
           router.push('/EditDetails'); // Navigate to full page
         }}
       >
-        <Text style={[styles.menuText, { color: colors.textOnPrimary }]}>Edit Details</Text>
+        <Text style={[styles.menuText, { color: colors.buttonText }]}>Edit Details</Text>
       </TouchableOpacity>
 
       {/* Add other menu items */}
@@ -66,22 +66,22 @@ const Settings = () => {
         style={[styles.menuItem, { backgroundColor: colors.buttonPrimary }]}
         onPress={handleAppearance}
       >
-        <Text style={[styles.menuText, { color: colors.textOnPrimary }]}>Appearance</Text>
+        <Text style={[styles.menuText, { color: colors.buttonText }]}>Appearance</Text>
       </TouchableOpacity>
 
       <TouchableOpacity style={[styles.menuItem, { backgroundColor: colors.buttonPrimary }]}>
-        <Text style={[styles.menuText, { color: colors.textOnPrimary }]}>About</Text>
+        <Text style={[styles.menuText, { color: colors.buttonText }]}>About</Text>
       </TouchableOpacity>
 
       <TouchableOpacity style={[styles.menuItem, { backgroundColor: colors.buttonPrimary }]}>
-        <Text style={[styles.menuText, { color: colors.textOnPrimary }]}>Legal</Text>
+        <Text style={[styles.menuText, { color: colors.buttonText }]}>Legal</Text>
       </TouchableOpacity>
 
       <TouchableOpacity
         style={[styles.menuItem, { backgroundColor: colors.buttonPrimary }]}
         onPress={handleLogout}
       >
-        <Text style={[styles.menuText, { color: colors.textOnPrimary }]}>Logout</Text>
+        <Text style={[styles.menuText, { color: colors.buttonText }]}>Logout</Text>
       </TouchableOpacity>
     </View>
   );

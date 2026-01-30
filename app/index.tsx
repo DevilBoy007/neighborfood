@@ -36,7 +36,7 @@ const LoginScreen = () => {
           ]}
           onPress={() => router.navigate('/Login')}
         >
-          <Text style={[styles.buttonText, { color: colors.textOnPrimary }]}>Login</Text>
+          <Text style={[styles.buttonText, { color: colors.buttonText }]}>Login</Text>
         </SoundPressable>
         <SoundPressable
           style={({ pressed }) => [
@@ -48,7 +48,7 @@ const LoginScreen = () => {
           ]}
           onPress={() => router.navigate('/Register')}
         >
-          <Text style={[styles.buttonText, { color: colors.textOnPrimary }]}>Sign Up</Text>
+          <Text style={[styles.buttonText, { color: colors.buttonText }]}>Sign Up</Text>
         </SoundPressable>
       </View>
     </View>

@@ -699,11 +699,11 @@ export default function AddItemScreen() {
       </KeyboardAvoidingView>
       <View style={[styles.buttonContainer, Platform.OS === 'ios' && styles.iosButtonContainer]}>
         <TouchableOpacity
-          style={[styles.button, { backgroundColor: colors.buttonPrimary }]}
+          style={[styles.button, { backgroundColor: colors.buttonPrimaryAlternate }]}
           onPress={handleSubmit}
           disabled={uploading || isLoadingItem}
         >
-          <Text style={[styles.buttonText, { color: colors.textOnPrimary }]}>
+          <Text style={[styles.buttonText, { color: colors.buttonText }]}>
             {itemId ? 'Save' : 'Add Item'}
           </Text>
         </TouchableOpacity>

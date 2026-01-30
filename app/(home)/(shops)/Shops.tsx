@@ -111,10 +111,10 @@ export default function Shops() {
           <Ionicons
             name="add-circle-outline"
             size={24}
-            color={colors.textOnPrimary}
+            color={colors.buttonText}
             style={styles.buttonIcon}
           />
-          <Text style={[styles.addShopButtonText, { color: colors.textOnPrimary }]}>Add Shop</Text>
+          <Text style={[styles.addShopButtonText, { color: colors.buttonText }]}>Add Shop</Text>
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>

@@ -73,7 +73,7 @@ const ContactScreen = () => {
                   style={[
                     styles.optionText,
                     { color: colors.text },
-                    selectedOption === option && { color: colors.textOnPrimary },
+                    selectedOption === option && { color: colors.buttonText },
                   ]}
                 >
                   {option}
@@ -83,7 +83,10 @@ const ContactScreen = () => {
 
             {selectedOption && (
               <TextInput
-                style={[styles.textInput, { backgroundColor: colors.inputBackground }]}
+                style={[
+                  styles.textInput,
+                  { backgroundColor: colors.inputBackground, color: colors.text },
+                ]}
                 multiline
                 placeholder="Type your message here..."
                 placeholderTextColor={colors.placeholder}
@@ -100,13 +103,13 @@ const ContactScreen = () => {
       <TouchableOpacity
         style={[
           styles.submitButton,
-          { backgroundColor: colors.buttonPrimary },
+          { backgroundColor: colors.buttonPrimaryAlternate },
           (!selectedOption || !message) && { backgroundColor: colors.buttonDisabled },
         ]}
         disabled={!selectedOption || !message}
         onPress={handleSubmit}
       >
-        <Text style={[styles.submitButtonText, { color: colors.textOnPrimary }]}>Submit</Text>
+        <Text style={[styles.submitButtonText, { color: colors.buttonText }]}>Submit</Text>
       </TouchableOpacity>
     </SafeAreaView>
   );

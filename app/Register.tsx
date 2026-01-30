@@ -656,7 +656,7 @@ const RegisterScreen = () => {
             <Text
               style={[
                 styles.buttonText,
-                { color: colors.textOnPrimary },
+                { color: colors.buttonText },
                 disabled && { color: colors.textMuted },
               ]}
             >
@@ -682,7 +682,7 @@ const styles = StyleSheet.create({
     fontFamily: 'TitanOne',
     fontSize: 36,
     fontWeight: 'bold',
-    marginTop: 40,
+    marginTop: 50,
     textAlign: 'center',
   },
   sectionTitle: {

@@ -60,7 +60,9 @@ export interface ThemePreset {
     icon: string;
     iconMuted: string;
     // Interactive elements
+    buttonText: string;
     buttonPrimary: string;
+    buttonPrimaryAlternate: string;
     buttonSecondary: string;
     buttonDisabled: string;
     // Input elements
@@ -71,6 +73,7 @@ export interface ThemePreset {
     navBackground: string;
     navIcon: string;
     navText: string;
+    stickyBackButton: string;
   };
 }
 
@@ -92,7 +95,7 @@ export const ThemePresets: Record<ThemePresetName, ThemePreset> = {
       text: '#000000',
       textSecondary: '#333333',
       textMuted: '#666666',
-      textOnPrimary: '#ffffff',
+      textOnPrimary: '#00bfff',
       // State colors
       success: '#4CAF50',
       warning: '#FF9800',
@@ -104,7 +107,9 @@ export const ThemePresets: Record<ThemePresetName, ThemePreset> = {
       icon: '#000000',
       iconMuted: '#687076',
       // Interactive elements
+      buttonText: '#ffffff',
       buttonPrimary: '#00bfff',
+      buttonPrimaryAlternate: '#87cefa',
       buttonSecondary: '#b7ffb0',
       buttonDisabled: '#cccccc',
       // Input elements
@@ -114,7 +119,8 @@ export const ThemePresets: Record<ThemePresetName, ThemePreset> = {
       // Navigation elements
       navBackground: '#87CEFA',
       navIcon: '#000000',
-      navText: '#000000',
+      navText: '#00bfff',
+      stickyBackButton: '#ffffffb3',
     },
   },
   simpleDark: {
@@ -134,7 +140,7 @@ export const ThemePresets: Record<ThemePresetName, ThemePreset> = {
       text: '#F9FAFB',
       textSecondary: '#E5E7EB',
       textMuted: '#9CA3AF',
-      textOnPrimary: '#F9FAFB',
+      textOnPrimary: '#fff',
       // State colors
       success: '#10B981',
       warning: '#F59E0B',
@@ -145,8 +151,10 @@ export const ThemePresets: Record<ThemePresetName, ThemePreset> = {
       divider: '#4B5563',
       icon: '#E5E7EB',
       iconMuted: '#9CA3AF',
-      // Interactive elements
+      // Interactive elements,
+      buttonText: '#F9FAFB',
       buttonPrimary: '#6B7280',
+      buttonPrimaryAlternate: '#9CA3AF',
       buttonSecondary: '#4B5563',
       buttonDisabled: '#374151',
       // Input elements
@@ -157,6 +165,7 @@ export const ThemePresets: Record<ThemePresetName, ThemePreset> = {
       navBackground: '#111827',
       navIcon: '#E5E7EB',
       navText: '#E5E7EB',
+      stickyBackButton: '#666666b3',
     },
   },
   neoModern: {
@@ -188,7 +197,9 @@ export const ThemePresets: Record<ThemePresetName, ThemePreset> = {
       icon: '#44403C',
       iconMuted: '#26066F',
       // Interactive elements
+      buttonText: '#FFFFFF',
       buttonPrimary: '#8B5CF6',
+      buttonPrimaryAlternate: '#A78BFA',
       buttonSecondary: '#F3E8FF',
       buttonDisabled: '#D6D3D1',
       // Input elements
@@ -199,6 +210,7 @@ export const ThemePresets: Record<ThemePresetName, ThemePreset> = {
       navBackground: '#A78BFA',
       navIcon: '#44403C',
       navText: '#1C1917',
+      stickyBackButton: '#ffffffb3',
     },
   },
   midnight: {
@@ -230,7 +242,9 @@ export const ThemePresets: Record<ThemePresetName, ThemePreset> = {
       icon: '#C9D1D9',
       iconMuted: '#8B949E',
       // Interactive elements
+      buttonText: '#FFFFFF',
       buttonPrimary: '#1f6feb',
+      buttonPrimaryAlternate: '#58A6FF',
       buttonSecondary: '#21262D',
       buttonDisabled: '#30363D',
       // Input elements
@@ -241,6 +255,7 @@ export const ThemePresets: Record<ThemePresetName, ThemePreset> = {
       navBackground: '#010409',
       navIcon: '#58A6FF',
       navText: '#F0F6FC',
+      stickyBackButton: '#79C0FFb3',
     },
   },
   fall: {
@@ -272,7 +287,9 @@ export const ThemePresets: Record<ThemePresetName, ThemePreset> = {
       icon: '#78350F',
       iconMuted: '#A16207',
       // Interactive elements
+      buttonText: '#451A03',
       buttonPrimary: '#FB923C',
+      buttonPrimaryAlternate: '#FBBF24',
       buttonSecondary: '#FEF3C7',
       buttonDisabled: '#FDE68A',
       // Input elements
@@ -283,6 +300,7 @@ export const ThemePresets: Record<ThemePresetName, ThemePreset> = {
       navBackground: '#FBBF24',
       navIcon: '#78350F',
       navText: '#451A03',
+      stickyBackButton: '#ffffffb3',
     },
   },
 };

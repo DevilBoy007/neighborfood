@@ -145,7 +145,7 @@ const LoginScreen = () => {
           <Text
             style={[
               styles.buttonText,
-              { color: colors.textOnPrimary },
+              { color: colors.buttonText },
               disabled && { color: colors.textMuted },
             ]}
           >
