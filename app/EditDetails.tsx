@@ -20,6 +20,7 @@ import { Ionicons } from '@expo/vector-icons';
 import profileIcon from '@/assets/images/user.png';
 import firebaseService from '@/handlers/firebaseService';
 import { useUser } from '@/store/reduxHooks';
+import { useAppColors } from '@/hooks/useAppColors';
 
 /* eslint-disable @typescript-eslint/no-require-imports */
 // Conditionally import native-only components
@@ -34,6 +35,7 @@ if (Platform.OS !== 'web') {
 
 const EditDetails = () => {
   const { userData, setUserData } = useUser();
+  const colors = useAppColors();
   const [isLoading, setIsLoading] = useState(false);
   const [locationSelected, setLocationSelected] = useState(false);
   const [showLocationWarning, setShowLocationWarning] = useState(false);
@@ -410,7 +412,7 @@ const EditDetails = () => {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={styles.topBar}>
         <TouchableOpacity
           style={styles.profileImageContainer}
@@ -419,7 +421,7 @@ const EditDetails = () => {
         >
           {uploadingImage ? (
             <View style={styles.uploadingOverlay}>
-              <ActivityIndicator size="small" color="#00bfff" />
+              <ActivityIndicator size="small" color={colors.primary} />
             </View>
           ) : (
             <>
@@ -427,18 +429,26 @@ const EditDetails = () => {
                 source={profileImage ? { uri: profileImage } : profileIcon}
                 style={styles.profileImage}
               />
-              <View style={styles.editIconOverlay}>
-                <Ionicons name="camera" size={14} color="#fff" />
+              <View
+                style={[
+                  styles.editIconOverlay,
+                  { backgroundColor: colors.primary, borderColor: colors.background },
+                ]}
+              >
+                <Ionicons name="camera" size={14} color={colors.textOnPrimary} />
               </View>
             </>
           )}
         </TouchableOpacity>
-        <Text style={styles.title}>Edit Details</Text>
+        <Text style={[styles.title, { color: colors.navText }]}>Edit Details</Text>
         <Text
           onPress={() => {
             router.back();
           }}
-          style={styles.closeIcon}
+          style={[
+            styles.closeIcon,
+            { borderColor: colors.border, backgroundColor: colors.card, color: colors.primary },
+          ]}
         >
           X
         </Text>
@@ -449,54 +459,69 @@ const EditDetails = () => {
         showsVerticalScrollIndicator={Platform.OS !== 'web'}
         keyboardShouldPersistTaps="handled"
       >
-        <Text style={styles.subtitle}>Personal Info</Text>
+        <Text style={[styles.subtitle, { color: colors.text }]}>Personal Info</Text>
         <View style={styles.emailRow}>
           <TextInput
-            style={[styles.input, styles.emailInput]}
+            style={[
+              styles.input,
+              styles.emailInput,
+              { borderColor: colors.border, backgroundColor: colors.surface },
+            ]}
             placeholder="email"
-            placeholderTextColor={'#999'}
+            placeholderTextColor={colors.placeholder}
             value={formData.email}
             editable={false}
             selectTextOnFocus={false}
           />
           <TouchableOpacity style={styles.infoButton} onPress={() => setShowEmailInfo(true)}>
-            <Ionicons name="information-circle-outline" size={24} color="#666" />
+            <Ionicons name="information-circle-outline" size={24} color={colors.iconMuted} />
           </TouchableOpacity>
         </View>
 
         <View style={styles.row}>
           <TextInput
-            style={[styles.input, styles.halfInput]}
+            style={[
+              styles.input,
+              styles.halfInput,
+              { borderColor: colors.border, backgroundColor: colors.inputBackground },
+            ]}
             placeholder="first name"
-            placeholderTextColor={'#999'}
+            placeholderTextColor={colors.placeholder}
             value={formData.firstName}
             onChangeText={(text) => handleChange('firstName', text)}
           />
           <TextInput
-            style={[styles.input, styles.halfInput]}
+            style={[
+              styles.input,
+              styles.halfInput,
+              { borderColor: colors.border, backgroundColor: colors.inputBackground },
+            ]}
             placeholder="last name"
-            placeholderTextColor={'#999'}
+            placeholderTextColor={colors.placeholder}
             value={formData.lastName}
             onChangeText={(text) => handleChange('lastName', text)}
           />
         </View>
 
         <TextInput
-          style={styles.input}
+          style={[
+            styles.input,
+            { borderColor: colors.border, backgroundColor: colors.inputBackground },
+          ]}
           placeholder="phone number"
-          placeholderTextColor={'#999'}
+          placeholderTextColor={colors.placeholder}
           keyboardType="phone-pad"
           value={formData.phone}
           onChangeText={(text) => handleChange('phone', text)}
         />
 
         {/* Location Section */}
-        <Text style={styles.subtitle}>Location</Text>
+        <Text style={[styles.subtitle, { color: colors.text }]}>Location</Text>
         <View style={styles.googlePlacesWrapper}>
           <GooglePlacesAutocomplete
             placeholder="Enter your address"
             textInputProps={{
-              placeholderTextColor: '#999',
+              placeholderTextColor: colors.placeholder,
               returnKeyType: 'search',
               defaultValue: formData.location.address,
             }}
@@ -506,7 +531,10 @@ const EditDetails = () => {
               language: 'en',
             }}
             styles={{
-              textInput: styles.googlePlacesInput,
+              textInput: [
+                styles.googlePlacesInput,
+                { borderColor: colors.border, backgroundColor: colors.inputBackground },
+              ],
               container: {
                 ...styles.googlePlacesContainer,
                 zIndex: 9999,
@@ -531,12 +559,14 @@ const EditDetails = () => {
 
         {/* Display selected location details */}
         {locationSelected && formData.location.address ? (
-          <View style={styles.locationDetailsContainer}>
-            <Text style={styles.locationDetail}>{formData.location.address}</Text>
+          <View style={[styles.locationDetailsContainer, { backgroundColor: colors.primary }]}>
+            <Text style={[styles.locationDetail, { color: colors.textOnPrimary }]}>
+              {formData.location.address}
+            </Text>
           </View>
         ) : formData.location.city || formData.location.state || formData.location.zip ? (
-          <View style={styles.locationDetailsContainer}>
-            <Text style={styles.locationDetail}>
+          <View style={[styles.locationDetailsContainer, { backgroundColor: colors.primary }]}>
+            <Text style={[styles.locationDetail, { color: colors.textOnPrimary }]}>
               {formData.location.city}
               {formData.location.city && formData.location.state ? ', ' : ''}
               {formData.location.state} {formData.location.zip}
@@ -544,12 +574,15 @@ const EditDetails = () => {
           </View>
         ) : null}
 
-        <Text style={styles.subtitle}>Login Info</Text>
+        <Text style={[styles.subtitle, { color: colors.text }]}>Login Info</Text>
 
         <TextInput
-          style={styles.input}
+          style={[
+            styles.input,
+            { borderColor: colors.border, backgroundColor: colors.inputBackground },
+          ]}
           placeholder="username"
-          placeholderTextColor={'#999'}
+          placeholderTextColor={colors.placeholder}
           value={formData.username}
           autoCapitalize="none"
           onChangeText={(text) => {
@@ -558,9 +591,9 @@ const EditDetails = () => {
           }}
         />
         {usernameError ? (
-          <Text style={styles.errorText}>{usernameError}</Text>
+          <Text style={[styles.errorText, { color: colors.error }]}>{usernameError}</Text>
         ) : (
-          <Text style={styles.helperText}>
+          <Text style={[styles.helperText, { color: colors.textMuted }]}>
             Must be at least 6 characters with no special characters.
           </Text>
         )}
@@ -578,21 +611,24 @@ const EditDetails = () => {
           activeOpacity={1}
           onPress={() => setShowEmailInfo(false)}
         >
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>ℹ️ About Email</Text>
-            <Text style={styles.modalText}>
+          <View style={[styles.modalContent, { backgroundColor: colors.card }]}>
+            <Text style={[styles.modalTitle, { color: colors.info }]}>ℹ️ About Email</Text>
+            <Text style={[styles.modalText, { color: colors.text }]}>
               Your email address is used as your login credential and is linked to your account's
               authentication.
             </Text>
-            <Text style={styles.modalText}>
+            <Text style={[styles.modalText, { color: colors.text }]}>
               For security reasons, changing your email requires identity verification. Please
               contact our support team if you need to update it.
             </Text>
             <TouchableOpacity
-              style={[styles.modalButton, styles.modalButtonConfirm, { marginTop: 8, flex: 0 }]}
+              style={[
+                styles.modalButton,
+                { marginTop: 8, flex: 0, backgroundColor: colors.primary },
+              ]}
               onPress={() => setShowEmailInfo(false)}
             >
-              <Text style={[styles.modalButtonText, styles.modalButtonTextConfirm]}>Got it</Text>
+              <Text style={[styles.modalButtonText, { color: colors.textOnPrimary }]}>Got it</Text>
             </TouchableOpacity>
           </View>
         </TouchableOpacity>
@@ -606,26 +642,28 @@ const EditDetails = () => {
         onRequestClose={() => setShowLocationWarning(false)}
       >
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>⚠️ Location Change</Text>
-            <Text style={styles.modalText}>
+          <View style={[styles.modalContent, { backgroundColor: colors.card }]}>
+            <Text style={[styles.modalTitle, { color: colors.warning }]}>⚠️ Location Change</Text>
+            <Text style={[styles.modalText, { color: colors.text }]}>
               Changing your location will update the market location for all of your existing shops
               and items. They will appear in the new market area ({formData.location.zip}) instead
               of the current one ({originalZip.current}).
             </Text>
-            <Text style={styles.modalText}>Are you sure you want to continue?</Text>
+            <Text style={[styles.modalText, { color: colors.text }]}>
+              Are you sure you want to continue?
+            </Text>
             <View style={styles.modalButtons}>
               <TouchableOpacity
-                style={[styles.modalButton, styles.modalButtonCancel]}
+                style={[styles.modalButton, { backgroundColor: colors.surface }]}
                 onPress={() => setShowLocationWarning(false)}
               >
-                <Text style={styles.modalButtonText}>Cancel</Text>
+                <Text style={[styles.modalButtonText, { color: colors.textMuted }]}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.modalButton, styles.modalButtonConfirm]}
+                style={[styles.modalButton, { backgroundColor: colors.warning }]}
                 onPress={handleSave}
               >
-                <Text style={[styles.modalButtonText, styles.modalButtonTextConfirm]}>
+                <Text style={[styles.modalButtonText, { color: colors.textOnPrimary }]}>
                   Yes, Update
                 </Text>
               </TouchableOpacity>
@@ -635,14 +673,18 @@ const EditDetails = () => {
       </Modal>
       <View style={styles.buttonContainer}>
         <TouchableOpacity
-          style={[styles.saveButton, isLoading && styles.saveButtonDisabled]}
+          style={[
+            styles.saveButton,
+            { backgroundColor: colors.buttonPrimary },
+            isLoading && styles.saveButtonDisabled,
+          ]}
           onPress={handleSaveClick}
           disabled={isLoading}
         >
           {isLoading ? (
-            <ActivityIndicator color="white" size="small" />
+            <ActivityIndicator color={colors.textOnPrimary} size="small" />
           ) : (
-            <Text style={styles.saveButtonText}>Save</Text>
+            <Text style={[styles.saveButtonText, { color: colors.textOnPrimary }]}>Save</Text>
           )}
         </TouchableOpacity>
       </View>
@@ -653,7 +695,6 @@ const EditDetails = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#b7ffb0',
     paddingHorizontal: Platform.OS === 'web' ? '10%' : 20,
     paddingTop: Platform.OS === 'web' ? 40 : 60,
   },
@@ -678,14 +719,12 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: -2,
     right: -2,
-    backgroundColor: '#00bfff',
     borderRadius: 10,
     width: 20,
     height: 20,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,
-    borderColor: '#b7ffb0',
   },
   uploadingOverlay: {
     width: Platform.OS === 'web' ? 50 : 40,
@@ -700,16 +739,12 @@ const styles = StyleSheet.create({
     fontFamily: 'TitanOne',
     flex: 1,
     textAlign: 'center',
-    color: '#fff',
   },
   closeIcon: {
     fontSize: 15,
     padding: Platform.OS === 'web' ? 10 : 5,
     borderWidth: 1,
-    borderColor: '#000',
     borderRadius: 5,
-    backgroundColor: '#fff',
-    color: '#b7ffb0',
   },
   subtitle: {
     fontSize: 20,
@@ -721,12 +756,10 @@ const styles = StyleSheet.create({
   input: {
     height: Platform.OS === 'web' ? 45 : 50,
     borderWidth: 1,
-    borderColor: '#000',
     borderRadius: 8,
     paddingHorizontal: 15,
     marginBottom: 15,
     fontSize: 16,
-    backgroundColor: '#fff',
     width: '100%',
     ...Platform.select({
       web: {
@@ -752,8 +785,6 @@ const styles = StyleSheet.create({
   emailInput: {
     flex: 1,
     marginBottom: 0,
-    backgroundColor: '#f5f5f5',
-    color: '#666',
   },
   infoButton: {
     padding: 10,
@@ -770,25 +801,21 @@ const styles = StyleSheet.create({
     right: 0,
   },
   saveButton: {
-    backgroundColor: '#00bfff',
     width: '100%',
     padding: 10,
     paddingBottom: 33,
     alignItems: 'center',
   },
   saveButtonDisabled: {
-    backgroundColor: '#ccc',
     opacity: 0.7,
   },
   saveButtonText: {
     fontFamily: 'TextMeOne',
     fontSize: 30,
-    color: 'white',
   },
   helperText: {
     fontSize: 12,
     fontFamily: 'TextMeOne',
-    color: '#666',
     marginTop: -10,
     marginBottom: 15,
     paddingHorizontal: 5,
@@ -803,16 +830,13 @@ const styles = StyleSheet.create({
     zIndex: 9999,
   },
   googlePlacesInput: {
-    backgroundColor: '#fff',
     padding: 12,
     borderRadius: 8,
     fontSize: 16,
     height: 50,
     borderWidth: 1,
-    borderColor: '#000',
   },
   locationDetailsContainer: {
-    backgroundColor: '#00bfff',
     padding: 12,
     borderRadius: 8,
     marginBottom: 16,
@@ -820,13 +844,11 @@ const styles = StyleSheet.create({
   },
   locationDetail: {
     fontSize: 18,
-    color: '#fff',
     fontFamily: 'TextMeOne',
   },
   errorText: {
     fontSize: 12,
     fontFamily: 'TextMeOne',
-    color: '#ff3b30',
     marginTop: -10,
     marginBottom: 15,
     paddingHorizontal: 5,
@@ -839,7 +861,6 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   modalContent: {
-    backgroundColor: '#fff',
     borderRadius: 16,
     padding: 24,
     width: '100%',
@@ -860,14 +881,12 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 22,
     fontFamily: 'TitanOne',
-    color: '#ff9500',
     marginBottom: 16,
     textAlign: 'center',
   },
   modalText: {
     fontSize: 16,
     fontFamily: 'TextMeOne',
-    color: '#333',
     marginBottom: 12,
     lineHeight: 22,
   },
@@ -883,19 +902,9 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: 'center',
   },
-  modalButtonCancel: {
-    backgroundColor: '#f0f0f0',
-  },
-  modalButtonConfirm: {
-    backgroundColor: '#ff9500',
-  },
   modalButtonText: {
     fontSize: 16,
     fontFamily: 'TextMeOne',
-    color: '#666',
-  },
-  modalButtonTextConfirm: {
-    color: '#fff',
   },
 });
 

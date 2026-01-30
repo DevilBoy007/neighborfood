@@ -4,6 +4,7 @@ import { useRouter, usePathname } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useCart } from '@/store/reduxHooks';
 import { SoundTouchableOpacity } from '@/components/SoundTouchableOpacity';
+import { useAppColors } from '@/hooks/useAppColors';
 
 interface CartFABProps {
   bottom?: number;
@@ -13,6 +14,7 @@ const CartFAB: React.FC<CartFABProps> = ({ bottom = 20 }) => {
   const router = useRouter();
   const pathname = usePathname();
   const { getItemCount } = useCart();
+  const colors = useAppColors();
 
   const itemCount = getItemCount();
 
@@ -32,12 +34,12 @@ const CartFAB: React.FC<CartFABProps> = ({ bottom = 20 }) => {
       activeOpacity={0.8}
       soundType="tap"
     >
-      <View style={styles.fab}>
-        <Ionicons name="cart" size={24} color="#FFFFFF" />
-        <Text style={styles.fabText}>View Cart</Text>
+      <View style={[styles.fab, { backgroundColor: colors.buttonPrimary }]}>
+        <Ionicons name="cart" size={24} color={colors.textOnPrimary} />
+        <Text style={[styles.fabText, { color: colors.textOnPrimary }]}>View Cart</Text>
       </View>
-      <View style={styles.badge}>
-        <Text style={styles.badgeText}>{itemCount}</Text>
+      <View style={[styles.badge, { backgroundColor: colors.accent, borderColor: colors.surface }]}>
+        <Text style={[styles.badgeText, { color: colors.text }]}>{itemCount}</Text>
       </View>
     </SoundTouchableOpacity>
   );
@@ -63,7 +65,6 @@ const styles = StyleSheet.create({
     }),
   },
   fab: {
-    backgroundColor: '#00bfff',
     borderRadius: 30,
     flexDirection: 'row',
     alignItems: 'center',
@@ -71,7 +72,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   fabText: {
-    color: '#FFFFFF',
     fontWeight: 'bold',
     fontSize: 16,
     marginLeft: 8,
@@ -80,17 +80,14 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: -8,
     right: -8,
-    backgroundColor: '#FFD166',
     borderRadius: 12,
     minWidth: 24,
     height: 24,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 2,
-    borderColor: '#FFFFFF',
   },
   badgeText: {
-    color: '#333333',
     fontSize: 12,
     fontWeight: 'bold',
     textAlign: 'center',
