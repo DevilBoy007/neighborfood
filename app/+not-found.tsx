@@ -1,21 +1,30 @@
 import { StyleSheet, Text, View, Pressable, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useAppColors } from '@/hooks/useAppColors';
+
 const SplashScreen = () => {
   const router = useRouter();
+  const colors = useAppColors();
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={styles.textContainer}>
-        <Text style={styles.title}>...oops</Text>
-        <Text style={styles.subtitle}>we couldn&apos;t find what you were looking for </Text>
+        <Text style={[styles.title, { color: colors.textOnPrimary }]}>...oops</Text>
+        <Text style={[styles.subtitle, { color: colors.text }]}>
+          we couldn&apos;t find what you were looking for
+        </Text>
       </View>
 
       <View style={styles.buttonContainer}>
         <Pressable
-          style={({ pressed }) => [styles.button, pressed && styles.buttonOpacity]}
+          style={({ pressed }) => [
+            styles.button,
+            { backgroundColor: colors.buttonPrimary },
+            pressed && styles.buttonOpacity,
+          ]}
           onPress={() => router.back()}
         >
-          <Text style={styles.buttonText}>back to safety</Text>
+          <Text style={[styles.buttonText, { color: colors.textOnPrimary }]}>back to safety</Text>
         </Pressable>
       </View>
     </View>
@@ -25,7 +34,6 @@ const SplashScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#B7FFB0',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingVertical: 40,
@@ -47,7 +55,6 @@ const styles = StyleSheet.create({
     fontSize: 36,
     fontWeight: 'bold',
     fontFamily: 'TitanOne',
-    color: '#fff',
     marginTop: 100,
     ...Platform.select({
       web: {
@@ -68,7 +75,6 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   button: {
-    backgroundColor: '#00bfff',
     padding: 15,
     borderRadius: 5,
     marginHorizontal: 5,
@@ -76,7 +82,6 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
   buttonText: {
-    color: 'white',
     fontSize: 21,
     fontWeight: 'bold',
     textAlign: 'center',

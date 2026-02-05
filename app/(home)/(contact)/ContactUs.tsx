@@ -12,10 +12,12 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { ScrollView } from 'react-native-gesture-handler';
+import { useAppColors } from '@/hooks/useAppColors';
 
 const ContactScreen = () => {
   const router = useRouter();
-  const [selectedOption, setSelectedOption] = useState(null);
+  const colors = useAppColors();
+  const [selectedOption, setSelectedOption] = useState<string | null>(null);
   const [message, setMessage] = useState('');
 
   const options = ['feedback', 'question', 'other'];
@@ -29,7 +31,7 @@ const ContactScreen = () => {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={styles.header}>
         <TouchableOpacity
           style={styles.backButton}
@@ -37,12 +39,14 @@ const ContactScreen = () => {
             router.back();
           }}
         >
-          <Ionicons name="chevron-back" color="#000" size={24} />
+          <Ionicons name="chevron-back" color={colors.icon} size={24} />
         </TouchableOpacity>
-        <Text style={styles.headerText}>Contact Us</Text>
+        <Text style={[styles.headerText, { color: colors.navText }]}>Contact Us</Text>
       </View>
       <View style={{ paddingHorizontal: 16, paddingBottom: 0 }}>
-        <Text style={styles.title}>what&apos;s on your mind?</Text>
+        <Text style={[styles.title, { color: colors.text, borderBottomColor: colors.border }]}>
+          what&apos;s on your mind?
+        </Text>
       </View>
       <KeyboardAvoidingView
         style={{ flex: 1 }}
@@ -58,19 +62,34 @@ const ContactScreen = () => {
             {options.map((option) => (
               <TouchableOpacity
                 key={option}
-                style={[styles.optionButton, selectedOption === option && styles.selectedOption]}
+                style={[
+                  styles.optionButton,
+                  { backgroundColor: colors.card },
+                  selectedOption === option && { backgroundColor: colors.primary },
+                ]}
                 onPress={() => setSelectedOption(option)}
               >
-                <Text style={styles.optionText}>{option}</Text>
+                <Text
+                  style={[
+                    styles.optionText,
+                    { color: colors.text },
+                    selectedOption === option && { color: colors.buttonText },
+                  ]}
+                >
+                  {option}
+                </Text>
               </TouchableOpacity>
             ))}
 
             {selectedOption && (
               <TextInput
-                style={styles.textInput}
+                style={[
+                  styles.textInput,
+                  { backgroundColor: colors.inputBackground, color: colors.text },
+                ]}
                 multiline
                 placeholder="Type your message here..."
-                placeholderTextColor={'#999'}
+                placeholderTextColor={colors.placeholder}
                 value={message}
                 onChangeText={setMessage}
                 blurOnSubmit={false}
@@ -82,11 +101,15 @@ const ContactScreen = () => {
       </KeyboardAvoidingView>
 
       <TouchableOpacity
-        style={[styles.submitButton, (!selectedOption || !message) && styles.submitButtonDisabled]}
+        style={[
+          styles.submitButton,
+          { backgroundColor: colors.buttonPrimaryAlternate },
+          (!selectedOption || !message) && { backgroundColor: colors.buttonDisabled },
+        ]}
         disabled={!selectedOption || !message}
         onPress={handleSubmit}
       >
-        <Text style={styles.submitButtonText}>Submit</Text>
+        <Text style={[styles.submitButtonText, { color: colors.buttonText }]}>Submit</Text>
       </TouchableOpacity>
     </SafeAreaView>
   );
@@ -95,7 +118,6 @@ const ContactScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#b7ffb0',
     paddingTop: 50,
   },
   header: {
@@ -116,7 +138,6 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     marginLeft: 16,
     fontFamily: 'TitanOne',
-    color: '#fff',
   },
   content: {
     flex: 1,
@@ -126,35 +147,28 @@ const styles = StyleSheet.create({
     fontSize: 24,
     marginBottom: 1,
     borderBottomWidth: 1,
-    borderBottomColor: '#000',
     paddingBottom: 8,
     fontFamily: 'TextMeOne',
     fontWeight: 'bold',
   },
   optionButton: {
-    backgroundColor: '#fff',
     padding: 16,
     borderRadius: 8,
     marginBottom: 12,
   },
-  selectedOption: {
-    backgroundColor: '#00bfff',
-  },
   optionText: {
-    fontSize: Platform.OS === 'web' ? 21 : 18,
+    fontSize: 25,
     textAlign: 'center',
     fontFamily: 'TextMeOne',
   },
   textInput: {
-    backgroundColor: '#fff',
     borderRadius: 8,
     padding: 16,
-    height: 150,
+    height: 225,
     marginTop: 24,
     textAlignVertical: 'top',
   },
   submitButton: {
-    backgroundColor: '#87CEFA',
     padding: 20,
     alignItems: 'center',
     ...Platform.select({
@@ -163,12 +177,8 @@ const styles = StyleSheet.create({
       },
     }),
   },
-  submitButtonDisabled: {
-    backgroundColor: '#ddd',
-  },
   submitButtonText: {
-    color: '#fff',
-    fontSize: Platform.OS === 'web' ? 30 : 25,
+    fontSize: 30,
     fontWeight: '500',
     fontFamily: 'TitanOne',
   },

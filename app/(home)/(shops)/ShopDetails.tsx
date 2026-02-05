@@ -18,11 +18,13 @@ import ItemCard from '@/components/ItemCard';
 import firebaseService from '@/handlers/firebaseService';
 
 import { useLocation, useUser, useShop, ItemData } from '@/store/reduxHooks';
+import { useAppColors } from '@/hooks/useAppColors';
 
 export default function ShopDetails() {
   const { selectedShop, setSelectedShop } = useShop();
   const { userData } = useUser();
   const { locationData, formatDistance } = useLocation();
+  const colors = useAppColors();
   const [items, setItems] = useState<ItemData[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [uploading, setUploading] = useState<boolean>(false);
@@ -213,10 +215,13 @@ export default function ShopDetails() {
 
   if (!selectedShop) {
     return (
-      <View style={styles.container}>
-        <Text style={styles.errorText}>Shop not found</Text>
-        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-          <Text style={styles.buttonText}>Go Back</Text>
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <Text style={[styles.errorText, { color: colors.textMuted }]}>Shop not found</Text>
+        <TouchableOpacity
+          style={[styles.backButton, { backgroundColor: colors.primary }]}
+          onPress={() => router.back()}
+        >
+          <Text style={[styles.buttonText, { color: colors.textOnPrimary }]}>Go Back</Text>
         </TouchableOpacity>
       </View>
     );
@@ -228,7 +233,7 @@ export default function ShopDetails() {
         source={{
           uri:
             selectedShop.backgroundImageUrl === ''
-              ? `https://placehold.co/${Platform.OS === 'web' ? 800 : 600}x400/00bfff/fff.png`
+              ? `https://placehold.co/${Platform.OS === 'web' ? 800 : 600}x400/${colors.primary.replace('#', '')}/${colors.textOnPrimary.replace('#', '')}.png`
               : selectedShop.backgroundImageUrl,
         }}
         style={styles.headerImage}
@@ -246,11 +251,21 @@ export default function ShopDetails() {
         <TouchableOpacity style={styles.uploadImageButton} onPress={pickImage} disabled={uploading}>
           {uploading ? (
             <View style={styles.uploadingContainer}>
-              <ActivityIndicator size="small" color="#fff" />
-              <Text style={styles.uploadingText}>{Math.round(uploadProgress)}%</Text>
+              <ActivityIndicator size="small" color={colors.textOnPrimary} />
+              <Text style={[styles.uploadingText, { color: colors.textOnPrimary }]}>
+                {Math.round(uploadProgress)}%
+              </Text>
             </View>
           ) : (
-            <Ionicons name="image-outline" size={24} color="#fff" />
+            <Ionicons
+              name="image-outline"
+              size={24}
+              color={
+                colors.buttonText == '#451A03'
+                  ? '#ffffff'
+                  : colors.buttonText /* special case for fall theme */
+              }
+            />
           )}
         </TouchableOpacity>
       )}
@@ -262,19 +277,19 @@ export default function ShopDetails() {
       {/* Sticky back button for mobile */}
       {Platform.OS !== 'web' && (
         <TouchableOpacity
-          style={styles.stickyBackButton}
+          style={[styles.stickyBackButton, { backgroundColor: colors.stickyBackButton }]}
           onPress={() => {
             setSelectedShop(null);
             router.back();
           }}
         >
-          <Ionicons name="chevron-back" size={24} color="black" />
+          <Ionicons name="chevron-back" size={24} color={colors.icon} />
         </TouchableOpacity>
       )}
 
       <ParallaxScrollView
         headerImage={<HeaderImage />}
-        headerBackgroundColor={{ light: '#b7ffb0', dark: '#b7ffb0' }}
+        headerBackgroundColor={{ light: colors.background, dark: colors.background }}
       >
         <View style={styles.headerContainer}>
           {/* Only show this back button on web */}
@@ -286,16 +301,17 @@ export default function ShopDetails() {
                 router.back();
               }}
             >
-              <Ionicons name="chevron-back" size={24} color="black" />
+              <Ionicons name="chevron-back" size={24} color={colors.icon} />
             </TouchableOpacity>
           )}
         </View>
 
-        <View style={styles.shopInfoContainer}>
+        <View style={[styles.shopInfoContainer, { backgroundColor: colors.background }]}>
           <View style={styles.shopHeaderRow}>
             <Text
               style={[
                 styles.shopName,
+                { color: colors.textOnPrimary },
                 selectedShop.name.length > 17 ? { fontSize: Platform.OS === 'web' ? 40 : 25 } : {},
               ]}
             >
@@ -311,14 +327,14 @@ export default function ShopDetails() {
                   })
                 }
               >
-                <Ionicons name="pencil" size={20} color="#555" />
+                <Ionicons name="pencil" size={20} color={colors.iconMuted} />
               </TouchableOpacity>
             )}
           </View>
 
           <View style={styles.ownerRow}>
-            <Ionicons name="person-outline" size={16} color="#555" />
-            <Text style={styles.ownerText}>
+            <Ionicons name="person-outline" size={16} color={colors.iconMuted} />
+            <Text style={[styles.ownerText, { color: colors.textOnPrimary }]}>
               {selectedShop.userId === userData?.uid
                 ? 'you'
                 : shopOwner
@@ -326,32 +342,38 @@ export default function ShopDetails() {
                   : 'Loading...'}
             </Text>
           </View>
-          <Text style={styles.shopDescription}>{selectedShop.description}</Text>
+          <Text style={[styles.shopDescription, { color: colors.text }]}>
+            {selectedShop.description}
+          </Text>
           <View>
             {selectedShop.type && (
               <View style={styles.infoRow}>
                 <View style={styles.iconContainer}>
-                  <Ionicons name="briefcase-outline" size={18} color="#555" />
+                  <Ionicons name="briefcase-outline" size={18} color={colors.iconMuted} />
                 </View>
-                <Text style={styles.infoText}>{selectedShop.type}</Text>
+                <Text style={[styles.infoText, { color: colors.textOnPrimary }]}>
+                  {selectedShop.type}
+                </Text>
               </View>
             )}
 
             {selectedShop.days && selectedShop.days.length > 0 && (
               <View style={styles.infoRow}>
                 <View style={styles.iconContainer}>
-                  <Ionicons name="calendar-outline" size={18} color="#555" />
+                  <Ionicons name="calendar-outline" size={18} color={colors.iconMuted} />
                 </View>
-                <Text style={styles.infoText}>Available: {selectedShop.days.join(', ')}</Text>
+                <Text style={[styles.infoText, { color: colors.textOnPrimary }]}>
+                  Available: {selectedShop.days.join(', ')}
+                </Text>
               </View>
             )}
 
             {selectedShop.seasons && selectedShop.seasons.length > 0 && (
               <View style={styles.infoRow}>
                 <View style={styles.iconContainer}>
-                  <Ionicons name="flower-outline" size={18} color="#555" />
+                  <Ionicons name="flower-outline" size={18} color={colors.iconMuted} />
                 </View>
-                <Text style={styles.infoText}>
+                <Text style={[styles.infoText, { color: colors.textOnPrimary }]}>
                   Seasons:{' '}
                   {selectedShop.seasons.map((season, index) => (
                     <Text key={season}>
@@ -366,9 +388,8 @@ export default function ShopDetails() {
                                 : 'snow-outline'
                         }
                         size={14}
-                        color="#555"
-                      />
-                      {index < selectedShop.seasons.length - 1 ? ', ' : ''}
+                        color={colors.iconMuted}
+                      />{' '}
                     </Text>
                   ))}
                 </Text>
@@ -378,18 +399,18 @@ export default function ShopDetails() {
             {selectedShop.openTime && selectedShop.closeTime && (
               <View style={styles.infoRow}>
                 <View style={styles.iconContainer}>
-                  <Ionicons name="time-outline" size={18} color="#555" />
+                  <Ionicons name="time-outline" size={18} color={colors.iconMuted} />
                 </View>
-                <Text style={styles.infoText}>
+                <Text style={[styles.infoText, { color: colors.textOnPrimary }]}>
                   Hours: {selectedShop.openTime} - {selectedShop.closeTime}
                 </Text>
               </View>
             )}
             <View style={styles.infoRow}>
               <View style={styles.iconContainer}>
-                <Ionicons name="location-outline" size={18} color="#555" />
+                <Ionicons name="location-outline" size={18} color={colors.iconMuted} />
               </View>
-              <Text style={styles.infoText}>
+              <Text style={[styles.infoText, { color: colors.textOnPrimary }]}>
                 {locationData.coords && selectedShop.location
                   ? formatDistance(
                       calculateDistance(
@@ -406,24 +427,28 @@ export default function ShopDetails() {
 
           <View style={styles.deliveryInfoContainer}>
             {selectedShop.allowPickup && (
-              <View style={styles.deliveryOption}>
-                <Ionicons name="bag-handle-outline" size={18} color="#fff" />
-                <Text style={styles.deliveryText}>Pickup available</Text>
+              <View style={[styles.deliveryOption, { backgroundColor: colors.primary }]}>
+                <Ionicons name="bag-handle-outline" size={18} color={colors.buttonText} />
+                <Text style={[styles.deliveryText, { color: colors.buttonText }]}>
+                  Pickup available
+                </Text>
               </View>
             )}
             {selectedShop.localDelivery && (
-              <View style={styles.deliveryOption}>
-                <Ionicons name="bicycle-outline" size={18} color="#fff" />
-                <Text style={styles.deliveryText}>Local delivery</Text>
+              <View style={[styles.deliveryOption, { backgroundColor: colors.text }]}>
+                <Ionicons name="bicycle-outline" size={18} color={colors.buttonText} />
+                <Text style={[styles.deliveryText, { color: colors.buttonText }]}>
+                  Local delivery
+                </Text>
               </View>
             )}
           </View>
         </View>
 
         <View style={styles.itemsContainer}>
-          <Text style={styles.sectionTitle}>Items</Text>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Items</Text>
           {loading ? (
-            <ActivityIndicator size="large" color="#00bfff" />
+            <ActivityIndicator size="large" color={colors.primary} />
           ) : items.length > 0 ? (
             items.map((item) => (
               <ItemCard
@@ -443,11 +468,13 @@ export default function ShopDetails() {
               />
             ))
           ) : (
-            <Text style={styles.noItemsText}>No items available</Text>
+            <Text style={[styles.noItemsText, { color: colors.textMuted }]}>
+              No items available
+            </Text>
           )}
           {selectedShop.userId === userData?.uid && (
             <TouchableOpacity
-              style={styles.addItemsButton}
+              style={[styles.addItemsButton, { backgroundColor: colors.buttonPrimary }]}
               onPress={() =>
                 router.push({
                   pathname: '/AddItem',
@@ -458,10 +485,12 @@ export default function ShopDetails() {
               <Ionicons
                 name="add-circle-outline"
                 size={24}
-                color="#fff"
+                color={colors.buttonText}
                 style={styles.buttonIcon}
               />
-              <Text style={styles.addItemsButtonText}>Add Items</Text>
+              <Text style={[styles.addItemsButtonText, { color: colors.buttonText }]}>
+                Add Items
+              </Text>
             </TouchableOpacity>
           )}
         </View>
@@ -475,7 +504,6 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#b7ffb0',
   },
   headerImageContainer: {
     width: '100%',
@@ -508,7 +536,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   uploadingText: {
-    color: '#fff',
     marginTop: 4,
     fontSize: 12,
   },
@@ -530,7 +557,6 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 110,
     left: 30,
-    backgroundColor: 'rgba(255, 255, 255, 0.7)',
     borderRadius: 20,
     padding: 3,
     zIndex: 100,
@@ -542,7 +568,6 @@ const styles = StyleSheet.create({
   },
   shopInfoContainer: {
     marginBottom: 20,
-    backgroundColor: '#b7ffb0',
     alignItems: 'center',
   },
   shopHeaderRow: {
@@ -559,7 +584,6 @@ const styles = StyleSheet.create({
   },
   ownerText: {
     fontSize: 14,
-    color: '#555',
     fontFamily: 'TextMeOne',
     marginLeft: 4,
   },
@@ -568,7 +592,6 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginBottom: 8,
     fontFamily: 'TitanOne',
-    color: '#fff',
   },
   editShopIconButton: {
     backgroundColor: 'rgba(255, 255, 255, 0.7)',
@@ -578,7 +601,6 @@ const styles = StyleSheet.create({
   },
   shopDescription: {
     fontSize: 16,
-    color: '#333',
     marginBottom: 16,
     fontFamily: 'TextMeOne',
   },
@@ -596,7 +618,6 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   infoText: {
-    color: '#555',
     fontFamily: 'TextMeOne',
     flex: 1,
   },
@@ -608,7 +629,6 @@ const styles = StyleSheet.create({
   deliveryOption: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#000',
     borderRadius: 16,
     paddingVertical: 6,
     paddingHorizontal: 10,
@@ -618,7 +638,6 @@ const styles = StyleSheet.create({
   deliveryText: {
     marginLeft: 6,
     fontFamily: 'TextMeOne',
-    color: 'white',
   },
   itemsContainer: {
     marginTop: 16,
@@ -631,33 +650,28 @@ const styles = StyleSheet.create({
     fontFamily: 'TitanOne',
   },
   backButton: {
-    backgroundColor: '#00bfff',
     padding: 12,
     borderRadius: 8,
     marginTop: 20,
   },
   buttonText: {
-    color: 'white',
     fontWeight: 'bold',
     textAlign: 'center',
     fontSize: 16,
   },
   errorText: {
     fontSize: 18,
-    color: '#555',
     marginBottom: 20,
     fontFamily: 'TextMeOne',
   },
   noItemsText: {
     fontSize: 16,
-    color: '#555',
     fontStyle: 'italic',
     textAlign: 'center',
     padding: 20,
     fontFamily: 'TextMeOne',
   },
   addItemsButton: {
-    backgroundColor: '#00bfff',
     padding: 16,
     borderRadius: 8,
     marginTop: 16,
@@ -667,7 +681,6 @@ const styles = StyleSheet.create({
   },
   addItemsButtonText: {
     fontSize: Platform.OS === 'web' ? 30 : 24,
-    color: '#fff',
     fontFamily: 'TextMeOne',
   },
   buttonIcon: {

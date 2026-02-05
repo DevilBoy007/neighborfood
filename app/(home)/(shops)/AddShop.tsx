@@ -18,6 +18,7 @@ import Toast from 'react-native-toast-message';
 
 import firebaseService from '@/handlers/firebaseService';
 import { useUser, useShop } from '@/store/reduxHooks';
+import { useAppColors } from '@/hooks/useAppColors';
 
 const weekDays =
   Platform.OS === 'web'
@@ -51,6 +52,7 @@ export default function ShopRegistrationScreen() {
   const { selectedShop, setSelectedShop } = useShop();
   const { shopId } = useLocalSearchParams();
   const { userData } = useUser();
+  const colors = useAppColors();
   const [name, setName] = useState<string>('');
   const [description, setDescription] = useState<string>('');
   const [type, setType] = useState<string>('');
@@ -274,12 +276,12 @@ export default function ShopRegistrationScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={[styles.header, { borderBottomColor: colors.border }]}>
         <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-          <Ionicons name="chevron-back" size={24} color="black" />
+          <Ionicons name="chevron-back" size={24} color={colors.icon} />
         </TouchableOpacity>
-        <Text style={styles.sectionTitle}>Manage Shops</Text>
+        <Text style={[styles.sectionTitle, { color: colors.navText }]}>Manage Shops</Text>
       </View>
       <KeyboardAvoidingView
         style={{ flex: 1 }}
@@ -287,18 +289,22 @@ export default function ShopRegistrationScreen() {
         keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 20}
       >
         <ScrollView
-          style={styles.container}
+          style={[styles.container, { backgroundColor: colors.background }]}
           contentContainerStyle={{ paddingBottom: Platform.OS === 'ios' ? 50 : 50 }}
           keyboardDismissMode="on-drag"
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.formContainer}>
-            <Text style={styles.sectionTitle}>Shop Info</Text>
+            <Text style={[styles.sectionTitle, { color: colors.navText }]}>Shop Info</Text>
             <TextInput
-              style={[styles.input, errors.name ? styles.inputError : null]}
+              style={[
+                styles.input,
+                { backgroundColor: colors.inputBackground },
+                errors.name ? styles.inputError : null,
+              ]}
               placeholder="shop name"
-              placeholderTextColor={'#999'}
+              placeholderTextColor={colors.placeholder}
               value={name}
               onChangeText={(text) => {
                 setName(text);
@@ -308,9 +314,14 @@ export default function ShopRegistrationScreen() {
             {errors.name ? <Text style={styles.errorText}>{errors.name}</Text> : null}
 
             <TextInput
-              style={[styles.input, styles.textArea, errors.description ? styles.inputError : null]}
+              style={[
+                styles.input,
+                styles.textArea,
+                { backgroundColor: colors.inputBackground },
+                errors.description ? styles.inputError : null,
+              ]}
               placeholder="description"
-              placeholderTextColor={'#999'}
+              placeholderTextColor={colors.placeholder}
               multiline
               minHeight={Platform.OS === 'ios' ? 80 : null}
               value={description}
@@ -321,12 +332,14 @@ export default function ShopRegistrationScreen() {
             />
             {errors.description ? <Text style={styles.errorText}>{errors.description}</Text> : null}
 
-            <Text style={styles.sectionTitle}>Market Info</Text>
+            <Text style={[styles.sectionTitle, { color: colors.navText }]}>Market Info</Text>
             {Platform.OS === 'web' ? (
               <>
                 <select
                   style={{
                     ...styles.webSelect,
+                    backgroundColor: colors.inputBackground,
+                    borderColor: colors.border,
                     ...(errors.type ? styles.webSelectError : {}),
                   }}
                   value={type}
@@ -356,31 +369,35 @@ export default function ShopRegistrationScreen() {
                       setType(value);
                       if (value) setErrors({ ...errors, type: '' });
                     }}
-                    style={styles.picker}
+                    style={[styles.picker, { backgroundColor: colors.inputBackground }]}
                     itemStyle={{ height: 150, fontFamily: 'TextMeOne' }}
                   >
-                    <Picker.Item color="#00bfff" label="type" value="" />
-                    <Picker.Item color="black" label="General" value="general" />
-                    <Picker.Item color="black" label="Produce" value="produce" />
-                    <Picker.Item color="black" label="Farm" value="farm" />
-                    <Picker.Item color="black" label="Grainery" value="grainery" />
-                    <Picker.Item color="black" label="Butchery" value="butchery" />
-                    <Picker.Item color="black" label="Spices" value="spices" />
-                    <Picker.Item color="black" label="Bakery" value="bakery" />
-                    <Picker.Item color="black" label="Homemade Goods" value="homemade" />
+                    <Picker.Item color={colors.primary} label="type" value="" />
+                    <Picker.Item color={colors.text} label="General" value="general" />
+                    <Picker.Item color={colors.text} label="Produce" value="produce" />
+                    <Picker.Item color={colors.text} label="Farm" value="farm" />
+                    <Picker.Item color={colors.text} label="Grainery" value="grainery" />
+                    <Picker.Item color={colors.text} label="Butchery" value="butchery" />
+                    <Picker.Item color={colors.text} label="Spices" value="spices" />
+                    <Picker.Item color={colors.text} label="Bakery" value="bakery" />
+                    <Picker.Item color={colors.text} label="Homemade Goods" value="homemade" />
                   </Picker>
                 </View>
                 {errors.type ? <Text style={styles.errorText}>{errors.type}</Text> : null}
               </>
             )}
 
-            <Text style={styles.sectionTitle}>Availability</Text>
-            <Text style={styles.sectionSubtitle}>Days</Text>
+            <Text style={[styles.sectionTitle, { color: colors.navText }]}>Availability</Text>
+            <Text style={[styles.sectionSubtitle, { color: colors.text }]}>Days</Text>
             <View style={styles.daysContainer}>
               {weekDays.map((day) => (
                 <TouchableOpacity
                   key={day}
-                  style={[styles.dayButton, selectedDays.includes(day) && styles.selectedButton]}
+                  style={[
+                    styles.dayButton,
+                    { backgroundColor: colors.card },
+                    selectedDays.includes(day) && { backgroundColor: colors.primary },
+                  ]}
                   onPress={() => {
                     toggleDay(day);
                     if (selectedDays.length > 0 || day) setErrors({ ...errors, days: '' });
@@ -388,8 +405,8 @@ export default function ShopRegistrationScreen() {
                 >
                   <Text
                     style={[
-                      styles.dayButtonText,
-                      selectedDays.includes(day) && styles.selectedButtonText,
+                      { color: colors.text },
+                      selectedDays.includes(day) && { color: colors.buttonText },
                     ]}
                   >
                     {day}
@@ -399,26 +416,22 @@ export default function ShopRegistrationScreen() {
             </View>
             {errors.days ? <Text style={styles.errorText}>{errors.days}</Text> : null}
 
-            <Text style={styles.sectionSubtitle}>Seasons</Text>
+            <Text style={[styles.sectionSubtitle, { color: colors.text }]}>Seasons</Text>
             <View style={styles.seasonsContainer}>
               {seasons.map((season) => (
                 <TouchableOpacity
                   key={season}
                   style={[
                     styles.seasonButton,
-                    selectedSeasons.includes(season) && styles.selectedButton,
+                    { backgroundColor: colors.card },
+                    selectedSeasons.includes(season) && { backgroundColor: colors.primary },
                   ]}
                   onPress={() => {
                     toggleSeason(season);
                     if (selectedSeasons.length > 0 || season) setErrors({ ...errors, seasons: '' });
                   }}
                 >
-                  <Text
-                    style={[
-                      styles.seasonButtonText,
-                      selectedSeasons.includes(season) && styles.selectedButtonText,
-                    ]}
-                  >
+                  <Text>
                     <Ionicons
                       name={
                         season === 'spring'
@@ -431,7 +444,9 @@ export default function ShopRegistrationScreen() {
                       }
                       size={18}
                       style={
-                        selectedSeasons.includes(season) ? { color: '#fff' } : { color: '#333' }
+                        selectedSeasons.includes(season)
+                          ? { color: colors.buttonText }
+                          : { color: colors.text }
                       }
                     />
                   </Text>
@@ -440,33 +455,41 @@ export default function ShopRegistrationScreen() {
             </View>
             {errors.seasons ? <Text style={styles.errorText}>{errors.seasons}</Text> : null}
 
-            <Text style={styles.sectionSubtitle}>Hours</Text>
+            <Text style={[styles.sectionSubtitle, { color: colors.text }]}>Hours</Text>
             <View style={styles.hoursContainer}>
               <View style={styles.timeInput}>
                 <TextInput
-                  style={[styles.input, errors.hours ? styles.inputError : null]}
+                  style={[
+                    styles.input,
+                    { backgroundColor: colors.inputBackground },
+                    errors.hours ? styles.inputError : null,
+                  ]}
                   placeholder="09:00"
-                  placeholderTextColor={'#999'}
+                  placeholderTextColor={colors.placeholder}
                   value={openTime}
                   onChangeText={(text) => {
                     setOpenTime(text);
                     if (text.trim() || closeTime.trim()) setErrors({ ...errors, hours: '' });
                   }}
                 />
-                <Text style={styles.timeLabel}>(opening time)</Text>
+                <Text style={[styles.timeLabel, { color: colors.textMuted }]}>(opening time)</Text>
               </View>
               <View style={styles.timeInput}>
                 <TextInput
-                  style={[styles.input, errors.hours ? styles.inputError : null]}
+                  style={[
+                    styles.input,
+                    { backgroundColor: colors.inputBackground },
+                    errors.hours ? styles.inputError : null,
+                  ]}
                   placeholder="17:00"
-                  placeholderTextColor={'#999'}
+                  placeholderTextColor={colors.placeholder}
                   value={closeTime}
                   onChangeText={(text) => {
                     setCloseTime(text);
                     if (openTime.trim() || text.trim()) setErrors({ ...errors, hours: '' });
                   }}
                 />
-                <Text style={styles.timeLabel}>(closing time)</Text>
+                <Text style={[styles.timeLabel, { color: colors.textMuted }]}>(closing time)</Text>
               </View>
             </View>
             {errors.hours ? <Text style={styles.errorText}>{errors.hours}</Text> : null}
@@ -479,8 +502,14 @@ export default function ShopRegistrationScreen() {
                   if (!allowPickup || localDelivery) setErrors({ ...errors, delivery: '' });
                 }}
               >
-                <View style={[styles.checkboxBox, allowPickup && styles.checkboxChecked]} />
-                <Text style={styles.checkboxLabel}>allow pickup</Text>
+                <View
+                  style={[
+                    styles.checkboxBox,
+                    { borderColor: colors.border },
+                    allowPickup && { backgroundColor: colors.primary, borderColor: colors.primary },
+                  ]}
+                />
+                <Text style={[styles.checkboxLabel, { color: colors.text }]}>allow pickup</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -490,8 +519,17 @@ export default function ShopRegistrationScreen() {
                   if (allowPickup || !localDelivery) setErrors({ ...errors, delivery: '' });
                 }}
               >
-                <View style={[styles.checkboxBox, localDelivery && styles.checkboxChecked]} />
-                <Text style={styles.checkboxLabel}>local delivery</Text>
+                <View
+                  style={[
+                    styles.checkboxBox,
+                    { borderColor: colors.border },
+                    localDelivery && {
+                      backgroundColor: colors.primary,
+                      borderColor: colors.primary,
+                    },
+                  ]}
+                />
+                <Text style={[styles.checkboxLabel, { color: colors.text }]}>local delivery</Text>
               </TouchableOpacity>
               {errors.delivery ? <Text style={styles.errorText}>{errors.delivery}</Text> : null}
             </View>
@@ -499,8 +537,13 @@ export default function ShopRegistrationScreen() {
         </ScrollView>
       </KeyboardAvoidingView>
       <View style={[styles.buttonContainer, Platform.OS === 'ios' && styles.iosButtonContainer]}>
-        <TouchableOpacity style={styles.button} onPress={handleSubmit}>
-          <Text style={styles.buttonText}>{shopId ? 'Save' : 'Create'}</Text>
+        <TouchableOpacity
+          style={[styles.button, { backgroundColor: colors.buttonPrimaryAlternate }]}
+          onPress={handleSubmit}
+        >
+          <Text style={[styles.buttonText, { color: colors.buttonText }]}>
+            {shopId ? 'Save' : 'Create'}
+          </Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -529,7 +572,6 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-    backgroundColor: '#b7ffb0',
   },
   formContainer: {
     paddingHorizontal: 20,
@@ -543,7 +585,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     padding: 16,
-    borderBottomColor: '#000',
     borderBottomWidth: 1,
     ...Platform.select({
       ios: {
@@ -554,18 +595,15 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 24,
     marginVertical: 15,
-    color: '#fff',
     fontFamily: 'TitanOne',
   },
   sectionSubtitle: {
     fontSize: 18,
     marginVertical: 15,
-    color: 'black',
     fontFamily: 'TitanOne',
     textAlign: 'right',
   },
   input: {
-    backgroundColor: '#fff',
     padding: 15,
     borderRadius: 8,
     marginBottom: 15,
@@ -577,7 +615,6 @@ const styles = StyleSheet.create({
     textAlignVertical: 'top',
   },
   webSelect: {
-    backgroundColor: '#fff',
     height: 50,
     padding: 15,
     borderRadius: 3,
@@ -585,11 +622,8 @@ const styles = StyleSheet.create({
     fontSize: 16,
     width: '100%',
     borderWidth: 1,
-    borderColor: '#999',
   },
   picker: {
-    color: '#333',
-    backgroundColor: '#fff',
     marginBottom: 25,
   },
   daysContainer: {
@@ -598,7 +632,6 @@ const styles = StyleSheet.create({
     marginBottom: 15,
   },
   dayButton: {
-    backgroundColor: '#fff',
     padding: 10,
     borderRadius: 8,
     width: 40,
@@ -616,23 +649,10 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
   },
   seasonButton: {
-    backgroundColor: '#fff',
     padding: 10,
     borderRadius: 8,
     width: '20%',
     alignItems: 'center',
-  },
-  selectedButton: {
-    backgroundColor: '#00bfff',
-  },
-  dayButtonText: {
-    color: '#333',
-  },
-  seasonButtonText: {
-    color: '#333',
-  },
-  selectedButtonText: {
-    color: '#fff',
   },
   hoursContainer: {
     flexDirection: 'row',
@@ -643,7 +663,6 @@ const styles = StyleSheet.create({
     width: '48%',
   },
   timeLabel: {
-    color: '#666',
     fontSize: 12,
     textAlign: 'center',
     marginTop: 5,
@@ -660,16 +679,10 @@ const styles = StyleSheet.create({
     width: 20,
     height: 20,
     borderWidth: 1,
-    borderColor: '#000',
     marginRight: 10,
     borderRadius: 4,
   },
-  checkboxChecked: {
-    backgroundColor: '#00bfff',
-    borderColor: '#00bfff',
-  },
   checkboxLabel: {
-    color: '#333',
     fontSize: 16,
   },
   buttonContainer: {
@@ -684,10 +697,8 @@ const styles = StyleSheet.create({
     width: '100%',
     padding: 10,
     paddingBottom: 33,
-    backgroundColor: '#87CEFA',
   },
   buttonText: {
-    color: 'white',
     textAlign: 'center',
     fontSize: 30,
     fontFamily: 'TextMeOne',

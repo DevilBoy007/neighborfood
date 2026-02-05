@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useShop, ShopData } from '@/store/reduxHooks';
+import { useAppColors } from '@/hooks/useAppColors';
 
 interface ShopCardProps {
   name: string;
@@ -11,6 +12,7 @@ interface ShopCardProps {
 const ShopCard = ({ name, shop }: ShopCardProps) => {
   const router = useRouter();
   const { setSelectedShop } = useShop();
+  const colors = useAppColors();
 
   const handlePress = () => {
     if (shop) {
@@ -23,9 +25,9 @@ const ShopCard = ({ name, shop }: ShopCardProps) => {
   const itemImages = shop.items?.filter((item) => item.imageUrl).map((item) => item.imageUrl) || [];
 
   return (
-    <View style={styles.shopItem}>
+    <View style={[styles.shopItem, { backgroundColor: colors.surface }]}>
       <TouchableOpacity onPress={handlePress}>
-        <Text style={styles.shopName}>{name}</Text>
+        <Text style={[styles.shopName, { color: colors.text }]}>{name}</Text>
         <View style={styles.shopCircles}>
           {itemImages.length > 0 ? (
             itemImages.map((imageUrl, i) => (
@@ -34,9 +36,14 @@ const ShopCard = ({ name, shop }: ShopCardProps) => {
           ) : (
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
               <View
-                style={{ width: 20, height: 20, backgroundColor: '#f0f0f0', borderRadius: 10 }}
+                style={{
+                  width: 20,
+                  height: 20,
+                  backgroundColor: colors.inputBackground,
+                  borderRadius: 10,
+                }}
               />
-              <Text style={{ marginLeft: 8, color: '#888', fontStyle: 'italic' }}>
+              <Text style={{ marginLeft: 8, color: colors.textMuted, fontStyle: 'italic' }}>
                 No items yet
               </Text>
             </View>
@@ -49,7 +56,6 @@ const ShopCard = ({ name, shop }: ShopCardProps) => {
 
 const styles = StyleSheet.create({
   shopItem: {
-    backgroundColor: 'white',
     padding: 16,
     marginVertical: 8,
     marginHorizontal: 16,

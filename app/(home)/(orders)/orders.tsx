@@ -14,11 +14,13 @@ import { Ionicons } from '@expo/vector-icons';
 
 import OrderCard from '@/components/OrderCard';
 import { useUser, useOrder } from '@/store/reduxHooks';
+import { useAppColors } from '@/hooks/useAppColors';
 
 const OrdersScreen = () => {
   const router = useRouter();
   const { filter } = useLocalSearchParams<{ filter: 'placed' | 'received' | 'history' }>();
   const { userData } = useUser();
+  const colors = useAppColors();
   const {
     placedOrders,
     receivedOrders,
@@ -123,29 +125,31 @@ const OrdersScreen = () => {
 
   if (isLoadingOrders) {
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
         <View style={styles.header}>
           <View>
             <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-              <Ionicons name="chevron-back" size={24} color="black" />
+              <Ionicons name="chevron-back" size={24} color={colors.icon} />
             </TouchableOpacity>
           </View>
         </View>
-        <Text style={styles.headerTitle}>{currentConfig.title}</Text>
+        <Text style={[styles.headerTitle, { color: colors.navText }]}>{currentConfig.title}</Text>
         <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText}>{currentConfig.loadingText}</Text>
+          <Text style={[styles.loadingText, { color: colors.textMuted }]}>
+            {currentConfig.loadingText}
+          </Text>
         </View>
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>{currentConfig.title}</Text>
+        <Text style={[styles.headerTitle, { color: colors.navText }]}>{currentConfig.title}</Text>
         <View>
           <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-            <Ionicons name="chevron-back" size={24} color="black" />
+            <Ionicons name="chevron-back" size={24} color={colors.icon} />
           </TouchableOpacity>
         </View>
       </View>
@@ -155,17 +159,21 @@ const OrdersScreen = () => {
           <RefreshControl
             refreshing={isLoadingOrders}
             onRefresh={handleRefresh}
-            tintColor="#00bfff"
+            tintColor={colors.primary}
             title="Pull to refresh orders"
-            titleColor="#00bfff"
+            titleColor={colors.primary}
           />
         }
       >
         {orders.length === 0 ? (
           <View style={styles.emptyState}>
-            <Ionicons name={currentConfig.emptyIcon} size={64} color="#ccc" />
-            <Text style={styles.emptyStateText}>{currentConfig.emptyText}</Text>
-            <Text style={styles.emptyStateSubtext}>{currentConfig.emptySubtext}</Text>
+            <Ionicons name={currentConfig.emptyIcon} size={64} color={colors.iconMuted} />
+            <Text style={[styles.emptyStateText, { color: colors.textMuted }]}>
+              {currentConfig.emptyText}
+            </Text>
+            <Text style={[styles.emptyStateSubtext, { color: colors.textMuted }]}>
+              {currentConfig.emptySubtext}
+            </Text>
           </View>
         ) : (
           orders.map((order, index) => {
@@ -195,7 +203,6 @@ const OrdersScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#b7ffb0',
   },
   header: {
     flexDirection: 'row',
@@ -213,7 +220,6 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: '400',
     fontFamily: 'TitanOne',
-    color: '#fff',
     ...Platform.select({
       web: {
         fontSize: 32,
@@ -236,7 +242,6 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontSize: 16,
-    color: '#666',
     textAlign: 'center',
   },
   emptyState: {
@@ -248,13 +253,11 @@ const styles = StyleSheet.create({
   emptyStateText: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#666',
     marginTop: 16,
     marginBottom: 8,
   },
   emptyStateSubtext: {
     fontSize: 14,
-    color: '#999',
     textAlign: 'center',
   },
   orderContainer: {
