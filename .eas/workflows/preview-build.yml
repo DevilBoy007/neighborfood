@@ -1,8 +1,5 @@
 name: Preview Build (PR)
 
-on:
-  workflow_dispatch
-
 jobs:
   # Build Android preview for internal testing
   build_android:

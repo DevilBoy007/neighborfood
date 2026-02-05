@@ -1,8 +1,5 @@
 name: Production Build & Submit
 
-on:
-  workflow_dispatch
-
 jobs:
   # Build Android for production
   build_android:
