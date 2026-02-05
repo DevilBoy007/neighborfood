@@ -140,6 +140,7 @@ export default function RootLayout() {
           <Stack>
             <Stack.Screen name="Market" options={{ headerShown: false }} />
             <Stack.Screen name="Menu" options={{ headerShown: false }} />
+            <Stack.Screen name="(messages)" options={{ headerShown: false }} />
           </Stack>
         </View>
       </View>

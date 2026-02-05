@@ -9,12 +9,12 @@ import {
   Platform,
   ActivityIndicator,
   Alert,
+  SafeAreaView,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 
-import { SafeView } from '@/components/SafeView';
 import { useMessage, useUser, ThreadData } from '@/store/reduxHooks';
 import { useAppColors } from '@/hooks/useAppColors';
 
@@ -149,42 +149,40 @@ export default function MessagesScreen() {
   );
 
   return (
-    <SafeView>
-      <View style={[styles.container, { backgroundColor: colors.background }]}>
-        <View
-          style={[
-            styles.header,
-            { backgroundColor: colors.navBackground, borderBottomColor: colors.border },
-          ]}
-        >
-          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-            <Ionicons name="arrow-back" size={24} color={colors.icon} />
-          </TouchableOpacity>
-          <Text style={[styles.headerTitle, { color: colors.text }]}>Messages</Text>
-          <View style={styles.headerSpacer} />
-        </View>
-
-        {isLoadingThreads && !refreshing ? (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={colors.primary} />
-            <Text style={[styles.loadingText, { color: colors.textMuted }]}>
-              Loading conversations...
-            </Text>
-          </View>
-        ) : (
-          <FlatList
-            data={threads}
-            keyExtractor={(item) => item.id}
-            renderItem={renderThreadItem}
-            contentContainerStyle={threads.length === 0 ? styles.emptyListContainer : undefined}
-            ListEmptyComponent={renderEmptyList}
-            refreshing={refreshing}
-            onRefresh={handleRefresh}
-            showsVerticalScrollIndicator={false}
-          />
-        )}
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <View
+        style={[
+          styles.header,
+          { backgroundColor: colors.navBackground, borderBottomColor: colors.border },
+        ]}
+      >
+        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+          <Ionicons name="arrow-back" size={24} color={colors.icon} />
+        </TouchableOpacity>
+        <Text style={[styles.headerTitle, { color: colors.buttonText }]}>Messages</Text>
+        <View style={styles.headerSpacer} />
       </View>
-    </SafeView>
+
+      {isLoadingThreads && !refreshing ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={colors.primary} />
+          <Text style={[styles.loadingText, { color: colors.textMuted }]}>
+            Loading conversations...
+          </Text>
+        </View>
+      ) : (
+        <FlatList
+          data={threads}
+          keyExtractor={(item) => item.id}
+          renderItem={renderThreadItem}
+          contentContainerStyle={threads.length === 0 ? styles.emptyListContainer : undefined}
+          ListEmptyComponent={renderEmptyList}
+          refreshing={refreshing}
+          onRefresh={handleRefresh}
+          showsVerticalScrollIndicator={false}
+        />
+      )}
+    </SafeAreaView>
   );
 }
 
@@ -207,8 +205,7 @@ const styles = StyleSheet.create({
     padding: 8,
   },
   headerTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
+    fontSize: Platform.OS === 'web' ? 40 : 30,
     fontFamily: 'TitanOne',
     color: '#000',
   },
@@ -236,8 +233,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 40,
   },
   emptyTitle: {
-    fontSize: 22,
-    fontWeight: 'bold',
+    fontSize: Platform.OS === 'web' ? 40 : 25,
     color: '#333',
     marginTop: 20,
     fontFamily: 'TitanOne',
