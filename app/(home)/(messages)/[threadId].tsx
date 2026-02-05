@@ -18,6 +18,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { SafeView } from '@/components/SafeView';
 import { useMessage, useUser, MessageData, ThreadData } from '@/store/reduxHooks';
 import firebaseService from '@/handlers/firebaseService';
+import { useAppColors } from '@/hooks/useAppColors';
 
 const formatMessageTime = (timestamp: { seconds: number; nanoseconds: number } | undefined) => {
   if (!timestamp) return '';
@@ -51,34 +52,46 @@ const formatMessageDate = (timestamp: { seconds: number; nanoseconds: number } |
 const OrderMessageBubble = ({
   orderData,
   isSentByMe,
+  colors,
 }: {
   orderData: MessageData['orderData'];
   isSentByMe: boolean;
+  colors: any;
 }) => {
   if (!orderData) return null;
 
   return (
-    <View style={[styles.orderBubble, isSentByMe && styles.orderBubbleSent]}>
+    <View
+      style={[
+        styles.orderBubble,
+        { backgroundColor: colors.surface },
+        isSentByMe && { backgroundColor: colors.card },
+      ]}
+    >
       <View style={styles.orderHeader}>
-        <Ionicons name="receipt-outline" size={20} color="#333" />
-        <Text style={styles.orderTitle}>Order</Text>
+        <Ionicons name="receipt-outline" size={20} color={colors.icon} />
+        <Text style={[styles.orderTitle, { color: colors.text }]}>Order</Text>
       </View>
       {orderData.shopPhotoURL && (
         <Image source={{ uri: orderData.shopPhotoURL }} style={styles.orderImage} />
       )}
-      <Text style={styles.orderShopName}>{orderData.shopName}</Text>
+      <Text style={[styles.orderShopName, { color: colors.text }]}>{orderData.shopName}</Text>
       <View style={styles.orderItems}>
         {orderData.items?.slice(0, 3).map((item, index) => (
-          <Text key={index} style={styles.orderItem}>
+          <Text key={index} style={[styles.orderItem, { color: colors.textSecondary }]}>
             {item.quantity}x {item.name} - ${item.price.toFixed(2)}
           </Text>
         ))}
         {orderData.items && orderData.items.length > 3 && (
-          <Text style={styles.orderItemMore}>+{orderData.items.length - 3} more items</Text>
+          <Text style={[styles.orderItemMore, { color: colors.textMuted }]}>
+            +{orderData.items.length - 3} more items
+          </Text>
         )}
       </View>
-      <View style={styles.orderFooter}>
-        <Text style={styles.orderTotal}>Total: ${orderData.total?.toFixed(2)}</Text>
+      <View style={[styles.orderFooter, { borderTopColor: colors.divider }]}>
+        <Text style={[styles.orderTotal, { color: colors.text }]}>
+          Total: ${orderData.total?.toFixed(2)}
+        </Text>
         <View
           style={[
             styles.orderStatusBadge,
@@ -117,6 +130,7 @@ export default function MessageThreadScreen() {
   const router = useRouter();
   const { threadId } = useLocalSearchParams<{ threadId: string }>();
   const { userData } = useUser();
+  const colors = useAppColors();
   const {
     selectedThread,
     messages,
@@ -205,7 +219,14 @@ export default function MessageThreadScreen() {
       <>
         {showDateSeparator && (
           <View style={styles.dateSeparator}>
-            <Text style={styles.dateSeparatorText}>{formatMessageDate(item.createdAt)}</Text>
+            <Text
+              style={[
+                styles.dateSeparatorText,
+                { color: colors.textMuted, backgroundColor: colors.divider },
+              ]}
+            >
+              {formatMessageDate(item.createdAt)}
+            </Text>
           </View>
         )}
         <View
@@ -215,17 +236,38 @@ export default function MessageThreadScreen() {
           ]}
         >
           {item.type === 'order' ? (
-            <OrderMessageBubble orderData={item.orderData} isSentByMe={isSentByMe} />
+            <OrderMessageBubble
+              orderData={item.orderData}
+              isSentByMe={isSentByMe}
+              colors={colors}
+            />
           ) : (
             <View
-              style={[styles.messageBubble, isSentByMe ? styles.sentBubble : styles.receivedBubble]}
+              style={[
+                styles.messageBubble,
+                isSentByMe
+                  ? [styles.sentBubble, { backgroundColor: colors.primary }]
+                  : [styles.receivedBubble, { backgroundColor: colors.surface }],
+              ]}
             >
-              <Text style={[styles.messageText, isSentByMe && styles.sentMessageText]}>
+              <Text
+                style={[
+                  styles.messageText,
+                  { color: colors.text },
+                  isSentByMe && { color: colors.textOnPrimary },
+                ]}
+              >
                 {item.content}
               </Text>
             </View>
           )}
-          <Text style={[styles.messageTime, isSentByMe && styles.sentMessageTime]}>
+          <Text
+            style={[
+              styles.messageTime,
+              { color: colors.textMuted },
+              isSentByMe && styles.sentMessageTime,
+            ]}
+          >
             {formatMessageTime(item.createdAt)}
           </Text>
         </View>
@@ -235,34 +277,41 @@ export default function MessageThreadScreen() {
 
   const renderEmptyMessages = () => (
     <View style={styles.emptyMessagesContainer}>
-      <Ionicons name="chatbubble-ellipses-outline" size={60} color="#ccc" />
-      <Text style={styles.emptyMessagesText}>Start the conversation!</Text>
+      <Ionicons name="chatbubble-ellipses-outline" size={60} color={colors.iconMuted} />
+      <Text style={[styles.emptyMessagesText, { color: colors.textMuted }]}>
+        Start the conversation!
+      </Text>
     </View>
   );
 
   return (
     <SafeView>
       <KeyboardAvoidingView
-        style={styles.container}
+        style={[styles.container, { backgroundColor: colors.background }]}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
       >
         {/* Header */}
-        <View style={styles.header}>
+        <View
+          style={[
+            styles.header,
+            { backgroundColor: colors.navBackground, borderBottomColor: colors.border },
+          ]}
+        >
           <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-            <Ionicons name="arrow-back" size={24} color="#000" />
+            <Ionicons name="arrow-back" size={24} color={colors.icon} />
           </TouchableOpacity>
           <View style={styles.headerInfo}>
             {otherUserInfo?.photoURL ? (
               <Image source={{ uri: otherUserInfo.photoURL }} style={styles.headerAvatar} />
             ) : (
-              <View style={styles.headerAvatarPlaceholder}>
-                <Text style={styles.headerAvatarText}>
+              <View style={[styles.headerAvatarPlaceholder, { backgroundColor: colors.surface }]}>
+                <Text style={[styles.headerAvatarText, { color: colors.primary }]}>
                   {(otherUserInfo?.username || 'U').charAt(0).toUpperCase()}
                 </Text>
               </View>
             )}
-            <Text style={styles.headerTitle} numberOfLines={1}>
+            <Text style={[styles.headerTitle, { color: colors.text }]} numberOfLines={1}>
               {otherUserInfo?.username || 'Unknown User'}
             </Text>
           </View>
@@ -272,7 +321,7 @@ export default function MessageThreadScreen() {
         {/* Messages List */}
         {isLoadingMessages ? (
           <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#87CEFA" />
+            <ActivityIndicator size="large" color={colors.primary} />
           </View>
         ) : (
           <FlatList
@@ -295,11 +344,19 @@ export default function MessageThreadScreen() {
         )}
 
         {/* Input Area */}
-        <View style={styles.inputContainer}>
+        <View
+          style={[
+            styles.inputContainer,
+            { backgroundColor: colors.surface, borderTopColor: colors.border },
+          ]}
+        >
           <TextInput
-            style={styles.textInput}
+            style={[
+              styles.textInput,
+              { backgroundColor: colors.inputBackground, color: colors.text },
+            ]}
             placeholder="Type a message..."
-            placeholderTextColor="#999"
+            placeholderTextColor={colors.placeholder}
             value={inputText}
             onChangeText={setInputText}
             multiline
@@ -308,7 +365,11 @@ export default function MessageThreadScreen() {
           <TouchableOpacity
             style={[
               styles.sendButton,
-              (!inputText.trim() || isSendingMessage) && styles.sendButtonDisabled,
+              { backgroundColor: colors.primary },
+              (!inputText.trim() || isSendingMessage) && [
+                styles.sendButtonDisabled,
+                { backgroundColor: colors.buttonDisabled },
+              ],
             ]}
             onPress={handleSend}
             disabled={!inputText.trim() || isSendingMessage}

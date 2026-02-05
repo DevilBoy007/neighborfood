@@ -16,6 +16,7 @@ import { useFocusEffect } from '@react-navigation/native';
 
 import { SafeView } from '@/components/SafeView';
 import { useMessage, useUser, ThreadData } from '@/store/reduxHooks';
+import { useAppColors } from '@/hooks/useAppColors';
 
 const formatTimestamp = (timestamp: { seconds: number; nanoseconds: number } | undefined) => {
   if (!timestamp) return '';
@@ -40,6 +41,7 @@ export default function MessagesScreen() {
   const router = useRouter();
   const { userData } = useUser();
   const { threads, isLoadingThreads, loadThreads, setSelectedThread, removeThread } = useMessage();
+  const colors = useAppColors();
 
   const [refreshing, setRefreshing] = useState(false);
 
@@ -95,7 +97,7 @@ export default function MessagesScreen() {
 
     return (
       <TouchableOpacity
-        style={styles.threadItem}
+        style={[styles.threadItem, { borderBottomColor: colors.divider }]}
         onPress={() => handleThreadPress(item)}
         onLongPress={() => handleDeleteThread(item)}
       >
@@ -103,8 +105,8 @@ export default function MessagesScreen() {
           {otherUserInfo?.photoURL ? (
             <Image source={{ uri: otherUserInfo.photoURL }} style={styles.avatar} />
           ) : (
-            <View style={styles.avatarPlaceholder}>
-              <Text style={styles.avatarText}>
+            <View style={[styles.avatarPlaceholder, { backgroundColor: colors.primary }]}>
+              <Text style={[styles.avatarText, { color: colors.textOnPrimary }]}>
                 {(otherUserInfo?.username || 'U').charAt(0).toUpperCase()}
               </Text>
             </View>
@@ -112,14 +114,14 @@ export default function MessagesScreen() {
         </View>
         <View style={styles.threadContent}>
           <View style={styles.threadHeader}>
-            <Text style={styles.username} numberOfLines={1}>
+            <Text style={[styles.username, { color: colors.text }]} numberOfLines={1}>
               {otherUserInfo?.username || 'Unknown User'}
             </Text>
-            <Text style={styles.timestamp}>
+            <Text style={[styles.timestamp, { color: colors.textMuted }]}>
               {formatTimestamp(item.lastMessage?.createdAt || item.updatedAt)}
             </Text>
           </View>
-          <Text style={styles.lastMessage} numberOfLines={1}>
+          <Text style={[styles.lastMessage, { color: colors.textSecondary }]} numberOfLines={1}>
             {item.lastMessage?.type === 'order'
               ? '📦 New order'
               : item.lastMessage?.content || 'No messages yet'}
@@ -130,7 +132,7 @@ export default function MessagesScreen() {
           onPress={() => handleDeleteThread(item)}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         >
-          <Ionicons name="trash-outline" size={20} color="#ff6b6b" />
+          <Ionicons name="trash-outline" size={20} color={colors.error} />
         </TouchableOpacity>
       </TouchableOpacity>
     );
@@ -138,9 +140,9 @@ export default function MessagesScreen() {
 
   const renderEmptyList = () => (
     <View style={styles.emptyContainer}>
-      <Ionicons name="chatbubbles-outline" size={80} color="#ccc" />
-      <Text style={styles.emptyTitle}>No Messages Yet</Text>
-      <Text style={styles.emptySubtitle}>
+      <Ionicons name="chatbubbles-outline" size={80} color={colors.iconMuted} />
+      <Text style={[styles.emptyTitle, { color: colors.textSecondary }]}>No Messages Yet</Text>
+      <Text style={[styles.emptySubtitle, { color: colors.textMuted }]}>
         Start a conversation by placing an order or messaging a shop owner!
       </Text>
     </View>
@@ -148,19 +150,26 @@ export default function MessagesScreen() {
 
   return (
     <SafeView>
-      <View style={styles.container}>
-        <View style={styles.header}>
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <View
+          style={[
+            styles.header,
+            { backgroundColor: colors.navBackground, borderBottomColor: colors.border },
+          ]}
+        >
           <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-            <Ionicons name="arrow-back" size={24} color="#000" />
+            <Ionicons name="arrow-back" size={24} color={colors.icon} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Messages</Text>
+          <Text style={[styles.headerTitle, { color: colors.text }]}>Messages</Text>
           <View style={styles.headerSpacer} />
         </View>
 
         {isLoadingThreads && !refreshing ? (
           <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#87CEFA" />
-            <Text style={styles.loadingText}>Loading conversations...</Text>
+            <ActivityIndicator size="large" color={colors.primary} />
+            <Text style={[styles.loadingText, { color: colors.textMuted }]}>
+              Loading conversations...
+            </Text>
           </View>
         ) : (
           <FlatList
