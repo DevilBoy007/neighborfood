@@ -106,6 +106,14 @@ export default function RootLayout() {
                       animation: 'slide_from_bottom',
                     }}
                   />
+                  <Stack.Screen
+                    name="Appearance"
+                    options={{
+                      headerShown: false,
+                      presentation: 'modal',
+                      animation: 'slide_from_bottom',
+                    }}
+                  />
                 </Stack>
                 <Toast config={toastConfig} />
               </GestureHandlerRootView>

@@ -2,9 +2,11 @@ import { useRouter } from 'expo-router';
 import { Platform, StyleSheet, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useEffect } from 'react';
+import { useAppColors } from '@/hooks/useAppColors';
 
 export default function SucessScreen({ onTimerComplete = () => {} }) {
   const router = useRouter();
+  const colors = useAppColors();
 
   onTimerComplete = router.back;
 
@@ -20,14 +22,14 @@ export default function SucessScreen({ onTimerComplete = () => {} }) {
     return () => clearTimeout(timer);
   }, [onTimerComplete]);
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.primary }]}>
       <LinearGradient
         // Background Linear Gradient
-        colors={['#b7ffb0', '#b7ffb0', '#00bfff']}
+        colors={[colors.secondary, colors.secondary, colors.primary]}
         style={styles.background}
       />
       <Text
-        style={styles.text}
+        style={[styles.text, { color: colors.buttonText }]}
         onPress={() => {
           router.back();
         }}
@@ -43,7 +45,6 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#00bfff',
   },
   background: {
     position: 'absolute',
@@ -55,7 +56,6 @@ const styles = StyleSheet.create({
   text: {
     backgroundColor: 'transparent',
     fontSize: 30,
-    color: '#fff',
     fontFamily: 'TextMeOne',
     ...Platform.select({
       web: {

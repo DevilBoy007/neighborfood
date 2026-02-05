@@ -15,6 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import ShopCard from '@/components/ShopCard';
 import { useUser, useLocation, ShopData } from '@/store/reduxHooks';
 import firebaseService from '@/handlers/firebaseService';
+import { useAppColors } from '@/hooks/useAppColors';
 
 /* eslint-disable @typescript-eslint/no-require-imports */
 const MapScreen =
@@ -34,6 +35,7 @@ const MarketScreen = () => {
   const [shops, setShops] = useState<ShopWithItems[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const colors = useAppColors();
 
   // Use both user context and location context
   const { userData } = useUser();
@@ -114,8 +116,8 @@ const MarketScreen = () => {
     if (loading && !refreshing) {
       return (
         <View style={styles.centeredContainer}>
-          <ActivityIndicator size="large" color="#333" />
-          <Text style={styles.messageText}>Fetching shops...</Text>
+          <ActivityIndicator size="large" color={colors.text} />
+          <Text style={[styles.messageText, { color: colors.text }]}>Fetching shops...</Text>
         </View>
       );
     }
@@ -127,7 +129,9 @@ const MarketScreen = () => {
     if (shops.length === 0) {
       return (
         <View style={styles.centeredContainer}>
-          <Text style={styles.messageText}>No shops found in your area</Text>
+          <Text style={[styles.messageText, { color: colors.text }]}>
+            No shops found in your area
+          </Text>
         </View>
       );
     }
@@ -143,10 +147,10 @@ const MarketScreen = () => {
             <RefreshControl
               refreshing={refreshing}
               onRefresh={onRefresh}
-              tintColor={'#00bfff'}
+              tintColor={colors.primary}
               title="Fetching shops..."
-              titleColor={'#00bfff'}
-              colors={['#00bfff', '#000']}
+              titleColor={colors.primary}
+              colors={[colors.primary, colors.text]}
             />
           }
         />
@@ -155,25 +159,30 @@ const MarketScreen = () => {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={styles.header}>
-        <Text style={styles.title}>market</Text>
+        <Text style={[styles.title, { color: colors.navText }]}>market</Text>
       </View>
 
       <View style={styles.searchContainer}>
-        <Ionicons name="search" size={20} color="gray" style={styles.searchIcon} />
+        <Ionicons name="search" size={20} color={colors.iconMuted} style={styles.searchIcon} />
         <TextInput
-          style={styles.searchInput}
+          style={[styles.searchInput, { backgroundColor: colors.surface, color: colors.primary }]}
           placeholder="search"
-          placeholderTextColor="#999"
+          placeholderTextColor={colors.placeholder}
           value={searchQuery}
           onChangeText={setSearchQuery}
         />
-        <TouchableOpacity style={styles.textButton}>
-          <Text style={{ fontFamily: 'TextMeOne' }}>sort</Text>
+        <TouchableOpacity style={[styles.textButton, { backgroundColor: colors.surface }]}>
+          <Text style={{ fontFamily: 'TextMeOne', color: colors.text }}>sort</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.textButton} onPress={toggleView}>
-          <Text style={{ fontFamily: 'TextMeOne' }}>{isMapView ? 'list' : 'map'}</Text>
+        <TouchableOpacity
+          style={[styles.textButton, { backgroundColor: colors.surface }]}
+          onPress={toggleView}
+        >
+          <Text style={{ fontFamily: 'TextMeOne', color: colors.text }}>
+            {isMapView ? 'list' : 'map'}
+          </Text>
         </TouchableOpacity>
       </View>
 
@@ -184,7 +193,6 @@ const MarketScreen = () => {
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#B7FFB0',
     minHeight: '100%',
     ...Platform.select({
       web: {
@@ -205,7 +213,6 @@ const styles = StyleSheet.create({
     fontSize: Platform.select({ ios: 30, web: 80 }),
     fontWeight: 'bold',
     fontFamily: 'TitanOne',
-    color: '#fff',
   },
   profileIcon: {
     width: 50,
@@ -228,14 +235,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: 20,
     paddingLeft: 30,
-    backgroundColor: 'white',
-    color: '#00bfff',
     fontFamily: 'TextMeOne',
   },
   textButton: {
     marginLeft: 8,
     padding: 8,
-    backgroundColor: 'white',
     borderRadius: 20,
   },
   mapContainer: {
@@ -276,7 +280,6 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontFamily: 'TextMeOne',
     textAlign: 'center',
-    color: '#333',
     marginVertical: 10,
   },
   centeredContainer: {
@@ -288,7 +291,6 @@ const styles = StyleSheet.create({
   messageText: {
     fontFamily: 'TextMeOne',
     fontSize: 18,
-    color: '#333',
     textAlign: 'center',
     marginTop: 10,
   },

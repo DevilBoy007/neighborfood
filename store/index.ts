@@ -19,6 +19,7 @@ import itemReducer from './slices/itemSlice';
 import orderReducer from './slices/orderSlice';
 import cartReducer from './slices/cartSlice';
 import messageReducer from './slices/messageSlice';
+import themeReducer from './slices/themeSlice';
 
 const rootReducer = combineReducers({
   user: userReducer,
@@ -28,6 +29,7 @@ const rootReducer = combineReducers({
   order: orderReducer,
   cart: cartReducer,
   message: messageReducer,
+  theme: themeReducer,
 });
 
 // Web storage adapter for redux-persist (lazy access to avoid bundling issues)
@@ -61,7 +63,7 @@ const persistConfig = {
   version: 1,
   storage,
   // Whitelist specific slices to persist
-  whitelist: ['user', 'cart'],
+  whitelist: ['user', 'cart', 'theme'],
   // Location and orders are fetched fresh on app start
   blacklist: ['location', 'order', 'shop', 'item', 'message'],
 };

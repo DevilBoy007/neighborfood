@@ -17,6 +17,7 @@ import { useFocusEffect } from '@react-navigation/native';
 
 import firebaseService from '@/handlers/firebaseService';
 import { useUser, useItem, useShop, ItemData } from '@/store/reduxHooks';
+import { useAppColors } from '@/hooks/useAppColors';
 import Toast from 'react-native-toast-message';
 import ItemCard from '@/components/ItemCard';
 
@@ -24,9 +25,10 @@ export default function ManageItems() {
   const { userData } = useUser();
   const { setSelectedItem } = useItem();
   const { shops, setShops } = useShop();
+  const colors = useAppColors();
   const [items, setItems] = useState<ItemData[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<string | null>(null);
   const router = useRouter();
 
   // Create a map of shop IDs to shop names for display
@@ -55,9 +57,9 @@ export default function ManageItems() {
       const userItems = await firebaseService.getAllItemsForUser(userData.uid);
       setItems(userItems);
       console.log('User items:', userItems.length);
-    } catch (err) {
+    } catch (err: unknown) {
       console.error('Error fetching items:', err);
-      setError(err.message);
+      setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
       setLoading(false);
     }
@@ -118,15 +120,15 @@ export default function ManageItems() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-          <Ionicons name="chevron-back" size={24} color="black" />
+          <Ionicons name="chevron-back" size={24} color={colors.icon} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>menu</Text>
+        <Text style={[styles.headerTitle, { color: colors.navText }]}>menu</Text>
       </View>
       <View>
-        <Text style={styles.title}>Manage Items</Text>
+        <Text style={[styles.title, { color: colors.navText }]}>Manage Items</Text>
       </View>
 
       <ScrollView
@@ -135,17 +137,17 @@ export default function ManageItems() {
           <RefreshControl
             refreshing={loading}
             onRefresh={memoizedFetchUserItems}
-            tintColor={'#00bfff'}
+            tintColor={colors.primary}
             title="Fetching items..."
-            titleColor={'#00bfff'}
-            colors={['#00bfff', '#000']}
+            titleColor={colors.primary}
+            colors={[colors.primary, colors.text]}
           />
         }
       >
         {!loading && error ? (
-          <Text style={styles.errorText}>Error: {error}</Text>
+          <Text style={[styles.errorText, { color: colors.error }]}>Error: {error}</Text>
         ) : !loading && items.length === 0 ? (
-          <Text style={styles.noItemsText}>No items available</Text>
+          <Text style={[styles.noItemsText, { color: colors.textMuted }]}>No items available</Text>
         ) : (
           !loading &&
           items.map((item) => (
@@ -161,11 +163,16 @@ export default function ManageItems() {
           ))
         )}
         <TouchableOpacity
-          style={styles.addItemButton}
+          style={[styles.addItemButton, { backgroundColor: colors.buttonPrimary }]}
           onPress={() => router.push('/(home)/(items)/AddItem')}
         >
-          <Ionicons name="add-circle-outline" size={24} color="#fff" style={styles.buttonIcon} />
-          <Text style={styles.addItemButtonText}>Add Item</Text>
+          <Ionicons
+            name="add-circle-outline"
+            size={24}
+            color={colors.buttonText}
+            style={styles.buttonIcon}
+          />
+          <Text style={[styles.addItemButtonText, { color: colors.buttonText }]}>Add Item</Text>
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
@@ -175,7 +182,6 @@ export default function ManageItems() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#b7ffb0',
   },
   header: {
     flexDirection: 'row',
@@ -192,7 +198,6 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     fontWeight: '400',
     fontFamily: 'TitanOne',
-    color: '#fff',
     ...Platform.select({
       web: {
         fontSize: 32,
@@ -206,7 +211,6 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: '400',
     fontFamily: 'TitanOne',
-    color: '#fff',
     ...Platform.select({
       web: {
         fontSize: 32,
@@ -218,7 +222,6 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   addItemButton: {
-    backgroundColor: '#00bfff',
     padding: 16,
     borderRadius: 8,
     marginTop: 16,
@@ -229,14 +232,12 @@ const styles = StyleSheet.create({
   },
   addItemButtonText: {
     fontSize: 24,
-    color: '#fff',
     fontFamily: 'TextMeOne',
   },
   buttonIcon: {
     marginRight: 8,
   },
   errorText: {
-    color: 'red',
     textAlign: 'center',
     marginTop: 20,
     fontSize: 16,
@@ -245,6 +246,5 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 20,
     fontSize: 16,
-    color: '#555',
   },
 });

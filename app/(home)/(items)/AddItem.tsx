@@ -22,6 +22,7 @@ import { v4 as uuidv4 } from 'uuid';
 
 import firebaseService from '@/handlers/firebaseService';
 import { useUser, useItem, useShop } from '@/store/reduxHooks';
+import { useAppColors } from '@/hooks/useAppColors';
 
 const categories = [
   'produce',
@@ -41,6 +42,7 @@ export default function AddItemScreen() {
   const { userData } = useUser();
   const { selectedItem, setSelectedItem, setIsLoadingItem, isLoadingItem } = useItem();
   const { shops, setShops, setIsLoadingShop } = useShop();
+  const colors = useAppColors();
 
   const [name, setName] = useState<string>('');
   const [description, setDescription] = useState<string>('');
@@ -407,12 +409,14 @@ export default function AddItemScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={[styles.header, { borderBottomColor: colors.border }]}>
         <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-          <Ionicons name="chevron-back" size={24} color="black" />
+          <Ionicons name="chevron-back" size={24} color={colors.icon} />
         </TouchableOpacity>
-        <Text style={styles.sectionTitle}>{itemId ? 'Edit Item' : 'Add Item'}</Text>
+        <Text style={[styles.sectionTitle, { color: colors.navText }]}>
+          {itemId ? 'Edit Item' : 'Add Item'}
+        </Text>
       </View>
       <KeyboardAvoidingView
         style={{ flex: 1 }}
@@ -420,18 +424,22 @@ export default function AddItemScreen() {
         keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 20}
       >
         <ScrollView
-          style={styles.container}
+          style={[styles.container, { backgroundColor: colors.background }]}
           contentContainerStyle={{ paddingBottom: Platform.OS === 'ios' ? 50 : 50 }}
           keyboardDismissMode="on-drag"
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.formContainer}>
-            <Text style={styles.sectionTitle}>Item Info</Text>
+            <Text style={[styles.sectionTitle, { color: colors.navText }]}>Item Info</Text>
             <TextInput
-              style={[styles.input, errors.name ? styles.inputError : null]}
+              style={[
+                styles.input,
+                { backgroundColor: colors.inputBackground },
+                errors.name ? styles.inputError : null,
+              ]}
               placeholder="item name"
-              placeholderTextColor={'#999'}
+              placeholderTextColor={colors.placeholder}
               value={name}
               onChangeText={(text) => {
                 setName(text);
@@ -441,9 +449,14 @@ export default function AddItemScreen() {
             {errors.name ? <Text style={styles.errorText}>{errors.name}</Text> : null}
 
             <TextInput
-              style={[styles.input, styles.textArea, errors.description ? styles.inputError : null]}
+              style={[
+                styles.input,
+                styles.textArea,
+                { backgroundColor: colors.inputBackground },
+                errors.description ? styles.inputError : null,
+              ]}
               placeholder="description"
-              placeholderTextColor={'#999'}
+              placeholderTextColor={colors.placeholder}
               multiline
               minHeight={Platform.OS === 'ios' ? 80 : null}
               value={description}
@@ -454,7 +467,7 @@ export default function AddItemScreen() {
             />
             {errors.description ? <Text style={styles.errorText}>{errors.description}</Text> : null}
 
-            <Text style={styles.sectionTitle}>Shop & Category</Text>
+            <Text style={[styles.sectionTitle, { color: colors.navText }]}>Shop & Category</Text>
 
             {/* Shop Selection */}
             {Platform.OS === 'web' ? (
@@ -462,6 +475,8 @@ export default function AddItemScreen() {
                 <select
                   style={{
                     ...styles.webSelect,
+                    backgroundColor: colors.inputBackground,
+                    borderColor: colors.border,
                     ...(errors.shopId ? styles.webSelectError : {}),
                   }}
                   value={shopId}
@@ -488,12 +503,17 @@ export default function AddItemScreen() {
                       setShopId(value);
                       if (value) setErrors({ ...errors, shopId: '' });
                     }}
-                    style={styles.picker}
+                    style={[styles.picker, { backgroundColor: colors.background }]}
                     itemStyle={{ height: 150, fontFamily: 'TextMeOne' }}
                   >
-                    <Picker.Item color="#00bfff" label="select shop" value="" />
+                    <Picker.Item color={colors.primary} label="select shop" value="" />
                     {shops.map((shop) => (
-                      <Picker.Item key={shop.id} color="black" label={shop.name} value={shop.id} />
+                      <Picker.Item
+                        key={shop.id}
+                        color={colors.text}
+                        label={shop.name}
+                        value={shop.id}
+                      />
                     ))}
                   </Picker>
                 </View>
@@ -502,14 +522,15 @@ export default function AddItemScreen() {
             )}
 
             {/* Categories */}
-            <Text style={styles.sectionSubtitle}>Categories</Text>
+            <Text style={[styles.sectionSubtitle, { color: colors.text }]}>Categories</Text>
             <View style={styles.categoriesContainer}>
               {categories.map((category) => (
                 <TouchableOpacity
                   key={category}
                   style={[
                     styles.categoryButton,
-                    selectedCategories.includes(category) && styles.selectedButton,
+                    { backgroundColor: colors.card },
+                    selectedCategories.includes(category) && { backgroundColor: colors.primary },
                   ]}
                   onPress={() => {
                     toggleCategory(category);
@@ -520,7 +541,8 @@ export default function AddItemScreen() {
                   <Text
                     style={[
                       styles.categoryButtonText,
-                      selectedCategories.includes(category) && styles.selectedButtonText,
+                      { color: colors.text },
+                      selectedCategories.includes(category) && { color: colors.textOnPrimary },
                     ]}
                   >
                     {category}
@@ -530,15 +552,20 @@ export default function AddItemScreen() {
             </View>
             {errors.categories ? <Text style={styles.errorText}>{errors.categories}</Text> : null}
 
-            <Text style={styles.sectionTitle}>Pricing & Availability</Text>
+            <Text style={[styles.sectionTitle, { color: colors.navText }]}>
+              Pricing & Availability
+            </Text>
 
             {/* Price and Unit */}
             <View style={styles.priceContainer}>
               <View style={[styles.priceInput, errors.price ? styles.inputError : null]}>
                 <TextInput
-                  style={[styles.input, { marginBottom: 0, paddingLeft: 40 }]}
+                  style={[
+                    styles.input,
+                    { marginBottom: 0, paddingLeft: 40, backgroundColor: colors.inputBackground },
+                  ]}
                   placeholder="9.99"
-                  placeholderTextColor={'#999'}
+                  placeholderTextColor={colors.placeholder}
                   value={price}
                   keyboardType="decimal-pad"
                   onChangeText={(text) => {
@@ -547,7 +574,7 @@ export default function AddItemScreen() {
                       setErrors({ ...errors, price: '' });
                   }}
                 />
-                <Text style={styles.priceLabel}>$</Text>
+                <Text style={[styles.priceLabel, { color: colors.text }]}>$</Text>
               </View>
 
               <View style={[styles.unitSelection, { width: '48%' }]}>
@@ -556,6 +583,8 @@ export default function AddItemScreen() {
                     style={{
                       ...styles.webSelect,
                       ...styles.webUnitSelect,
+                      backgroundColor: colors.inputBackground,
+                      borderColor: colors.border,
                       ...(errors.unit ? styles.webSelectError : {}),
                       marginBottom: 0,
                     }}
@@ -580,12 +609,12 @@ export default function AddItemScreen() {
                         setUnit(value);
                         if (value) setErrors({ ...errors, unit: '' });
                       }}
-                      style={styles.picker}
+                      style={[styles.picker, { backgroundColor: colors.background }]}
                       itemStyle={{ height: 150, fontFamily: 'TextMeOne' }}
                     >
-                      <Picker.Item color="#00bfff" label="unit" value="" />
+                      <Picker.Item color={colors.primary} label="unit" value="" />
                       {units.map((u) => (
-                        <Picker.Item key={u} color="black" label={u} value={u} />
+                        <Picker.Item key={u} color={colors.text} label={u} value={u} />
                       ))}
                     </Picker>
                   </View>
@@ -599,15 +628,18 @@ export default function AddItemScreen() {
 
             {/* Quantity */}
             <View style={styles.quantityContainer}>
-              <Text style={styles.quantityLabel}>Quantity Available:</Text>
+              <Text style={[styles.quantityLabel, { color: colors.text }]}>
+                Quantity Available:
+              </Text>
               <TextInput
                 style={[
                   styles.input,
                   styles.quantityInput,
+                  { backgroundColor: colors.inputBackground },
                   errors.quantity ? styles.inputError : null,
                 ]}
                 placeholder="1"
-                placeholderTextColor={'#999'}
+                placeholderTextColor={colors.placeholder}
                 value={quantity}
                 keyboardType="number-pad"
                 onChangeText={(text) => {
@@ -621,29 +653,43 @@ export default function AddItemScreen() {
             {/* Negotiable checkbox */}
             <View style={styles.checkboxContainer}>
               <TouchableOpacity style={styles.checkbox} onPress={() => setNegotiable(!negotiable)}>
-                <View style={[styles.checkboxBox, negotiable && styles.checkboxChecked]} />
-                <Text style={styles.checkboxLabel}>price negotiable</Text>
+                <View
+                  style={[
+                    styles.checkboxBox,
+                    { borderColor: colors.border },
+                    negotiable && { backgroundColor: colors.primary, borderColor: colors.primary },
+                  ]}
+                />
+                <Text style={[styles.checkboxLabel, { color: colors.text }]}>price negotiable</Text>
               </TouchableOpacity>
             </View>
 
             {/* Image Upload */}
-            <Text style={styles.sectionTitle}>Item Image</Text>
+            <Text style={[styles.sectionTitle, { color: colors.navText }]}>Item Image</Text>
             <TouchableOpacity
-              style={[styles.imageUpload, errors.image ? styles.imageUploadError : null]}
+              style={[
+                styles.imageUpload,
+                { borderColor: colors.border },
+                errors.image ? styles.imageUploadError : null,
+              ]}
               onPress={pickImage}
               disabled={uploading}
             >
               {uploading ? (
                 <View style={styles.uploadingContainer}>
-                  <ActivityIndicator size="large" color="#00bfff" />
-                  <Text style={styles.uploadingText}>Uploading...</Text>
+                  <ActivityIndicator size="large" color={colors.primary} />
+                  <Text style={[styles.uploadingText, { color: colors.primary }]}>
+                    Uploading...
+                  </Text>
                 </View>
               ) : image ? (
                 <Image source={{ uri: image }} style={styles.previewImage} />
               ) : (
                 <View style={styles.uploadPlaceholder}>
-                  <Ionicons name="camera-outline" size={40} color="#888" />
-                  <Text style={styles.uploadText}>Tap to upload image</Text>
+                  <Ionicons name="camera-outline" size={40} color={colors.iconMuted} />
+                  <Text style={[styles.uploadText, { color: colors.textMuted }]}>
+                    Tap to upload image
+                  </Text>
                 </View>
               )}
             </TouchableOpacity>
@@ -653,11 +699,13 @@ export default function AddItemScreen() {
       </KeyboardAvoidingView>
       <View style={[styles.buttonContainer, Platform.OS === 'ios' && styles.iosButtonContainer]}>
         <TouchableOpacity
-          style={styles.button}
+          style={[styles.button, { backgroundColor: colors.buttonPrimaryAlternate }]}
           onPress={handleSubmit}
           disabled={uploading || isLoadingItem}
         >
-          <Text style={styles.buttonText}>{itemId ? 'Save' : 'Add Item'}</Text>
+          <Text style={[styles.buttonText, { color: colors.buttonText }]}>
+            {itemId ? 'Save' : 'Add Item'}
+          </Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -695,7 +743,6 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-    backgroundColor: '#b7ffb0',
   },
   formContainer: {
     paddingHorizontal: 20,
@@ -709,7 +756,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     padding: 16,
-    borderBottomColor: '#000',
     borderBottomWidth: 1,
     ...Platform.select({
       ios: {
@@ -720,18 +766,15 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 24,
     marginVertical: 15,
-    color: '#fff',
     fontFamily: 'TitanOne',
   },
   sectionSubtitle: {
     fontSize: 18,
     marginVertical: 15,
-    color: 'black',
     fontFamily: 'TitanOne',
     textAlign: 'right',
   },
   input: {
-    backgroundColor: '#fff',
     padding: 15,
     borderRadius: 8,
     marginBottom: 15,
@@ -743,7 +786,6 @@ const styles = StyleSheet.create({
     textAlignVertical: 'top',
   },
   webSelect: {
-    backgroundColor: '#fff',
     height: 50,
     padding: 15,
     borderRadius: 3,
@@ -751,15 +793,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
     width: '100%',
     borderWidth: 1,
-    borderColor: '#999',
   },
   webUnitSelect: {
     height: 52,
     padding: 10,
   },
   picker: {
-    color: '#333',
-    backgroundColor: '#b7ffb0',
     height: 125,
     marginBottom: 25,
   },
@@ -770,22 +809,13 @@ const styles = StyleSheet.create({
     marginBottom: 15,
   },
   categoryButton: {
-    backgroundColor: '#fff',
     padding: 10,
     borderRadius: 8,
     width: '48%',
     alignItems: 'center',
     marginBottom: 10,
   },
-  selectedButton: {
-    backgroundColor: '#00bfff',
-  },
   categoryButtonText: {
-    color: '#333',
-    fontFamily: 'TextMeOne',
-  },
-  selectedButtonText: {
-    color: '#fff',
     fontFamily: 'TextMeOne',
   },
   priceContainer: {
@@ -803,7 +833,6 @@ const styles = StyleSheet.create({
     left: 10,
     top: 15,
     fontSize: 16,
-    color: '#333',
   },
   unitSelection: {
     width: '48%',
@@ -836,16 +865,10 @@ const styles = StyleSheet.create({
     width: 20,
     height: 20,
     borderWidth: 1,
-    borderColor: '#000',
     marginRight: 10,
     borderRadius: 4,
   },
-  checkboxChecked: {
-    backgroundColor: '#00bfff',
-    borderColor: '#00bfff',
-  },
   checkboxLabel: {
-    color: '#333',
     fontSize: 16,
     fontFamily: 'TextMeOne',
   },
@@ -857,7 +880,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 20,
     borderWidth: 1,
-    borderColor: '#ddd',
     borderStyle: 'dashed',
     overflow: 'hidden',
   },
@@ -865,7 +887,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   uploadText: {
-    color: '#888',
     marginTop: 10,
   },
   previewImage: {
@@ -878,7 +899,6 @@ const styles = StyleSheet.create({
   },
   uploadingText: {
     marginTop: 10,
-    color: '#00bfff',
   },
   buttonContainer: {
     bottom: 0,
@@ -892,10 +912,8 @@ const styles = StyleSheet.create({
     width: '100%',
     padding: 10,
     paddingBottom: 33,
-    backgroundColor: '#87CEFA',
   },
   buttonText: {
-    color: 'white',
     textAlign: 'center',
     fontSize: 30,
     fontFamily: 'TextMeOne',
