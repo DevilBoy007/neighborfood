@@ -1682,13 +1682,6 @@ interface RegisterPushTokenRequest {
   platform: 'ios' | 'android' | 'web';
 }
 
-interface SendPushNotificationRequest {
-  userId: string;
-  title: string;
-  body: string;
-  data?: Record<string, unknown>;
-}
-
 /**
  * Register a push notification token for a user
  */
