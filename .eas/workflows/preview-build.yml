@@ -1,8 +1,6 @@
 name: Preview Build (PR)
 
-on:
-  pull_request:
-    branches: ['main', 'develop']
+on: workflow_dispatch
 
 jobs:
   # Build Android preview for internal testing

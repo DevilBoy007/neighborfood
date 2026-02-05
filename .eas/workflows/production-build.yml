@@ -1,10 +1,6 @@
 name: Production Build & Submit
 
-on:
-  push:
-    branches: ['main']
-    tags:
-      - 'v*'
+on: workflow_dispatch
 
 jobs:
   # Build Android for production

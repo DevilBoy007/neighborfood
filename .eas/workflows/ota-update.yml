@@ -1,8 +1,7 @@
 name: OTA Update
 
 on:
-  push:
-    branches: ['main', 'develop']
+  workflow_dispatch:
     paths:
       # Only trigger OTA updates when JS/TS code changes (not native code)
       - 'app/**'
