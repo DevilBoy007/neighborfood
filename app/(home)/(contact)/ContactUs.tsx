@@ -157,14 +157,14 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   optionText: {
-    fontSize: Platform.OS === 'web' ? 21 : 18,
+    fontSize: 25,
     textAlign: 'center',
     fontFamily: 'TextMeOne',
   },
   textInput: {
     borderRadius: 8,
     padding: 16,
-    height: 150,
+    height: 225,
     marginTop: 24,
     textAlignVertical: 'top',
   },
@@ -178,7 +178,7 @@ const styles = StyleSheet.create({
     }),
   },
   submitButtonText: {
-    fontSize: Platform.OS === 'web' ? 30 : 25,
+    fontSize: 30,
     fontWeight: '500',
     fontFamily: 'TitanOne',
   },

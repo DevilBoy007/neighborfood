@@ -428,16 +428,16 @@ export default function ShopDetails() {
           <View style={styles.deliveryInfoContainer}>
             {selectedShop.allowPickup && (
               <View style={[styles.deliveryOption, { backgroundColor: colors.primary }]}>
-                <Ionicons name="bag-handle-outline" size={18} color={colors.textOnPrimary} />
-                <Text style={[styles.deliveryText, { color: colors.textOnPrimary }]}>
+                <Ionicons name="bag-handle-outline" size={18} color={colors.buttonText} />
+                <Text style={[styles.deliveryText, { color: colors.buttonText }]}>
                   Pickup available
                 </Text>
               </View>
             )}
             {selectedShop.localDelivery && (
               <View style={[styles.deliveryOption, { backgroundColor: colors.text }]}>
-                <Ionicons name="bicycle-outline" size={18} color={colors.textOnPrimary} />
-                <Text style={[styles.deliveryText, { color: colors.textOnPrimary }]}>
+                <Ionicons name="bicycle-outline" size={18} color={colors.buttonText} />
+                <Text style={[styles.deliveryText, { color: colors.buttonText }]}>
                   Local delivery
                 </Text>
               </View>

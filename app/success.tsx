@@ -29,7 +29,7 @@ export default function SucessScreen({ onTimerComplete = () => {} }) {
         style={styles.background}
       />
       <Text
-        style={[styles.text, { color: colors.textOnPrimary }]}
+        style={[styles.text, { color: colors.buttonText }]}
         onPress={() => {
           router.back();
         }}

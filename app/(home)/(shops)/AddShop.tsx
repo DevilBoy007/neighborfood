@@ -406,7 +406,7 @@ export default function ShopRegistrationScreen() {
                   <Text
                     style={[
                       { color: colors.text },
-                      selectedDays.includes(day) && { color: colors.textOnPrimary },
+                      selectedDays.includes(day) && { color: colors.buttonText },
                     ]}
                   >
                     {day}
@@ -445,7 +445,7 @@ export default function ShopRegistrationScreen() {
                       size={18}
                       style={
                         selectedSeasons.includes(season)
-                          ? { color: colors.textOnPrimary }
+                          ? { color: colors.buttonText }
                           : { color: colors.text }
                       }
                     />
@@ -538,10 +538,10 @@ export default function ShopRegistrationScreen() {
       </KeyboardAvoidingView>
       <View style={[styles.buttonContainer, Platform.OS === 'ios' && styles.iosButtonContainer]}>
         <TouchableOpacity
-          style={[styles.button, { backgroundColor: colors.buttonPrimary }]}
+          style={[styles.button, { backgroundColor: colors.buttonPrimaryAlternate }]}
           onPress={handleSubmit}
         >
-          <Text style={[styles.buttonText, { color: colors.textOnPrimary }]}>
+          <Text style={[styles.buttonText, { color: colors.buttonText }]}>
             {shopId ? 'Save' : 'Create'}
           </Text>
         </TouchableOpacity>

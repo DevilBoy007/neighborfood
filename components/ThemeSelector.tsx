@@ -80,7 +80,7 @@ const ThemeSelector: React.FC<ThemeSelectorProps> = ({ onClose }) => {
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={styles.header}>
-        <Text style={[styles.title, { color: colors.text }]} accessibilityRole="header">
+        <Text style={[styles.title, { color: colors.navText }]} accessibilityRole="header">
           Appearance
         </Text>
         <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
@@ -190,7 +190,7 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   closeButtonText: {
-    fontSize: 18,
+    fontSize: 25,
     fontFamily: 'TextMeOne',
     fontWeight: '600',
   },

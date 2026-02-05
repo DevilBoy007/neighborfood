@@ -169,10 +169,10 @@ export default function ManageItems() {
           <Ionicons
             name="add-circle-outline"
             size={24}
-            color={colors.textOnPrimary}
+            color={colors.buttonText}
             style={styles.buttonIcon}
           />
-          <Text style={[styles.addItemButtonText, { color: colors.textOnPrimary }]}>Add Item</Text>
+          <Text style={[styles.addItemButtonText, { color: colors.buttonText }]}>Add Item</Text>
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>

@@ -548,7 +548,7 @@ const RegisterScreen = () => {
                 <View
                   style={[styles.locationDetailsContainer, { backgroundColor: colors.primary }]}
                 >
-                  <Text style={[styles.locationDetail, { color: colors.textOnPrimary }]}>
+                  <Text style={[styles.locationDetail, { color: colors.buttonText }]}>
                     {formData.location.address}
                   </Text>
                 </View>

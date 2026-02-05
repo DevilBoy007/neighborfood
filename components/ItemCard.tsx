@@ -184,7 +184,13 @@ const ItemCard = ({
         </Text>
         <TouchableOpacity
           onPress={incrementQuantity}
-          style={[styles.quantityButton, { backgroundColor: colors.inputBackground }]}
+          style={[
+            styles.quantityButton,
+            {
+              backgroundColor:
+                colors.inputBackground == '#ffffff' ? '#eee' : colors.inputBackground,
+            },
+          ]}
         >
           <Ionicons name="add" size={16} color="#00bfff" />
         </TouchableOpacity>
