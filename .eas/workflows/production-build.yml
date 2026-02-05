@@ -1,27 +1,41 @@
 name: Production Build & Submit
 
 on:
-  push:
-    branches: ['main']
-    tags:
-      - 'v*'
+  workflow_dispatch:
+    inputs:
+      platform:
+        type: choice
+        options:
+          - android
+          - ios
+          - both
+        required: true
+        description: 'Platform to build for production'
+      message:
+        type: string
+        required: false
+        description: 'Build message/description'
 
 jobs:
   # Build Android for production
   build_android:
     name: Build Android
+    if: ${{ inputs.platform == 'android' || inputs.platform == 'both' }}
     type: build
     params:
       platform: android
       profile: production
+      message: ${{ inputs.message || 'Production build' }}
 
   # Build iOS for production
   build_ios:
     name: Build iOS
+    if: ${{ inputs.platform == 'ios' || inputs.platform == 'both' }}
     type: build
     params:
       platform: ios
       profile: production
+      message: ${{ inputs.message || 'Production build' }}
 
   # NOTE: Store submission is disabled until ready
   # Uncomment when ready to submit to App Store / Play Store

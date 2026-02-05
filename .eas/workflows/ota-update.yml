@@ -1,39 +1,37 @@
 name: OTA Update
 
 on:
-  push:
-    branches: ['main', 'develop']
-    paths:
-      # Only trigger OTA updates when JS/TS code changes (not native code)
-      - 'app/**'
-      - 'components/**'
-      - 'context/**'
-      - 'handlers/**'
-      - 'hooks/**'
-      - 'store/**'
-      - 'constants/**'
-      - 'assets/**'
-      - '!android/**'
-      - '!ios/**'
-      - '!**/*.md'
+  workflow_dispatch:
+    inputs:
+      channel:
+        type: choice
+        options:
+          - staging
+          - production
+        required: true
+        description: 'Update channel to publish to'
+      message:
+        type: string
+        required: false
+        description: 'Update message/description'
 
 jobs:
-  # Production updates (main branch)
-  # update_production:
-  #   name: Update Production Channel
-  #   if: ${{ github.ref_name == 'main' }}
-  #   type: update
-  #   environment: production
-  #   params:
-  #     channel: production
-  #     message: '${{ github.event.head_commit.message }}'
+  # Production updates
+  update_production:
+    name: Update Production Channel
+    if: ${{ inputs.channel == 'production' }}
+    type: update
+    environment: production
+    params:
+      channel: production
+      message: ${{ inputs.message || 'OTA Update' }}
 
-  # Staging updates (develop branch)
+  # Staging updates
   update_staging:
     name: Update Staging Channel
-    if: ${{ github.ref_name == 'develop' }}
+    if: ${{ inputs.channel == 'staging' }}
     type: update
     environment: preview
     params:
       channel: staging
-      message: '${{ github.event.head_commit.message }}'
+      message: ${{ inputs.message || 'OTA Update' }}
