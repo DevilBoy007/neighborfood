@@ -10,12 +10,13 @@ import {
   Platform,
   KeyboardAvoidingView,
   ActivityIndicator,
+  SafeAreaView,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { SafeView } from '@/components/SafeView';
 import { useMessage, useUser, MessageData, ThreadData } from '@/store/reduxHooks';
 import firebaseService from '@/handlers/firebaseService';
 import { useAppColors } from '@/hooks/useAppColors';
@@ -131,6 +132,7 @@ export default function MessageThreadScreen() {
   const { threadId } = useLocalSearchParams<{ threadId: string }>();
   const { userData } = useUser();
   const colors = useAppColors();
+  const insets = useSafeAreaInsets();
   const {
     selectedThread,
     messages,
@@ -285,9 +287,12 @@ export default function MessageThreadScreen() {
   );
 
   return (
-    <SafeView>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      {Platform.OS !== 'web' && (
+        <View style={{ height: insets.top, backgroundColor: colors.navBackground }} />
+      )}
       <KeyboardAvoidingView
-        style={[styles.container, { backgroundColor: colors.background }]}
+        style={styles.keyboardView}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
       >
@@ -296,12 +301,10 @@ export default function MessageThreadScreen() {
           style={[
             styles.header,
             { backgroundColor: colors.navBackground, borderBottomColor: colors.border },
+            Platform.OS !== 'web' && styles.headerMobile,
           ]}
         >
-          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-            <Ionicons name="arrow-back" size={24} color={colors.icon} />
-          </TouchableOpacity>
-          <View style={styles.headerInfo}>
+          <View>
             {otherUserInfo?.photoURL ? (
               <Image source={{ uri: otherUserInfo.photoURL }} style={styles.headerAvatar} />
             ) : (
@@ -315,7 +318,9 @@ export default function MessageThreadScreen() {
               {otherUserInfo?.username || 'Unknown User'}
             </Text>
           </View>
-          <View style={styles.headerSpacer} />
+          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+            <Ionicons name="chevron-back" size={24} color={colors.icon} />
+          </TouchableOpacity>
         </View>
 
         {/* Messages List */}
@@ -382,7 +387,7 @@ export default function MessageThreadScreen() {
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
-    </SafeView>
+    </View>
   );
 }
 
@@ -390,6 +395,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f5f5f5',
+  },
+  keyboardView: {
+    flex: 1,
   },
   header: {
     flexDirection: 'row',
@@ -400,13 +408,13 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
   },
-  backButton: {
-    padding: 8,
+  headerMobile: {
+    justifyContent: 'flex-end',
   },
-  headerInfo: {
-    flex: 1,
+  backButton: {
     flexDirection: 'row',
     alignItems: 'center',
+    marginRight: 0,
     marginLeft: 8,
   },
   headerAvatar: {
@@ -437,7 +445,9 @@ const styles = StyleSheet.create({
     fontFamily: 'TextMeOne',
   },
   headerSpacer: {
-    width: 40,
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   loadingContainer: {
     flex: 1,
@@ -453,6 +463,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   emptyMessagesContainer: {
+    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
   },
