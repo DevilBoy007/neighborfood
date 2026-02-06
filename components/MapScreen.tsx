@@ -169,7 +169,7 @@ const styles = StyleSheet.create({
   loadingText: {
     fontFamily: 'TextMeOne',
     fontSize: 18,
-    color: '#333',
+    color: '#eee',
     marginTop: 10,
   },
   errorText: {
