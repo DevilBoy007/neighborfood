@@ -29,7 +29,7 @@ export const Colors = {
  * Theme Presets for user-switchable appearance settings.
  * Each preset defines a complete color palette for the app.
  */
-export type ThemePresetName = 'default' | 'simpleDark' | 'neoModern' | 'midnight' | 'fall';
+export type ThemePresetName = 'default' | 'simpleDark' | 'lilac' | 'midnight' | 'fall';
 
 export interface ThemePreset {
   name: ThemePresetName;
@@ -168,9 +168,9 @@ export const ThemePresets: Record<ThemePresetName, ThemePreset> = {
       stickyBackButton: '#666666b3',
     },
   },
-  neoModern: {
-    name: 'neoModern',
-    displayName: 'Neo-Modern',
+  lilac: {
+    name: 'lilac',
+    displayName: 'Lilac',
     description: 'Bold, contemporary design with purple accents',
     colors: {
       // Primary colors
@@ -189,7 +189,7 @@ export const ThemePresets: Record<ThemePresetName, ThemePreset> = {
       // State colors
       success: '#22C55E',
       warning: '#EAB308',
-      error: '#DC2626',
+      error: '#673232',
       info: '#0EA5E9',
       // UI elements
       border: '#26066F',
