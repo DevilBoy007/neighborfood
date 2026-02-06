@@ -467,13 +467,6 @@ export const useTheme = () => {
   };
 };
 
-// Re-export types for convenience
-export type { UserData } from './slices/userSlice';
-export type { ShopData } from './slices/shopSlice';
-export type { ItemData } from './slices/itemSlice';
-export type { OrderData, OrderStatus } from './slices/orderSlice';
-export type { ThreadData, MessageData, MessageType } from './slices/messageSlice';
-
 /**
  * Hook that provides messaging functionality
  */
