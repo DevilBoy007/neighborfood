@@ -14,6 +14,7 @@ import {
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useMessage, useUser, ThreadData } from '@/store/reduxHooks';
 import { useAppColors } from '@/hooks/useAppColors';
@@ -42,6 +43,7 @@ export default function MessagesScreen() {
   const { userData } = useUser();
   const { threads, isLoadingThreads, loadThreads, setSelectedThread, removeThread } = useMessage();
   const colors = useAppColors();
+  const insets = useSafeAreaInsets();
 
   const [refreshing, setRefreshing] = useState(false);
 
@@ -149,18 +151,36 @@ export default function MessagesScreen() {
   );
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      {Platform.OS !== 'web' && (
+        <View style={{ height: insets.top, backgroundColor: colors.navBackground }} />
+      )}
       <View
         style={[
           styles.header,
           { backgroundColor: colors.navBackground, borderBottomColor: colors.border },
+          Platform.OS !== 'web' && styles.headerMobile,
         ]}
       >
-        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={Platform.OS === 'web' ? 40 : 24} color={colors.icon} />
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.buttonText }]}>Messages</Text>
-        <View style={styles.headerSpacer} />
+        {Platform.OS === 'web' ? (
+          <>
+            <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+              <Ionicons name="chevron-back" size={40} color={colors.icon} />
+            </TouchableOpacity>
+            <Text style={[styles.headerTitle, { color: colors.buttonText }]}>Messages</Text>
+            <View style={styles.headerSpacer} />
+          </>
+        ) : (
+          <>
+            <View style={styles.headerSpacer} />
+            <View style={styles.headerRightGroup}>
+              <Text style={[styles.headerTitle, { color: colors.buttonText }]}>Messages</Text>
+              <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+                <Ionicons name="chevron-back" size={24} color={colors.icon} />
+              </TouchableOpacity>
+            </View>
+          </>
+        )}
       </View>
 
       {isLoadingThreads && !refreshing ? (
@@ -182,7 +202,7 @@ export default function MessagesScreen() {
           showsVerticalScrollIndicator={false}
         />
       )}
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -304,5 +324,13 @@ const styles = StyleSheet.create({
   deleteButton: {
     padding: 8,
     marginLeft: 8,
+  },
+  headerMobile: {
+    justifyContent: 'flex-end',
+  },
+  headerRightGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
 });
