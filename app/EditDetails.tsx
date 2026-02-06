@@ -346,6 +346,7 @@ const EditDetails = () => {
         phone: phone,
         location: locationWithGeoPoint,
         username: username,
+        photoURL: userData.photoURL || profileImage || null,
       });
 
       // If location (zip) changed, update marketId for all user's shops and items
@@ -382,6 +383,7 @@ const EditDetails = () => {
         phone: phone,
         location: location,
         displayName: username,
+        photoURL: userData.photoURL || profileImage || null,
       };
       await setUserData(updatedUserData);
 
