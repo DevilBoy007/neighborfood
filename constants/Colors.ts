@@ -94,7 +94,7 @@ export const ThemePresets: Record<ThemePresetName, ThemePreset> = {
       // Text colors
       text: '#000000',
       textSecondary: '#333333',
-      textMuted: '#666666',
+      textMuted: '#333',
       textOnPrimary: '#00bfff',
       // State colors
       success: '#4CAF50',
@@ -103,7 +103,7 @@ export const ThemePresets: Record<ThemePresetName, ThemePreset> = {
       info: '#2196F3',
       // UI elements
       border: '#000000',
-      divider: '#e0e0e0',
+      divider: '#ffffff9f',
       icon: '#000000',
       iconMuted: '#687076',
       // Interactive elements
@@ -139,7 +139,7 @@ export const ThemePresets: Record<ThemePresetName, ThemePreset> = {
       // Text colors
       text: '#F9FAFB',
       textSecondary: '#E5E7EB',
-      textMuted: '#9CA3AF',
+      textMuted: '#3B82F64f',
       textOnPrimary: '#fff',
       // State colors
       success: '#10B981',
@@ -193,7 +193,7 @@ export const ThemePresets: Record<ThemePresetName, ThemePreset> = {
       info: '#0EA5E9',
       // UI elements
       border: '#26066F',
-      divider: '#E7E5E4',
+      divider: '#ffffff9f',
       icon: '#44403C',
       iconMuted: '#26066F',
       // Interactive elements

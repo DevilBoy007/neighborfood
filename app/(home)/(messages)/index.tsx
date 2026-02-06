@@ -119,11 +119,22 @@ export default function MessagesScreen() {
             <Text style={[styles.username, { color: colors.text }]} numberOfLines={1}>
               {otherUserInfo?.username || 'Unknown User'}
             </Text>
-            <Text style={[styles.timestamp, { color: colors.textMuted }]}>
+            <Text
+              style={[
+                styles.timestamp,
+                { color: colors.background === '#D75CF6' ? '#fff' : colors.textMuted },
+              ]}
+            >
               {formatTimestamp(item.lastMessage?.createdAt || item.updatedAt)}
             </Text>
           </View>
-          <Text style={[styles.lastMessage, { color: colors.textSecondary }]} numberOfLines={1}>
+          <Text
+            style={[
+              styles.lastMessage,
+              { color: colors.background === '#D75CF6' ? '#fff' : colors.textSecondary },
+            ]}
+            numberOfLines={1}
+          >
             {item.lastMessage?.type === 'order'
               ? '📦 New order'
               : item.lastMessage?.content || 'No messages yet'}
@@ -134,7 +145,11 @@ export default function MessagesScreen() {
           onPress={() => handleDeleteThread(item)}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         >
-          <Ionicons name="trash-outline" size={20} color={colors.error} />
+          <Ionicons
+            name="trash-outline"
+            size={Platform.OS === 'web' ? 30 : 20}
+            color={colors.error}
+          />
         </TouchableOpacity>
       </TouchableOpacity>
     );
@@ -304,20 +319,19 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   username: {
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: Platform.OS === 'web' ? 32 : 16,
+    fontWeight: '400',
     color: '#333',
     flex: 1,
     marginRight: 8,
     fontFamily: 'TextMeOne',
   },
   timestamp: {
-    fontSize: 12,
-    color: '#999',
+    fontSize: Platform.OS === 'web' ? 24 : 12,
     fontFamily: 'TextMeOne',
   },
   lastMessage: {
-    fontSize: 14,
+    fontSize: Platform.OS === 'web' ? 28 : 14,
     color: '#666',
     fontFamily: 'TextMeOne',
   },

@@ -266,7 +266,9 @@ export default function MessageThreadScreen() {
           <Text
             style={[
               styles.messageTime,
-              { color: colors.textMuted },
+              {
+                color: colors.textMuted === '#78716C' ? '#fffffff0' : colors.textMuted,
+              },
               isSentByMe && styles.sentMessageTime,
             ]}
           >
@@ -301,10 +303,10 @@ export default function MessageThreadScreen() {
           style={[
             styles.header,
             { backgroundColor: colors.navBackground, borderBottomColor: colors.border },
-            Platform.OS !== 'web' && styles.headerMobile,
+            styles.headerMobile,
           ]}
         >
-          <View>
+          <View style={styles.headerAvatarContainer}>
             {otherUserInfo?.photoURL ? (
               <Image source={{ uri: otherUserInfo.photoURL }} style={styles.headerAvatar} />
             ) : (
@@ -319,7 +321,11 @@ export default function MessageThreadScreen() {
             </Text>
           </View>
           <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-            <Ionicons name="chevron-back" size={24} color={colors.icon} />
+            <Ionicons
+              name="chevron-back"
+              size={Platform.OS === 'web' ? 40 : 24}
+              color={colors.icon}
+            />
           </TouchableOpacity>
         </View>
 
@@ -422,6 +428,15 @@ const styles = StyleSheet.create({
     marginRight: 0,
     marginLeft: 8,
   },
+  headerAvatarContainer: {
+    backgroundColor: '#ffffff3f',
+    padding: 4,
+    borderRadius: 30,
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    maxWidth: Platform.OS === 'web' ? '100%' : 225,
+  },
   headerAvatar: {
     width: 48,
     height: 48,
@@ -443,7 +458,7 @@ const styles = StyleSheet.create({
     color: '#87CEFA',
   },
   headerTitle: {
-    fontSize: 18,
+    fontSize: Platform.OS === 'web' ? 36 : 18,
     fontWeight: '600',
     color: '#000',
     flex: 1,
@@ -483,7 +498,7 @@ const styles = StyleSheet.create({
     marginVertical: 16,
   },
   dateSeparatorText: {
-    fontSize: 12,
+    fontSize: Platform.OS === 'web' ? 18 : 12,
     color: '#999',
     backgroundColor: '#e0e0e0',
     paddingHorizontal: 12,
@@ -523,7 +538,7 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   messageText: {
-    fontSize: 16,
+    fontSize: Platform.OS === 'web' ? 24 : 16,
     color: '#333',
     fontFamily: 'TextMeOne',
   },
@@ -531,7 +546,7 @@ const styles = StyleSheet.create({
     color: '#000',
   },
   messageTime: {
-    fontSize: 11,
+    fontSize: Platform.OS === 'web' ? 18 : 11,
     color: '#999',
     marginTop: 4,
     fontFamily: 'TextMeOne',
@@ -559,7 +574,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   orderTitle: {
-    fontSize: 14,
+    fontSize: Platform.OS === 'web' ? 28 : 14,
     fontWeight: '600',
     color: '#333',
     marginLeft: 6,
@@ -572,7 +587,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   orderShopName: {
-    fontSize: 16,
+    fontSize: Platform.OS === 'web' ? 32 : 16,
     fontWeight: '600',
     color: '#333',
     marginBottom: 8,
@@ -582,13 +597,13 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   orderItem: {
-    fontSize: 13,
+    fontSize: Platform.OS === 'web' ? 26 : 13,
     color: '#666',
     marginBottom: 2,
     fontFamily: 'TextMeOne',
   },
   orderItemMore: {
-    fontSize: 12,
+    fontSize: Platform.OS === 'web' ? 16 : 12,
     color: '#999',
     fontStyle: 'italic',
     fontFamily: 'TextMeOne',
@@ -602,7 +617,7 @@ const styles = StyleSheet.create({
     paddingTop: 8,
   },
   orderTotal: {
-    fontSize: 15,
+    fontSize: Platform.OS === 'web' ? 28 : 15,
     fontWeight: '600',
     color: '#333',
     fontFamily: 'TextMeOne',
@@ -613,7 +628,7 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   orderStatusText: {
-    fontSize: 10,
+    fontSize: Platform.OS === 'web' ? 18 : 10,
     fontWeight: '600',
     color: '#fff',
   },
@@ -632,8 +647,8 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     paddingHorizontal: 16,
     paddingVertical: Platform.OS === 'ios' ? 10 : 8,
-    fontSize: 16,
-    maxHeight: 100,
+    fontSize: Platform.OS === 'web' ? 30 : 16,
+    maxHeight: Platform.OS === 'web' ? 100 : 100,
     fontFamily: 'TextMeOne',
   },
   sendButton: {

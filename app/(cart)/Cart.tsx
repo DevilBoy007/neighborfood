@@ -216,7 +216,7 @@ const CartScreen = () => {
             onPress={handleCheckout}
             soundType="tap"
           >
-            <Text style={[styles.checkoutButtonText, { color: colors.textOnPrimary }]}>
+            <Text style={[styles.checkoutButtonText, { color: colors.buttonText }]}>
               Proceed to Checkout
             </Text>
           </SoundTouchableOpacity>

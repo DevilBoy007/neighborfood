@@ -290,7 +290,7 @@ const Checkout = () => {
         >
           <Ionicons name="chevron-back" size={24} color={colors.text} />
         </SoundTouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.textOnPrimary }]}>checkout</Text>
+        <Text style={[styles.headerTitle, { color: colors.buttonText }]}>checkout</Text>
       </View>
 
       <ScrollView style={styles.content}>
@@ -562,7 +562,7 @@ const Checkout = () => {
             disabled={isPlacingOrder}
             soundType="click"
           >
-            <Text style={[styles.placeOrderText, { color: colors.textOnPrimary }]}>
+            <Text style={[styles.placeOrderText, { color: colors.buttonText }]}>
               {isPlacingOrder ? 'Placing Order...' : 'Place Order'}
             </Text>
           </SoundTouchableOpacity>
