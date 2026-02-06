@@ -256,7 +256,7 @@ export default function MessageThreadScreen() {
                 style={[
                   styles.messageText,
                   { color: colors.text },
-                  isSentByMe && { color: colors.textOnPrimary },
+                  isSentByMe && { color: colors.buttonText },
                 ]}
               >
                 {item.content}
@@ -352,7 +352,11 @@ export default function MessageThreadScreen() {
         <View
           style={[
             styles.inputContainer,
-            { backgroundColor: colors.surface, borderTopColor: colors.border },
+            {
+              backgroundColor: colors.surface,
+              borderTopColor: colors.border,
+              paddingBottom: Platform.OS !== 'web' ? 100 : 10,
+            },
           ]}
         >
           <TextInput
@@ -404,6 +408,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 12,
     paddingVertical: 10,
+    paddingBottom: Platform.OS !== 'web' ? 20 : 10,
     backgroundColor: '#87CEFA',
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
@@ -418,15 +423,15 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
   headerAvatar: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     marginRight: 10,
   },
   headerAvatarPlaceholder: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     backgroundColor: '#fff',
     justifyContent: 'center',
     alignItems: 'center',
