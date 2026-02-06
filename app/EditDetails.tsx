@@ -435,7 +435,7 @@ const EditDetails = () => {
                   { backgroundColor: colors.primary, borderColor: colors.background },
                 ]}
               >
-                <Ionicons name="camera" size={14} color={colors.textOnPrimary} />
+                <Ionicons name="camera" size={14} color={colors.buttonText} />
               </View>
             </>
           )}
@@ -560,13 +560,13 @@ const EditDetails = () => {
         {/* Display selected location details */}
         {locationSelected && formData.location.address ? (
           <View style={[styles.locationDetailsContainer, { backgroundColor: colors.primary }]}>
-            <Text style={[styles.locationDetail, { color: colors.textOnPrimary }]}>
+            <Text style={[styles.locationDetail, { color: colors.buttonText }]}>
               {formData.location.address}
             </Text>
           </View>
         ) : formData.location.city || formData.location.state || formData.location.zip ? (
           <View style={[styles.locationDetailsContainer, { backgroundColor: colors.primary }]}>
-            <Text style={[styles.locationDetail, { color: colors.textOnPrimary }]}>
+            <Text style={[styles.locationDetail, { color: colors.buttonText }]}>
               {formData.location.city}
               {formData.location.city && formData.location.state ? ', ' : ''}
               {formData.location.state} {formData.location.zip}
@@ -628,7 +628,7 @@ const EditDetails = () => {
               ]}
               onPress={() => setShowEmailInfo(false)}
             >
-              <Text style={[styles.modalButtonText, { color: colors.textOnPrimary }]}>Got it</Text>
+              <Text style={[styles.modalButtonText, { color: colors.buttonText }]}>Got it</Text>
             </TouchableOpacity>
           </View>
         </TouchableOpacity>
@@ -663,7 +663,7 @@ const EditDetails = () => {
                 style={[styles.modalButton, { backgroundColor: colors.warning }]}
                 onPress={handleSave}
               >
-                <Text style={[styles.modalButtonText, { color: colors.textOnPrimary }]}>
+                <Text style={[styles.modalButtonText, { color: colors.buttonText }]}>
                   Yes, Update
                 </Text>
               </TouchableOpacity>
@@ -684,7 +684,7 @@ const EditDetails = () => {
           {isLoading ? (
             <ActivityIndicator color={colors.textOnPrimary} size="small" />
           ) : (
-            <Text style={[styles.saveButtonText, { color: colors.textOnPrimary }]}>Save</Text>
+            <Text style={[styles.saveButtonText, { color: colors.buttonText }]}>Save</Text>
           )}
         </TouchableOpacity>
       </View>
