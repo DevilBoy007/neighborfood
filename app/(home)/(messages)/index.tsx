@@ -157,7 +157,7 @@ export default function MessagesScreen() {
         ]}
       >
         <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={24} color={colors.icon} />
+          <Ionicons name="arrow-back" size={Platform.OS === 'web' ? 40 : 24} color={colors.icon} />
         </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: colors.buttonText }]}>Messages</Text>
         <View style={styles.headerSpacer} />
@@ -205,7 +205,7 @@ const styles = StyleSheet.create({
     padding: 8,
   },
   headerTitle: {
-    fontSize: Platform.OS === 'web' ? 40 : 30,
+    fontSize: Platform.OS === 'web' ? 60 : 30,
     fontFamily: 'TitanOne',
     color: '#000',
   },

@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
@@ -174,7 +174,7 @@ const styles = StyleSheet.create({
     fontFamily: 'TextMeOne',
   },
   dateText: {
-    fontSize: 24,
+    fontSize: Platform.OS === 'web' ? 30 : 24,
     fontWeight: 'bold',
     fontFamily: 'TextMeOne',
   },
@@ -186,20 +186,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   detailLabel: {
-    fontSize: 16,
+    fontSize: Platform.OS === 'web' ? 20 : 16,
     color: '#000',
     width: 60,
     fontFamily: 'TextMeOne',
     fontWeight: 'bold',
   },
   detailValue: {
-    fontSize: 16,
+    fontSize: Platform.OS === 'web' ? 20 : 16,
     color: '#000',
     flex: 1,
     fontFamily: 'TextMeOne',
   },
   itemsText: {
-    fontSize: 14,
+    fontSize: Platform.OS === 'web' ? 18 : 12,
     color: '#999',
     marginTop: 8,
     fontFamily: 'TextMeOne',
@@ -224,7 +224,7 @@ const styles = StyleSheet.create({
   },
   statusText: {
     color: '#fff',
-    fontSize: 15,
+    fontSize: Platform.OS === 'web' ? 25 : 12,
     fontWeight: '600',
     textAlign: 'center',
     paddingVertical: 12,

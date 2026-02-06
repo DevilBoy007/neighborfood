@@ -168,7 +168,7 @@ export default function ManageItems() {
         >
           <Ionicons
             name="add-circle-outline"
-            size={24}
+            size={Platform.OS === 'web' ? 36 : 24}
             color={colors.buttonText}
             style={styles.buttonIcon}
           />
@@ -200,7 +200,7 @@ const styles = StyleSheet.create({
     fontFamily: 'TitanOne',
     ...Platform.select({
       web: {
-        fontSize: 32,
+        fontSize: 40,
       },
     }),
   },
@@ -213,7 +213,7 @@ const styles = StyleSheet.create({
     fontFamily: 'TitanOne',
     ...Platform.select({
       web: {
-        fontSize: 32,
+        fontSize: 40,
       },
     }),
   },
@@ -231,7 +231,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   addItemButtonText: {
-    fontSize: 24,
+    fontSize: Platform.OS === 'web' ? 36 : 24,
     fontFamily: 'TextMeOne',
   },
   buttonIcon: {
@@ -240,11 +240,11 @@ const styles = StyleSheet.create({
   errorText: {
     textAlign: 'center',
     marginTop: 20,
-    fontSize: 16,
+    fontSize: Platform.OS === 'web' ? 18 : 16,
   },
   noItemsText: {
     textAlign: 'center',
     marginTop: 20,
-    fontSize: 16,
+    fontSize: Platform.OS === 'web' ? 18 : 16,
   },
 });

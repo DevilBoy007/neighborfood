@@ -703,6 +703,12 @@ export default function AddItemScreen() {
           onPress={handleSubmit}
           disabled={uploading || isLoadingItem}
         >
+          <Ionicons
+            name="add-circle-outline"
+            size={24}
+            color={colors.buttonText}
+            style={styles.buttonIcon}
+          />
           <Text style={[styles.buttonText, { color: colors.buttonText }]}>
             {itemId ? 'Save' : 'Add Item'}
           </Text>
@@ -734,7 +740,7 @@ const styles = StyleSheet.create({
   errorText: {
     color: 'red',
     marginBottom: 10,
-    fontSize: 14,
+    fontSize: Platform.OS === 'web' ? 18 : 14,
     fontFamily: 'TextMeOne',
   },
   errorRow: {
@@ -764,12 +770,12 @@ const styles = StyleSheet.create({
     }),
   },
   sectionTitle: {
-    fontSize: 24,
+    fontSize: Platform.OS === 'web' ? 30 : 24,
     marginVertical: 15,
     fontFamily: 'TitanOne',
   },
   sectionSubtitle: {
-    fontSize: 18,
+    fontSize: Platform.OS === 'web' ? 24 : 18,
     marginVertical: 15,
     fontFamily: 'TitanOne',
     textAlign: 'right',
@@ -779,7 +785,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginBottom: 15,
     fontFamily: 'TextMeOne',
-    fontSize: 16,
+    fontSize: Platform.OS === 'web' ? 18 : 16,
   },
   textArea: {
     height: Platform.OS === 'web' ? 100 : null,
@@ -790,7 +796,7 @@ const styles = StyleSheet.create({
     padding: 15,
     borderRadius: 3,
     marginBottom: 15,
-    fontSize: 16,
+    fontSize: 18,
     width: '100%',
     borderWidth: 1,
   },
@@ -832,7 +838,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 10,
     top: 15,
-    fontSize: 16,
+    fontSize: Platform.OS === 'web' ? 18 : 16,
   },
   unitSelection: {
     width: '48%',
@@ -844,7 +850,7 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   quantityLabel: {
-    fontSize: 16,
+    fontSize: Platform.OS === 'web' ? 21 : 16,
     marginRight: 10,
     flex: 1,
     fontFamily: 'TextMeOne',
@@ -869,7 +875,7 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   checkboxLabel: {
-    fontSize: 16,
+    fontSize: Platform.OS === 'web' ? 21 : 16,
     fontFamily: 'TextMeOne',
   },
   imageUpload: {
@@ -909,13 +915,19 @@ const styles = StyleSheet.create({
     bottom: 30,
   },
   button: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
     width: '100%',
     padding: 10,
     paddingBottom: 33,
   },
   buttonText: {
     textAlign: 'center',
-    fontSize: 30,
+    fontSize: Platform.OS === 'web' ? 36 : 30,
     fontFamily: 'TextMeOne',
+  },
+  buttonIcon: {
+    marginRight: 8,
   },
 });

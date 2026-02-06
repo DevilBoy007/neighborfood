@@ -175,9 +175,15 @@ const ItemCard = ({
       <View style={styles.quantityContainer}>
         <TouchableOpacity
           onPress={decrementQuantity}
-          style={[styles.quantityButton, { backgroundColor: colors.inputBackground }]}
+          style={[
+            styles.quantityButton,
+            {
+              backgroundColor:
+                colors.inputBackground == '#ffffff' ? '#eee' : colors.inputBackground,
+            },
+          ]}
         >
-          <Ionicons name="remove" size={16} color="#00bfff" />
+          <Ionicons name="remove" size={Platform.OS === 'web' ? 28 : 16} color="#00bfff" />
         </TouchableOpacity>
         <Text style={[styles.quantityText, { color: colors.text }]}>
           {Math.min(quantity, item.quantity)}
@@ -192,11 +198,11 @@ const ItemCard = ({
             },
           ]}
         >
-          <Ionicons name="add" size={16} color="#00bfff" />
+          <Ionicons name="add" size={Platform.OS === 'web' ? 28 : 16} color="#00bfff" />
         </TouchableOpacity>
       </View>
       <TouchableOpacity style={styles.addButton} onPress={handleAddToCart}>
-        <Ionicons name="cart" size={16} color="white" />
+        <Ionicons name="cart" size={Platform.OS === 'web' ? 28 : 16} color="white" />
         <Text style={styles.addButtonText}>Add to Cart</Text>
       </TouchableOpacity>
     </View>
@@ -292,7 +298,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   itemName: {
-    fontSize: 18,
+    fontSize: Platform.OS === 'web' ? 28 : 18,
     marginBottom: 4,
     fontFamily: 'TitanOne',
   },
@@ -302,29 +308,29 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   itemPrice: {
-    fontSize: 16,
+    fontSize: Platform.OS === 'web' ? 28 : 16,
     color: '#00bfff',
     fontWeight: '600',
     marginRight: 4,
     fontFamily: 'TextMeOne',
   },
   itemUnit: {
-    fontSize: 14,
+    fontSize: Platform.OS === 'web' ? 24 : 14,
     color: '#666',
     fontStyle: 'italic',
   },
   itemDescription: {
-    fontSize: 14,
+    fontSize: Platform.OS === 'web' ? 24 : 14,
     fontFamily: 'TextMeOne',
     marginBottom: 4,
   },
   itemShop: {
-    fontSize: 14,
+    fontSize: Platform.OS === 'web' ? 24 : 14,
     marginBottom: 5,
     fontFamily: 'TextMeOne',
   },
   itemQuantity: {
-    fontSize: 14,
+    fontSize: Platform.OS === 'web' ? 24 : 14,
     fontFamily: 'TextMeOne',
   },
   itemNegotiable: {
@@ -350,14 +356,14 @@ const styles = StyleSheet.create({
   },
   quantityButton: {
     borderRadius: 12,
-    width: 24,
-    height: 24,
+    width: Platform.OS === 'web' ? 30 : 24,
+    height: Platform.OS === 'web' ? 30 : 24,
     justifyContent: 'center',
     alignItems: 'center',
   },
   quantityText: {
     marginHorizontal: 12,
-    fontSize: 16,
+    fontSize: Platform.OS === 'web' ? 28 : 16,
     fontWeight: '600',
   },
   addButton: {
@@ -375,6 +381,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginLeft: 6,
     fontFamily: 'TextMeOne',
+    fontSize: Platform.OS === 'web' ? 28 : 14,
   },
 
   // Action button styles

@@ -375,7 +375,11 @@ export default function ShopDetails() {
                 {isStartingChat ? (
                   <ActivityIndicator size="small" color="#87CEFA" />
                 ) : (
-                  <Ionicons name="chatbubble-outline" size={18} color="#87CEFA" />
+                  <Ionicons
+                    name="chatbubble-outline"
+                    size={Platform.OS === 'web' ? 30 : 18}
+                    color="#87CEFA"
+                  />
                 )}
               </TouchableOpacity>
             )}
@@ -387,7 +391,11 @@ export default function ShopDetails() {
             {selectedShop.type && (
               <View style={styles.infoRow}>
                 <View style={styles.iconContainer}>
-                  <Ionicons name="briefcase-outline" size={18} color={colors.iconMuted} />
+                  <Ionicons
+                    name="briefcase-outline"
+                    size={Platform.OS === 'web' ? 30 : 18}
+                    color={colors.iconMuted}
+                  />
                 </View>
                 <Text style={[styles.infoText, { color: colors.textOnPrimary }]}>
                   {selectedShop.type}
@@ -398,7 +406,11 @@ export default function ShopDetails() {
             {selectedShop.days && selectedShop.days.length > 0 && (
               <View style={styles.infoRow}>
                 <View style={styles.iconContainer}>
-                  <Ionicons name="calendar-outline" size={18} color={colors.iconMuted} />
+                  <Ionicons
+                    name="calendar-outline"
+                    size={Platform.OS === 'web' ? 30 : 18}
+                    color={colors.iconMuted}
+                  />
                 </View>
                 <Text style={[styles.infoText, { color: colors.textOnPrimary }]}>
                   Available: {selectedShop.days.join(', ')}
@@ -409,7 +421,11 @@ export default function ShopDetails() {
             {selectedShop.seasons && selectedShop.seasons.length > 0 && (
               <View style={styles.infoRow}>
                 <View style={styles.iconContainer}>
-                  <Ionicons name="flower-outline" size={18} color={colors.iconMuted} />
+                  <Ionicons
+                    name="flower-outline"
+                    size={Platform.OS === 'web' ? 30 : 18}
+                    color={colors.iconMuted}
+                  />
                 </View>
                 <Text style={[styles.infoText, { color: colors.textOnPrimary }]}>
                   Seasons:{' '}
@@ -425,7 +441,7 @@ export default function ShopDetails() {
                                 ? 'leaf-outline'
                                 : 'snow-outline'
                         }
-                        size={14}
+                        size={Platform.OS === 'web' ? 25 : 14}
                         color={colors.iconMuted}
                       />{' '}
                     </Text>
@@ -437,7 +453,11 @@ export default function ShopDetails() {
             {selectedShop.openTime && selectedShop.closeTime && (
               <View style={styles.infoRow}>
                 <View style={styles.iconContainer}>
-                  <Ionicons name="time-outline" size={18} color={colors.iconMuted} />
+                  <Ionicons
+                    name="time-outline"
+                    size={Platform.OS === 'web' ? 30 : 18}
+                    color={colors.iconMuted}
+                  />
                 </View>
                 <Text style={[styles.infoText, { color: colors.textOnPrimary }]}>
                   Hours: {selectedShop.openTime} - {selectedShop.closeTime}
@@ -446,7 +466,11 @@ export default function ShopDetails() {
             )}
             <View style={styles.infoRow}>
               <View style={styles.iconContainer}>
-                <Ionicons name="location-outline" size={18} color={colors.iconMuted} />
+                <Ionicons
+                  name="location-outline"
+                  size={Platform.OS === 'web' ? 30 : 18}
+                  color={colors.iconMuted}
+                />
               </View>
               <Text style={[styles.infoText, { color: colors.textOnPrimary }]}>
                 {locationData.coords && selectedShop.location
@@ -466,7 +490,11 @@ export default function ShopDetails() {
           <View style={styles.deliveryInfoContainer}>
             {selectedShop.allowPickup && (
               <View style={[styles.deliveryOption, { backgroundColor: colors.primary }]}>
-                <Ionicons name="bag-handle-outline" size={18} color={colors.buttonText} />
+                <Ionicons
+                  name="bag-handle-outline"
+                  size={Platform.OS === 'web' ? 30 : 18}
+                  color={colors.buttonText}
+                />
                 <Text style={[styles.deliveryText, { color: colors.buttonText }]}>
                   Pickup available
                 </Text>
@@ -474,7 +502,11 @@ export default function ShopDetails() {
             )}
             {selectedShop.localDelivery && (
               <View style={[styles.deliveryOption, { backgroundColor: colors.text }]}>
-                <Ionicons name="bicycle-outline" size={18} color={colors.buttonText} />
+                <Ionicons
+                  name="bicycle-outline"
+                  size={Platform.OS === 'web' ? 30 : 18}
+                  color={colors.buttonText}
+                />
                 <Text style={[styles.deliveryText, { color: colors.buttonText }]}>
                   Local delivery
                 </Text>
@@ -522,7 +554,7 @@ export default function ShopDetails() {
             >
               <Ionicons
                 name="add-circle-outline"
-                size={24}
+                size={Platform.OS === 'web' ? 30 : 24}
                 color={colors.buttonText}
                 style={styles.buttonIcon}
               />
@@ -575,7 +607,7 @@ const styles = StyleSheet.create({
   },
   uploadingText: {
     marginTop: 4,
-    fontSize: 12,
+    fontSize: Platform.OS === 'web' ? 24 : 12,
   },
   headerContainer: {
     position: Platform.OS === 'web' ? 'absolute' : 'relative',
@@ -621,19 +653,18 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   ownerText: {
-    fontSize: 14,
+    fontSize: Platform.OS === 'web' ? 28 : 14,
     fontFamily: 'TextMeOne',
     marginLeft: 4,
   },
   messageOwnerButton: {
     marginLeft: 12,
     padding: 6,
-    backgroundColor: 'rgba(135, 206, 250, 0.2)',
+    backgroundColor: 'rgba(255, 255, 255, 0.69)',
     borderRadius: 15,
   },
   shopName: {
     fontSize: Platform.OS === 'web' ? 40 : 30,
-    fontWeight: 'bold',
     marginBottom: 8,
     fontFamily: 'TitanOne',
   },
@@ -644,7 +675,7 @@ const styles = StyleSheet.create({
     marginLeft: 10,
   },
   shopDescription: {
-    fontSize: 16,
+    fontSize: Platform.OS === 'web' ? 28 : 16,
     marginBottom: 16,
     fontFamily: 'TextMeOne',
   },
@@ -664,6 +695,7 @@ const styles = StyleSheet.create({
   infoText: {
     fontFamily: 'TextMeOne',
     flex: 1,
+    fontSize: Platform.OS === 'web' ? 24 : 14,
   },
   deliveryInfoContainer: {
     flexDirection: 'row',
@@ -682,14 +714,14 @@ const styles = StyleSheet.create({
   deliveryText: {
     marginLeft: 6,
     fontFamily: 'TextMeOne',
+    fontSize: Platform.OS === 'web' ? 24 : 14,
   },
   itemsContainer: {
     marginTop: 16,
     paddingBottom: 200,
   },
   sectionTitle: {
-    fontSize: 22,
-    fontWeight: 'bold',
+    fontSize: Platform.OS === 'web' ? 30 : 22,
     marginBottom: 16,
     fontFamily: 'TitanOne',
   },
@@ -699,17 +731,16 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
   buttonText: {
-    fontWeight: 'bold',
     textAlign: 'center',
-    fontSize: 16,
+    fontSize: Platform.OS === 'web' ? 30 : 16,
   },
   errorText: {
-    fontSize: 18,
+    fontSize: Platform.OS === 'web' ? 28 : 18,
     marginBottom: 20,
     fontFamily: 'TextMeOne',
   },
   noItemsText: {
-    fontSize: 16,
+    fontSize: Platform.OS === 'web' ? 28 : 16,
     fontStyle: 'italic',
     textAlign: 'center',
     padding: 20,

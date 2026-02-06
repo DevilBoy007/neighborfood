@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useShop, ShopData } from '@/store/reduxHooks';
 import { useAppColors } from '@/hooks/useAppColors';
@@ -62,8 +62,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   shopName: {
-    fontSize: 18,
-    fontWeight: 'bold',
+    fontSize: Platform.OS === 'web' ? 30 : 18,
     fontFamily: 'TextMeOne',
   },
   shopCircles: {
@@ -71,8 +70,8 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   itemImage: {
-    width: 20,
-    height: 20,
+    width: Platform.OS === 'web' ? 80 : 20,
+    height: Platform.OS === 'web' ? 80 : 20,
     borderRadius: 10,
     marginRight: 8,
   },

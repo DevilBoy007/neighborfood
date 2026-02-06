@@ -211,7 +211,6 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: Platform.select({ ios: 30, web: 80 }),
-    fontWeight: 'bold',
     fontFamily: 'TitanOne',
   },
   profileIcon: {
