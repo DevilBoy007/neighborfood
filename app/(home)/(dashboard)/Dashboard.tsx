@@ -184,9 +184,10 @@ const Dashboard = () => {
         style={[
           styles.header,
           { backgroundColor: colors.navBackground, borderBottomColor: colors.border },
+          Platform.OS !== 'web' && styles.headerMobile,
         ]}
       >
-        <View style={styles.headerContent}>
+        <View>
           <Text style={[styles.title, { color: colors.buttonText }]}>dashboard</Text>
           {userData && (
             <Text style={[styles.subtitle, { color: colors.text }]}>
@@ -351,18 +352,9 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingBottom: Platform.OS !== 'web' ? 16 : 12,
     borderBottomWidth: 1,
-    ...Platform.select({
-      web: {
-        paddingTop: 30,
-        paddingBottom: 30,
-      },
-      ios: {
-        paddingLeft: 80,
-      },
-    }),
   },
-  headerContent: {
-    flex: 1,
+  headerMobile: {
+    justifyContent: 'flex-end',
   },
   backButton: {
     padding: 8,

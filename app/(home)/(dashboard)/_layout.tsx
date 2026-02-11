@@ -9,7 +9,6 @@ export default function DashboardLayout() {
       }}
     >
       <Stack.Screen name="index" options={{ headerShown: false }} />
-      <Stack.Screen name="Dashboard" options={{ headerShown: false }} />
     </Stack>
   );
 }
