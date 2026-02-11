@@ -100,7 +100,11 @@ const MenuScreen = () => {
               title="contact us"
               destination={'./(contact)/ContactUs'}
             />
-            <MenuButton icon={dashboardIcon} title="dashboard" destination={null} />
+            <MenuButton
+              icon={dashboardIcon}
+              title="dashboard"
+              destination={'./(dashboard)/Dashboard'}
+            />
           </View>
         </ScrollView>
       </View>
