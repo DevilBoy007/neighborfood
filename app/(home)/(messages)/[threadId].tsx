@@ -16,9 +16,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { useMessage, useUser, MessageData, ThreadData } from '@/store/reduxHooks';
+import { useMessage, useUser, useOrder, MessageData, ThreadData } from '@/store/reduxHooks';
 import firebaseService from '@/handlers/firebaseService';
 import { useAppColors } from '@/hooks/useAppColors';
+import { useOrderStatus } from '@/hooks/useOrderStatus';
 
 const formatMessageTime = (timestamp: { seconds: number; nanoseconds: number } | undefined) => {
   if (!timestamp) return '';
@@ -51,14 +52,25 @@ const formatMessageDate = (timestamp: { seconds: number; nanoseconds: number } |
 // Component to render order messages
 const OrderMessageBubble = ({
   orderData,
+  orderId,
   isSentByMe,
   colors,
 }: {
   orderData: MessageData['orderData'];
+  orderId?: string;
   isSentByMe: boolean;
   colors: any;
 }) => {
+  const { allOrders } = useOrder();
+  const { getStatusColor } = useOrderStatus();
+
   if (!orderData) return null;
+
+  // Try to get the live order from Redux store
+  const liveOrder = orderId ? allOrders.find((order) => order.id === orderId) : null;
+
+  // Use live order status if available, otherwise fall back to static order data
+  const currentStatus = liveOrder?.status || orderData.status || 'pending';
 
   return (
     <View
@@ -96,38 +108,14 @@ const OrderMessageBubble = ({
         <Text style={[styles.orderTotal, { color: colors.text }]}>
           Total: ${orderData.total?.toFixed(2)}
         </Text>
-        <View
-          style={[
-            styles.orderStatusBadge,
-            { backgroundColor: getStatusColor(orderData.status || 'pending') },
-          ]}
-        >
+        <View style={[styles.orderStatusBadge, { backgroundColor: getStatusColor(currentStatus) }]}>
           <Text style={styles.orderStatusText}>
-            {orderData.status?.replace('-', ' ').toUpperCase() || 'PENDING'}
+            {currentStatus.replace('-', ' ').toUpperCase()}
           </Text>
         </View>
       </View>
     </View>
   );
-};
-
-const getStatusColor = (status: string) => {
-  switch (status) {
-    case 'pending':
-      return '#ffc107';
-    case 'preparing':
-      return '#17a2b8';
-    case 'ready':
-      return '#28a745';
-    case 'in-delivery':
-      return '#007bff';
-    case 'completed':
-      return '#6c757d';
-    case 'cancelled':
-      return '#dc3545';
-    default:
-      return '#6c757d';
-  }
 };
 
 export default function MessageThreadScreen() {
@@ -238,6 +226,7 @@ export default function MessageThreadScreen() {
           {item.type === 'order' ? (
             <OrderMessageBubble
               orderData={item.orderData}
+              orderId={item.orderId}
               isSentByMe={isSentByMe}
               colors={colors}
             />
