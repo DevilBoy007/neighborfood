@@ -15,6 +15,9 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.anonymous.neighborfood",
+      "entitlements": {
+        "aps-environment": "development"
+      },
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }
@@ -49,6 +52,13 @@
     },
     "plugins": [
       "expo-router",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/carrot-notification-icon.png",
+          "color": "#87CEFA"
+        }
+      ],
       [
         "expo-location",
         {

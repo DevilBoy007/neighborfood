@@ -12,7 +12,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import Toast from 'react-native-toast-message';
 import { v4 as uuidv4 } from 'uuid';
-import { useCart, useUser, useOrder } from '@/store/reduxHooks';
+import { useCart, useUser, useOrder, useMessage } from '@/store/reduxHooks';
 import firebaseService from '@/handlers/firebaseService';
 import { SoundTouchableOpacity } from '@/components/SoundTouchableOpacity';
 import { useAppColors } from '@/hooks/useAppColors';
@@ -25,6 +25,7 @@ const Checkout = () => {
   const { shopCarts, clearCart, calculateTotalSubtotal } = useCart();
   const { userData } = useUser();
   const { refreshOrders } = useOrder();
+  const { createOrGetThread } = useMessage();
   const colors = useAppColors();
 
   const [shopDeliveryOptions, setShopDeliveryOptions] = useState<Record<string, DeliveryOption>>(
@@ -121,6 +122,18 @@ const Checkout = () => {
     setIsPlacingOrder(true);
     const orderId = uuidv4();
     try {
+      // First, get shop owner information for each shop to create message threads
+      const shopOwnerMap = new Map<string, string>(); // shopId -> ownerId
+
+      await Promise.all(
+        shopCarts.map(async (shopCart) => {
+          const shop = await firebaseService.getDocument('shops', shopCart.shopId);
+          if (shop?.userId) {
+            shopOwnerMap.set(shopCart.shopId, shop.userId as string);
+          }
+        })
+      );
+
       // Create orders for each shop using the dedicated createOrder function
       const orderPromises = shopCarts.map(async (shopCart) => {
         const deliveryOption = shopDeliveryOptions[shopCart.shopId];
@@ -156,6 +169,50 @@ const Checkout = () => {
       });
 
       const createdOrders = await Promise.all(orderPromises);
+
+      // Create message threads with shop owners (one per unique owner)
+      // Group orders by owner to avoid creating duplicate threads
+      const ownerOrdersMap = new Map<string, typeof createdOrders>();
+      createdOrders.forEach((order) => {
+        const ownerId = shopOwnerMap.get(order.shopId);
+        if (ownerId && ownerId !== userData.uid) {
+          if (!ownerOrdersMap.has(ownerId)) {
+            ownerOrdersMap.set(ownerId, []);
+          }
+          ownerOrdersMap.get(ownerId)!.push(order);
+        }
+      });
+
+      // Create threads and send order messages
+      await Promise.all(
+        Array.from(ownerOrdersMap.entries()).map(async ([ownerId, orders]) => {
+          try {
+            // Use the first order as the initial message
+            const firstOrder = orders[0];
+            await createOrGetThread([userData.uid, ownerId], {
+              type: 'order',
+              orderId: firstOrder.id,
+              orderData: {
+                id: firstOrder.id,
+                shopName: firstOrder.shopName,
+                shopPhotoURL: firstOrder.shopPhotoURL,
+                items: firstOrder.items.map((item) => ({
+                  name: item.name,
+                  quantity: item.quantity,
+                  price: item.price,
+                })),
+                total: firstOrder.total,
+                status: firstOrder.status,
+                deliveryOption: firstOrder.deliveryOption,
+                deliveryAddress: firstOrder.deliveryAddress,
+              },
+            });
+          } catch (threadError) {
+            console.error('Error creating message thread:', threadError);
+            // Don't fail the order if thread creation fails
+          }
+        })
+      );
 
       if (userData?.uid) {
         await refreshOrders(userData.uid);
@@ -233,7 +290,7 @@ const Checkout = () => {
         >
           <Ionicons name="chevron-back" size={24} color={colors.text} />
         </SoundTouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.textOnPrimary }]}>checkout</Text>
+        <Text style={[styles.headerTitle, { color: colors.buttonText }]}>checkout</Text>
       </View>
 
       <ScrollView style={styles.content}>
@@ -505,7 +562,7 @@ const Checkout = () => {
             disabled={isPlacingOrder}
             soundType="click"
           >
-            <Text style={[styles.placeOrderText, { color: colors.textOnPrimary }]}>
+            <Text style={[styles.placeOrderText, { color: colors.buttonText }]}>
               {isPlacingOrder ? 'Placing Order...' : 'Place Order'}
             </Text>
           </SoundTouchableOpacity>

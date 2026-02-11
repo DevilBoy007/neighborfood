@@ -44,6 +44,24 @@ import {
   OrderStatus,
 } from './slices/orderSlice';
 import {
+  fetchThreads,
+  fetchMessages,
+  sendMessage as sendMessageAction,
+  createOrGetThread as createOrGetThreadAction,
+  deleteThread as deleteThreadAction,
+  markThreadAsRead as markThreadAsReadAction,
+  setSelectedThread as setSelectedThreadAction,
+  clearSelectedThread as clearSelectedThreadAction,
+  clearMessages,
+  addMessageLocally,
+  resetMessageState,
+  selectUnreadCount,
+  selectThreadsWithUnread,
+  ThreadData,
+  MessageData,
+  MessageType,
+} from './slices/messageSlice';
+import {
   addToCart as addToCartAction,
   removeFromCart as removeFromCartAction,
   updateItemQuantity as updateItemQuantityAction,
@@ -451,10 +469,130 @@ export const useTheme = () => {
   };
 };
 
+/**
+ * Hook that provides messaging functionality
+ */
+export const useMessage = () => {
+  const dispatch = useAppDispatch();
+  const threads = useAppSelector((state) => state.message?.threads ?? []);
+  const selectedThread = useAppSelector((state) => state.message?.selectedThread ?? null);
+  const messages = useAppSelector((state) => state.message?.messages ?? []);
+  const isLoadingThreads = useAppSelector((state) => state.message?.isLoadingThreads ?? false);
+  const isLoadingMessages = useAppSelector((state) => state.message?.isLoadingMessages ?? false);
+  const isSendingMessage = useAppSelector((state) => state.message?.isSendingMessage ?? false);
+  const isInitialized = useAppSelector((state) => state.message?.isInitialized ?? false);
+  const unreadCount = useAppSelector(selectUnreadCount);
+  const threadsWithUnread = useAppSelector(selectThreadsWithUnread);
+
+  const loadThreads = useCallback(
+    async (userId: string) => {
+      await dispatch(fetchThreads(userId));
+    },
+    [dispatch]
+  );
+
+  const loadMessages = useCallback(
+    async (threadId: string) => {
+      await dispatch(fetchMessages(threadId));
+    },
+    [dispatch]
+  );
+
+  const sendMessage = useCallback(
+    async (
+      threadId: string,
+      message: {
+        type: MessageType;
+        content?: string;
+        orderId?: string;
+        orderData?: object;
+      }
+    ) => {
+      await dispatch(sendMessageAction({ threadId, message }));
+    },
+    [dispatch]
+  );
+
+  const createOrGetThread = useCallback(
+    async (
+      participantIds: string[],
+      initialMessage?: {
+        type: MessageType;
+        content?: string;
+        orderId?: string;
+        orderData?: object;
+      }
+    ) => {
+      const result = await dispatch(createOrGetThreadAction({ participantIds, initialMessage }));
+      return result.payload as ThreadData & { isNew: boolean };
+    },
+    [dispatch]
+  );
+
+  const removeThread = useCallback(
+    async (threadId: string) => {
+      await dispatch(deleteThreadAction(threadId));
+    },
+    [dispatch]
+  );
+
+  const markAsRead = useCallback(
+    async (threadId: string) => {
+      await dispatch(markThreadAsReadAction(threadId));
+    },
+    [dispatch]
+  );
+
+  const setSelectedThread = useCallback(
+    (thread: ThreadData | null) => {
+      dispatch(setSelectedThreadAction(thread));
+    },
+    [dispatch]
+  );
+
+  const clearSelectedThread = useCallback(() => {
+    dispatch(clearSelectedThreadAction());
+  }, [dispatch]);
+
+  const addLocalMessage = useCallback(
+    (message: MessageData) => {
+      dispatch(addMessageLocally(message));
+    },
+    [dispatch]
+  );
+
+  const resetMessages = useCallback(() => {
+    dispatch(resetMessageState());
+  }, [dispatch]);
+
+  return {
+    threads,
+    selectedThread,
+    messages,
+    isLoadingThreads,
+    isLoadingMessages,
+    isSendingMessage,
+    isInitialized,
+    unreadCount,
+    threadsWithUnread,
+    loadThreads,
+    loadMessages,
+    sendMessage,
+    createOrGetThread,
+    removeThread,
+    markAsRead,
+    setSelectedThread,
+    clearSelectedThread,
+    addLocalMessage,
+    resetMessages,
+  };
+};
+
 // Re-export types for convenience
 export type { UserData } from './slices/userSlice';
 export type { ShopData } from './slices/shopSlice';
 export type { ItemData } from './slices/itemSlice';
 export type { OrderData, OrderStatus } from './slices/orderSlice';
+export type { ThreadData, MessageData, MessageType } from './slices/messageSlice';
 export type { ShopCart, CartItem } from './slices/cartSlice';
 export type { ThemePresetName } from '@/constants/Colors';

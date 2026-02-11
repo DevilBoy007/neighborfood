@@ -346,6 +346,7 @@ const EditDetails = () => {
         phone: phone,
         location: locationWithGeoPoint,
         username: username,
+        photoURL: userData.photoURL || profileImage || null,
       });
 
       // If location (zip) changed, update marketId for all user's shops and items
@@ -382,6 +383,7 @@ const EditDetails = () => {
         phone: phone,
         location: location,
         displayName: username,
+        photoURL: userData.photoURL || profileImage || null,
       };
       await setUserData(updatedUserData);
 
@@ -435,7 +437,7 @@ const EditDetails = () => {
                   { backgroundColor: colors.primary, borderColor: colors.background },
                 ]}
               >
-                <Ionicons name="camera" size={14} color={colors.textOnPrimary} />
+                <Ionicons name="camera" size={14} color={colors.buttonText} />
               </View>
             </>
           )}
@@ -560,13 +562,13 @@ const EditDetails = () => {
         {/* Display selected location details */}
         {locationSelected && formData.location.address ? (
           <View style={[styles.locationDetailsContainer, { backgroundColor: colors.primary }]}>
-            <Text style={[styles.locationDetail, { color: colors.textOnPrimary }]}>
+            <Text style={[styles.locationDetail, { color: colors.buttonText }]}>
               {formData.location.address}
             </Text>
           </View>
         ) : formData.location.city || formData.location.state || formData.location.zip ? (
           <View style={[styles.locationDetailsContainer, { backgroundColor: colors.primary }]}>
-            <Text style={[styles.locationDetail, { color: colors.textOnPrimary }]}>
+            <Text style={[styles.locationDetail, { color: colors.buttonText }]}>
               {formData.location.city}
               {formData.location.city && formData.location.state ? ', ' : ''}
               {formData.location.state} {formData.location.zip}
@@ -614,8 +616,8 @@ const EditDetails = () => {
           <View style={[styles.modalContent, { backgroundColor: colors.card }]}>
             <Text style={[styles.modalTitle, { color: colors.info }]}>ℹ️ About Email</Text>
             <Text style={[styles.modalText, { color: colors.text }]}>
-              Your email address is used as your login credential and is linked to your account's
-              authentication.
+              Your email address is used as your login credential and is linked to your
+              account&#39;s authentication.
             </Text>
             <Text style={[styles.modalText, { color: colors.text }]}>
               For security reasons, changing your email requires identity verification. Please
@@ -628,7 +630,7 @@ const EditDetails = () => {
               ]}
               onPress={() => setShowEmailInfo(false)}
             >
-              <Text style={[styles.modalButtonText, { color: colors.textOnPrimary }]}>Got it</Text>
+              <Text style={[styles.modalButtonText, { color: colors.buttonText }]}>Got it</Text>
             </TouchableOpacity>
           </View>
         </TouchableOpacity>
@@ -663,7 +665,7 @@ const EditDetails = () => {
                 style={[styles.modalButton, { backgroundColor: colors.warning }]}
                 onPress={handleSave}
               >
-                <Text style={[styles.modalButtonText, { color: colors.textOnPrimary }]}>
+                <Text style={[styles.modalButtonText, { color: colors.buttonText }]}>
                   Yes, Update
                 </Text>
               </TouchableOpacity>
@@ -684,7 +686,7 @@ const EditDetails = () => {
           {isLoading ? (
             <ActivityIndicator color={colors.textOnPrimary} size="small" />
           ) : (
-            <Text style={[styles.saveButtonText, { color: colors.textOnPrimary }]}>Save</Text>
+            <Text style={[styles.saveButtonText, { color: colors.buttonText }]}>Save</Text>
           )}
         </TouchableOpacity>
       </View>

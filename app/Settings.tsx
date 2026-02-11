@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
 import { router } from 'expo-router';
 import firebaseService from '@/handlers/firebaseService';
+import notificationService from '@/handlers/notificationService';
 import { useUser } from '@/store/reduxHooks';
 import { useAppColors } from '@/hooks/useAppColors';
 
@@ -12,6 +13,12 @@ const Settings = () => {
 
   const handleLogout = async () => {
     try {
+      // Remove push notification token before logout
+      if (userData?.uid) {
+        await notificationService.removeTokenFromUser(userData.uid);
+      }
+      notificationService.cleanup();
+
       // First logout from Firebase
       await firebaseService.logout();
 
@@ -50,39 +57,40 @@ const Settings = () => {
           Logged in as: {userData?.displayName || 'not logged in'}
         </Text>
       </View>
+      <View style={styles.menuContainer}>
+        <TouchableOpacity
+          style={[styles.menuItem, { backgroundColor: colors.buttonPrimary }]}
+          onPress={() => {
+            router.back(); // Close modal first
+            router.push('/EditDetails'); // Navigate to full page
+          }}
+        >
+          <Text style={[styles.menuText, { color: colors.buttonText }]}>Edit Details</Text>
+        </TouchableOpacity>
 
-      <TouchableOpacity
-        style={[styles.menuItem, { backgroundColor: colors.buttonPrimary }]}
-        onPress={() => {
-          router.back(); // Close modal first
-          router.push('/EditDetails'); // Navigate to full page
-        }}
-      >
-        <Text style={[styles.menuText, { color: colors.buttonText }]}>Edit Details</Text>
-      </TouchableOpacity>
+        {/* Add other menu items */}
+        <TouchableOpacity
+          style={[styles.menuItem, { backgroundColor: colors.buttonPrimary }]}
+          onPress={handleAppearance}
+        >
+          <Text style={[styles.menuText, { color: colors.buttonText }]}>Appearance</Text>
+        </TouchableOpacity>
 
-      {/* Add other menu items */}
-      <TouchableOpacity
-        style={[styles.menuItem, { backgroundColor: colors.buttonPrimary }]}
-        onPress={handleAppearance}
-      >
-        <Text style={[styles.menuText, { color: colors.buttonText }]}>Appearance</Text>
-      </TouchableOpacity>
+        <TouchableOpacity style={[styles.menuItem, { backgroundColor: colors.buttonPrimary }]}>
+          <Text style={[styles.menuText, { color: colors.buttonText }]}>About</Text>
+        </TouchableOpacity>
 
-      <TouchableOpacity style={[styles.menuItem, { backgroundColor: colors.buttonPrimary }]}>
-        <Text style={[styles.menuText, { color: colors.buttonText }]}>About</Text>
-      </TouchableOpacity>
+        <TouchableOpacity style={[styles.menuItem, { backgroundColor: colors.buttonPrimary }]}>
+          <Text style={[styles.menuText, { color: colors.buttonText }]}>Legal</Text>
+        </TouchableOpacity>
 
-      <TouchableOpacity style={[styles.menuItem, { backgroundColor: colors.buttonPrimary }]}>
-        <Text style={[styles.menuText, { color: colors.buttonText }]}>Legal</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity
-        style={[styles.menuItem, { backgroundColor: colors.buttonPrimary }]}
-        onPress={handleLogout}
-      >
-        <Text style={[styles.menuText, { color: colors.buttonText }]}>Logout</Text>
-      </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.menuItem, { backgroundColor: colors.buttonPrimary }]}
+          onPress={handleLogout}
+        >
+          <Text style={[styles.menuText, { color: colors.buttonText }]}>Logout</Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 };
@@ -116,20 +124,28 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     marginBottom: 20,
     alignItems: 'center',
+    width: Platform.OS === 'web' ? 800 : '100%',
+    alignSelf: 'center',
   },
   welcomeText: {
-    fontSize: 24,
+    fontSize: Platform.OS === 'web' ? 30 : 24,
     fontFamily: 'TextMeOne',
     textAlign: 'center',
+  },
+  menuContainer: {
+    flex: 1,
+    gap: 15,
+    alignItems: 'center',
   },
   menuItem: {
     padding: 20,
     borderRadius: 10,
     marginBottom: 10,
+    width: Platform.OS === 'web' ? 800 : '100%',
   },
   menuText: {
     textAlign: 'center',
-    fontSize: 21,
+    fontSize: Platform.OS === 'web' ? 30 : 21,
     fontFamily: 'TextMeOne',
   },
 });

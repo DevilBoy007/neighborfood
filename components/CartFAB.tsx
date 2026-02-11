@@ -35,8 +35,8 @@ const CartFAB: React.FC<CartFABProps> = ({ bottom = 20 }) => {
       soundType="tap"
     >
       <View style={[styles.fab, { backgroundColor: colors.buttonPrimary }]}>
-        <Ionicons name="cart" size={24} color={colors.textOnPrimary} />
-        <Text style={[styles.fabText, { color: colors.textOnPrimary }]}>View Cart</Text>
+        <Ionicons name="cart" size={24} color={colors.buttonText} />
+        <Text style={[styles.fabText, { color: colors.buttonText }]}>View Cart</Text>
       </View>
       <View style={[styles.badge, { backgroundColor: colors.accent, borderColor: colors.surface }]}>
         <Text style={[styles.badgeText, { color: colors.text }]}>{itemCount}</Text>

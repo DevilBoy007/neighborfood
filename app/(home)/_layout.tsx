@@ -11,6 +11,8 @@ import profileIcon from '../../assets/images/user.png';
 import { User } from 'firebase/auth';
 
 import CartFAB from '@/components/CartFAB';
+import NotificationBadge from '@/components/NotificationBadge';
+import { useMessage } from '@/store/reduxHooks';
 
 // Helper to get storage - lazily evaluated with guard for bundling
 const getStorage = () => {
@@ -31,6 +33,7 @@ export default function RootLayout() {
   const router = useRouter();
   const storage = getStorage();
   const [userData, setUser] = useState<User | null>(null);
+  const { loadThreads, unreadCount } = useMessage();
   const colors = useAppColors();
 
   useEffect(() => {
@@ -52,6 +55,9 @@ export default function RootLayout() {
 
         setUser(DATA);
         console.log('Loaded user data:', DATA.uid);
+
+        // Pre-load message threads in the background
+        loadThreads(DATA.uid);
       } catch (error) {
         console.error('Error checking user:', error);
         router.navigate('/Login');
@@ -64,6 +70,11 @@ export default function RootLayout() {
 
   const toggleSettings = useCallback(() => {
     router.navigate('/Settings');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const navigateToMessages = useCallback(() => {
+    router.push('/(home)/(messages)' as any);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -99,8 +110,17 @@ export default function RootLayout() {
                   style={[styles.iconButton, styles.profileImage]}
                 />
               </SoundTouchableOpacity>
-              <SoundTouchableOpacity style={styles.iconButton} soundType="tap">
-                <Ionicons name="chatbubbles-outline" size={50} color={colors.navIcon} />
+              <SoundTouchableOpacity
+                style={styles.iconButton}
+                onPress={navigateToMessages}
+                soundType="tap"
+              >
+                <View style={styles.iconContainer}>
+                  <Ionicons name="chatbubbles-outline" size={50} color={colors.navIcon} />
+                  {unreadCount > 0 && (
+                    <NotificationBadge count={unreadCount} size="small" position="top-right" />
+                  )}
+                </View>
               </SoundTouchableOpacity>
               <SoundTouchableOpacity style={styles.iconButton} soundType="tap">
                 <Ionicons name="stats-chart-outline" size={50} color={colors.navIcon} />
@@ -126,6 +146,7 @@ export default function RootLayout() {
           <Stack>
             <Stack.Screen name="Market" options={{ headerShown: false }} />
             <Stack.Screen name="Menu" options={{ headerShown: false }} />
+            <Stack.Screen name="(messages)" options={{ headerShown: false }} />
           </Stack>
         </View>
       </View>
@@ -136,8 +157,17 @@ export default function RootLayout() {
             { backgroundColor: colors.navBackground, borderTopColor: colors.border },
           ]}
         >
-          <SoundTouchableOpacity style={styles.iconButton} soundType="tap">
-            <Ionicons name="chatbubbles-outline" size={35} color={colors.navIcon} />
+          <SoundTouchableOpacity
+            style={styles.iconButton}
+            onPress={navigateToMessages}
+            soundType="tap"
+          >
+            <View style={styles.iconContainer}>
+              <Ionicons name="chatbubbles-outline" size={35} color={colors.navIcon} />
+              {unreadCount > 0 && (
+                <NotificationBadge count={unreadCount} size="small" position="top-right" />
+              )}
+            </View>
           </SoundTouchableOpacity>
           <SoundTouchableOpacity style={styles.iconButton} soundType="tap">
             <Ionicons name="stats-chart-outline" size={35} color={colors.navIcon} />
@@ -227,6 +257,11 @@ const styles = StyleSheet.create({
         marginBottom: 20,
       },
     }),
+  },
+  iconContainer: {
+    position: 'relative',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   icon: {
     width: 50,

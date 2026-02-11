@@ -131,7 +131,6 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: Platform.select({ ios: 30, web: 80 }),
-    fontWeight: 'bold',
     fontFamily: 'TitanOne',
     paddingBottom: 10,
   },
@@ -140,7 +139,7 @@ const styles = StyleSheet.create({
     fontFamily: 'TextMeOne',
     ...Platform.select({
       web: {
-        fontSize: 32,
+        fontSize: 40,
         marginBottom: 0,
       },
     }),
@@ -195,37 +194,28 @@ const styles = StyleSheet.create({
     marginBottom: 5,
     ...Platform.select({
       web: {
-        fontSize: 32,
+        fontSize: 40,
       },
     }),
   },
   menuButtonText: {
-    fontSize: 12,
+    fontSize: Platform.OS === 'web' ? 30 : 12,
     fontFamily: 'TextMeOne',
     ...Platform.select({
       web: {
-        fontSize: 16,
+        fontSize: 30,
       },
     }),
   },
   icon: {
-    width: 50,
-    height: 50,
+    width: 70,
+    height: 70,
     ...Platform.select({
       ios: {
         width: 30,
         height: 30,
       },
     }),
-  },
-  boldText: {
-    fontWeight: 'bold',
-  },
-  italicText: {
-    fontStyle: 'italic',
-  },
-  underlineText: {
-    textDecorationLine: 'underline',
   },
 });
 

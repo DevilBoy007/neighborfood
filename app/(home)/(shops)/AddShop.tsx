@@ -405,6 +405,7 @@ export default function ShopRegistrationScreen() {
                 >
                   <Text
                     style={[
+                      styles.dayButtonText,
                       { color: colors.text },
                       selectedDays.includes(day) && { color: colors.buttonText },
                     ]}
@@ -442,7 +443,7 @@ export default function ShopRegistrationScreen() {
                               ? 'leaf-outline'
                               : 'snow-outline'
                       }
-                      size={18}
+                      size={Platform.OS === 'web' ? 25 : 18}
                       style={
                         selectedSeasons.includes(season)
                           ? { color: colors.buttonText }
@@ -472,7 +473,9 @@ export default function ShopRegistrationScreen() {
                     if (text.trim() || closeTime.trim()) setErrors({ ...errors, hours: '' });
                   }}
                 />
-                <Text style={[styles.timeLabel, { color: colors.textMuted }]}>(opening time)</Text>
+                <Text style={[styles.timeLabel, { color: colors.textMuted }]}>
+                  (when you generally expect to start fulfilling orders)
+                </Text>
               </View>
               <View style={styles.timeInput}>
                 <TextInput
@@ -489,7 +492,9 @@ export default function ShopRegistrationScreen() {
                     if (openTime.trim() || text.trim()) setErrors({ ...errors, hours: '' });
                   }}
                 />
-                <Text style={[styles.timeLabel, { color: colors.textMuted }]}>(closing time)</Text>
+                <Text style={[styles.timeLabel, { color: colors.textMuted }]}>
+                  (when you generally expect to stop fulfilling orders)
+                </Text>
               </View>
             </View>
             {errors.hours ? <Text style={styles.errorText}>{errors.hours}</Text> : null}
@@ -568,7 +573,7 @@ const styles = StyleSheet.create({
   errorText: {
     color: 'red',
     marginBottom: 10,
-    fontSize: 14,
+    fontSize: Platform.OS === 'web' ? 18 : 14,
   },
   container: {
     flex: 1,
@@ -593,12 +598,12 @@ const styles = StyleSheet.create({
     }),
   },
   sectionTitle: {
-    fontSize: 24,
+    fontSize: Platform.OS === 'web' ? 36 : 24,
     marginVertical: 15,
     fontFamily: 'TitanOne',
   },
   sectionSubtitle: {
-    fontSize: 18,
+    fontSize: Platform.OS === 'web' ? 30 : 18,
     marginVertical: 15,
     fontFamily: 'TitanOne',
     textAlign: 'right',
@@ -608,7 +613,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginBottom: 15,
     fontFamily: 'TextMeOne',
-    fontSize: 16,
+    fontSize: Platform.OS === 'web' ? 21 : 16,
   },
   textArea: {
     height: Platform.OS === 'web' ? 100 : null,
@@ -619,7 +624,7 @@ const styles = StyleSheet.create({
     padding: 15,
     borderRadius: 3,
     marginBottom: 15,
-    fontSize: 16,
+    fontSize: 21,
     width: '100%',
     borderWidth: 1,
   },
@@ -642,6 +647,9 @@ const styles = StyleSheet.create({
       },
     }),
   },
+  dayButtonText: {
+    fontSize: Platform.OS === 'web' ? 21 : 16,
+  },
   seasonsContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -663,7 +671,7 @@ const styles = StyleSheet.create({
     width: '48%',
   },
   timeLabel: {
-    fontSize: 12,
+    fontSize: Platform.OS === 'web' ? 14 : 12,
     textAlign: 'center',
     marginTop: 5,
   },
@@ -683,7 +691,7 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   checkboxLabel: {
-    fontSize: 16,
+    fontSize: Platform.OS === 'web' ? 20 : 16,
   },
   buttonContainer: {
     bottom: 0,
@@ -700,7 +708,7 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     textAlign: 'center',
-    fontSize: 30,
+    fontSize: Platform.OS === 'web' ? 40 : 30,
     fontFamily: 'TextMeOne',
   },
 });

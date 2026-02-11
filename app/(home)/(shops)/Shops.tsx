@@ -110,7 +110,7 @@ export default function Shops() {
         >
           <Ionicons
             name="add-circle-outline"
-            size={24}
+            size={Platform.OS === 'web' ? 36 : 24}
             color={colors.buttonText}
             style={styles.buttonIcon}
           />
@@ -139,11 +139,10 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     alignSelf: 'center',
-    fontWeight: '400',
     fontFamily: 'TitanOne',
     ...Platform.select({
       web: {
-        fontSize: 32,
+        fontSize: 40,
       },
     }),
   },
@@ -152,11 +151,10 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 24,
-    fontWeight: '400',
     fontFamily: 'TitanOne',
     ...Platform.select({
       web: {
-        fontSize: 32,
+        fontSize: 40,
       },
     }),
   },
@@ -173,7 +171,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   addShopButtonText: {
-    fontSize: 24,
+    fontSize: Platform.OS === 'web' ? 36 : 24,
     fontFamily: 'TextMeOne',
   },
   buttonIcon: {
@@ -185,11 +183,11 @@ const styles = StyleSheet.create({
   errorText: {
     textAlign: 'center',
     marginTop: 20,
-    fontSize: 16,
+    fontSize: Platform.OS === 'web' ? 18 : 16,
   },
   noShopsText: {
     textAlign: 'center',
     marginTop: 20,
-    fontSize: 16,
+    fontSize: Platform.OS === 'web' ? 18 : 16,
   },
 });

@@ -365,6 +365,8 @@ const RegisterScreen = () => {
         location: locationWithGeoPoint,
         phone: userData.phone,
         username: username,
+        photoURL:
+          'https://firebasestorage.googleapis.com/v0/b/neighborfoods/o/cloud.gif?alt=media&token=81350c47-c9e3-4c75-8d9d-d0b9ff6e50f0',
       };
 
       await firebaseService.addDocument('users', firestoreData, userData.uid);

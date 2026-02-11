@@ -9,6 +9,7 @@ import { Provider } from 'react-redux';
 import { PersistGate } from 'redux-persist/integration/react';
 import { store, persistor } from '@/store';
 import { GoogleMapsLoader } from '@/components/GoogleMapsLoader';
+import { NotificationProvider } from '@/components/NotificationProvider';
 import { View, Text, LogBox } from 'react-native';
 
 // Ignore specific warnings about text nodes
@@ -83,37 +84,42 @@ export default function RootLayout() {
   return (
     <Provider store={store}>
       <PersistGate loading={null} persistor={persistor}>
-        <GoogleMapsLoader>
-          <KeyboardProvider>
-            <GestureHandlerRootView style={{ flex: 1 }}>
-              <Stack>
-                <Stack.Screen name="index" options={{ headerShown: false }} />
-                <Stack.Screen name="Register" options={{ headerShown: false }} />
-                <Stack.Screen name="Login" options={{ headerShown: false }} />
-                <Stack.Screen name="+not-found" options={{ headerShown: false }} />
-                <Stack.Screen name="success" options={{ headerShown: false, animation: 'fade' }} />
-                <Stack.Screen name="EditDetails" options={{ headerShown: false }} />
-                <Stack.Screen
-                  name="Settings"
-                  options={{
-                    headerShown: false,
-                    presentation: 'modal',
-                    animation: 'slide_from_bottom',
-                  }}
-                />
-                <Stack.Screen
-                  name="Appearance"
-                  options={{
-                    headerShown: false,
-                    presentation: 'modal',
-                    animation: 'slide_from_bottom',
-                  }}
-                />
-              </Stack>
-              <Toast config={toastConfig} />
-            </GestureHandlerRootView>
-          </KeyboardProvider>
-        </GoogleMapsLoader>
+        <NotificationProvider>
+          <GoogleMapsLoader>
+            <KeyboardProvider>
+              <GestureHandlerRootView style={{ flex: 1 }}>
+                <Stack>
+                  <Stack.Screen name="index" options={{ headerShown: false }} />
+                  <Stack.Screen name="Register" options={{ headerShown: false }} />
+                  <Stack.Screen name="Login" options={{ headerShown: false }} />
+                  <Stack.Screen name="+not-found" options={{ headerShown: false }} />
+                  <Stack.Screen
+                    name="success"
+                    options={{ headerShown: false, animation: 'fade' }}
+                  />
+                  <Stack.Screen name="EditDetails" options={{ headerShown: false }} />
+                  <Stack.Screen
+                    name="Settings"
+                    options={{
+                      headerShown: false,
+                      presentation: 'modal',
+                      animation: 'slide_from_bottom',
+                    }}
+                  />
+                  <Stack.Screen
+                    name="Appearance"
+                    options={{
+                      headerShown: false,
+                      presentation: 'modal',
+                      animation: 'slide_from_bottom',
+                    }}
+                  />
+                </Stack>
+                <Toast config={toastConfig} />
+              </GestureHandlerRootView>
+            </KeyboardProvider>
+          </GoogleMapsLoader>
+        </NotificationProvider>
       </PersistGate>
     </Provider>
   );

@@ -18,6 +18,7 @@ import shopReducer from './slices/shopSlice';
 import itemReducer from './slices/itemSlice';
 import orderReducer from './slices/orderSlice';
 import cartReducer from './slices/cartSlice';
+import messageReducer from './slices/messageSlice';
 import themeReducer from './slices/themeSlice';
 
 const rootReducer = combineReducers({
@@ -27,6 +28,7 @@ const rootReducer = combineReducers({
   item: itemReducer,
   order: orderReducer,
   cart: cartReducer,
+  message: messageReducer,
   theme: themeReducer,
 });
 
@@ -63,7 +65,7 @@ const persistConfig = {
   // Whitelist specific slices to persist
   whitelist: ['user', 'cart', 'theme'],
   // Location and orders are fetched fresh on app start
-  blacklist: ['location', 'order', 'shop', 'item'],
+  blacklist: ['location', 'order', 'shop', 'item', 'message'],
 };
 
 const persistedReducer = persistReducer(persistConfig, rootReducer);

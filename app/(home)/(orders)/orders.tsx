@@ -222,7 +222,7 @@ const styles = StyleSheet.create({
     fontFamily: 'TitanOne',
     ...Platform.select({
       web: {
-        fontSize: 32,
+        fontSize: 40,
       },
     }),
   },

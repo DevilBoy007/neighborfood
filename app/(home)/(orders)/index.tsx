@@ -86,7 +86,7 @@ const styles = StyleSheet.create({
     fontFamily: 'TitanOne',
     ...Platform.select({
       web: {
-        fontSize: 32,
+        fontSize: 40,
       },
     }),
   },
@@ -114,13 +114,13 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   tabButtonText: {
-    fontSize: 20,
+    fontSize: Platform.OS === 'web' ? 30 : 20,
     fontWeight: '600',
     marginBottom: 4,
     fontFamily: 'TextMeOne',
   },
   tabButtonSubtext: {
-    fontSize: 14,
+    fontSize: Platform.OS === 'web' ? 24 : 14,
     textAlign: 'center',
     fontFamily: 'TextMeOne',
   },

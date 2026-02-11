@@ -1265,3 +1265,620 @@ export const getUserById = onCall(async (request: CallableRequest<GetUserByIdReq
     throw new HttpsError('internal', 'Error fetching user');
   }
 });
+
+// =============================================================================
+// Message Thread Operations
+// =============================================================================
+
+interface CreateOrGetThreadRequest {
+  participantIds: string[]; // Array of exactly 2 user IDs
+  initialMessage?: {
+    type: 'text' | 'order';
+    content?: string;
+    orderId?: string;
+    orderData?: DocumentData;
+  };
+}
+
+interface GetThreadsForUserRequest {
+  userId: string;
+}
+
+interface GetMessagesForThreadRequest {
+  threadId: string;
+}
+
+interface SendMessageRequest {
+  threadId: string;
+  message: {
+    type: 'text' | 'order';
+    content?: string;
+    orderId?: string;
+    orderData?: DocumentData;
+  };
+}
+
+interface DeleteThreadRequest {
+  threadId: string;
+}
+
+interface MarkThreadAsReadRequest {
+  threadId: string;
+}
+
+/**
+ * Create or get an existing thread between two users
+ * Ensures only one thread exists between any two users
+ */
+export const createOrGetThread = onCall(
+  async (request: CallableRequest<CreateOrGetThreadRequest>) => {
+    verifyAuth(request);
+    const { participantIds, initialMessage } = request.data;
+
+    if (!participantIds || participantIds.length !== 2) {
+      throw new HttpsError('invalid-argument', 'Exactly 2 participant IDs are required');
+    }
+
+    // Verify the authenticated user is one of the participants
+    if (!participantIds.includes(request.auth!.uid)) {
+      throw new HttpsError('permission-denied', 'User must be a participant in the thread');
+    }
+
+    try {
+      // Sort participant IDs to ensure consistent ordering for queries
+      const sortedParticipants = [...participantIds].sort();
+
+      // Check if a thread already exists between these users
+      const existingThreadsSnapshot = await db
+        .collection('threads')
+        .where('participantIds', '==', sortedParticipants)
+        .limit(1)
+        .get();
+
+      if (!existingThreadsSnapshot.empty) {
+        // Thread exists, return it
+        const existingThread = existingThreadsSnapshot.docs[0];
+        const threadData = existingThread.data();
+
+        // If there's an initial message (order), add it to the existing thread
+        if (initialMessage) {
+          const messagesRef = db
+            .collection('threads')
+            .doc(existingThread.id)
+            .collection('messages');
+          await messagesRef.add({
+            senderId: request.auth!.uid,
+            type: initialMessage.type,
+            content: initialMessage.content || '',
+            orderId: initialMessage.orderId || null,
+            orderData: initialMessage.orderData || null,
+            createdAt: FieldValue.serverTimestamp(),
+            read: false,
+          });
+
+          // Update thread's lastMessage and updatedAt
+          await existingThread.ref.update({
+            lastMessage: {
+              type: initialMessage.type,
+              content:
+                initialMessage.type === 'order' ? 'New order placed' : initialMessage.content,
+              senderId: request.auth!.uid,
+              createdAt: FieldValue.serverTimestamp(),
+            },
+            updatedAt: FieldValue.serverTimestamp(),
+          });
+        }
+
+        return {
+          id: existingThread.id,
+          ...sanitizeFirestoreData(threadData),
+          isNew: false,
+        };
+      }
+
+      // Create a new thread
+      // First, fetch participant info for the thread metadata
+      const participantInfo: Record<string, { username: string; photoURL: string | null }> = {};
+
+      for (const participantId of sortedParticipants) {
+        const userDoc = await db.collection('users').doc(participantId).get();
+        if (userDoc.exists) {
+          const userData = userDoc.data();
+          participantInfo[participantId] = {
+            username: userData?.username || 'Unknown',
+            photoURL: userData?.photoURL || null,
+          };
+        } else {
+          participantInfo[participantId] = {
+            username: 'Unknown',
+            photoURL: null,
+          };
+        }
+      }
+
+      const newThreadData = {
+        participantIds: sortedParticipants,
+        participantInfo,
+        createdAt: FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp(),
+        lastMessage: initialMessage
+          ? {
+              type: initialMessage.type,
+              content:
+                initialMessage.type === 'order' ? 'New order placed' : initialMessage.content,
+              senderId: request.auth!.uid,
+              createdAt: FieldValue.serverTimestamp(),
+            }
+          : null,
+      };
+
+      const threadRef = await db.collection('threads').add(newThreadData);
+
+      // Add initial message if provided
+      if (initialMessage) {
+        const messagesRef = db.collection('threads').doc(threadRef.id).collection('messages');
+        await messagesRef.add({
+          senderId: request.auth!.uid,
+          type: initialMessage.type,
+          content: initialMessage.content || '',
+          orderId: initialMessage.orderId || null,
+          orderData: initialMessage.orderData || null,
+          createdAt: FieldValue.serverTimestamp(),
+          read: false,
+        });
+      }
+
+      console.log('Thread created with ID:', threadRef.id);
+      return {
+        id: threadRef.id,
+        ...sanitizeFirestoreData(newThreadData),
+        isNew: true,
+      };
+    } catch (error) {
+      console.error('Error creating or getting thread:', error);
+      throw new HttpsError('internal', 'Error creating or getting thread');
+    }
+  }
+);
+
+/**
+ * Get all threads for a user
+ */
+export const getThreadsForUser = onCall(
+  async (request: CallableRequest<GetThreadsForUserRequest>) => {
+    verifyAuth(request);
+    const { userId } = request.data;
+
+    if (!userId) {
+      throw new HttpsError('invalid-argument', 'User ID is required');
+    }
+
+    // Verify the authenticated user matches the userId
+    if (request.auth?.uid !== userId) {
+      throw new HttpsError('permission-denied', 'User can only access their own threads');
+    }
+
+    try {
+      const threadsSnapshot = await db
+        .collection('threads')
+        .where('participantIds', 'array-contains', userId)
+        .orderBy('updatedAt', 'desc')
+        .get();
+
+      const threads = threadsSnapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...sanitizeFirestoreData(doc.data()),
+      }));
+
+      return threads;
+    } catch (error) {
+      console.error('Error fetching threads for user:', error);
+      throw new HttpsError('internal', 'Error fetching threads');
+    }
+  }
+);
+
+/**
+ * Get messages for a thread
+ */
+export const getMessagesForThread = onCall(
+  async (request: CallableRequest<GetMessagesForThreadRequest>) => {
+    verifyAuth(request);
+    const { threadId } = request.data;
+
+    if (!threadId) {
+      throw new HttpsError('invalid-argument', 'Thread ID is required');
+    }
+
+    try {
+      // Verify user is a participant of this thread
+      const threadDoc = await db.collection('threads').doc(threadId).get();
+      if (!threadDoc.exists) {
+        throw new HttpsError('not-found', 'Thread not found');
+      }
+
+      const threadData = threadDoc.data();
+      if (!threadData?.participantIds?.includes(request.auth!.uid)) {
+        throw new HttpsError('permission-denied', 'User is not a participant of this thread');
+      }
+
+      const messagesSnapshot = await db
+        .collection('threads')
+        .doc(threadId)
+        .collection('messages')
+        .orderBy('createdAt', 'asc')
+        .get();
+
+      const messages = messagesSnapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...sanitizeFirestoreData(doc.data()),
+      }));
+
+      return messages;
+    } catch (error) {
+      if (error instanceof HttpsError) throw error;
+      console.error('Error fetching messages for thread:', error);
+      throw new HttpsError('internal', 'Error fetching messages');
+    }
+  }
+);
+
+/**
+ * Send a message to a thread
+ */
+export const sendMessage = onCall(async (request: CallableRequest<SendMessageRequest>) => {
+  verifyAuth(request);
+  const { threadId, message } = request.data;
+
+  if (!threadId || !message) {
+    throw new HttpsError('invalid-argument', 'Thread ID and message are required');
+  }
+
+  try {
+    // Verify user is a participant of this thread
+    const threadDoc = await db.collection('threads').doc(threadId).get();
+    if (!threadDoc.exists) {
+      throw new HttpsError('not-found', 'Thread not found');
+    }
+
+    const threadData = threadDoc.data();
+    if (!threadData?.participantIds?.includes(request.auth!.uid)) {
+      throw new HttpsError('permission-denied', 'User is not a participant of this thread');
+    }
+
+    // Add the message
+    const messagesRef = db.collection('threads').doc(threadId).collection('messages');
+    const messageDoc = await messagesRef.add({
+      senderId: request.auth!.uid,
+      type: message.type,
+      content: message.content || '',
+      orderId: message.orderId || null,
+      orderData: message.orderData || null,
+      createdAt: FieldValue.serverTimestamp(),
+      read: false,
+    });
+
+    // Update thread's lastMessage and updatedAt
+    await threadDoc.ref.update({
+      lastMessage: {
+        type: message.type,
+        content: message.type === 'order' ? 'New order placed' : message.content,
+        senderId: request.auth!.uid,
+        createdAt: FieldValue.serverTimestamp(),
+      },
+      updatedAt: FieldValue.serverTimestamp(),
+    });
+
+    console.log('Message sent with ID:', messageDoc.id);
+    return {
+      id: messageDoc.id,
+      senderId: request.auth!.uid,
+      type: message.type,
+      content: message.content || '',
+      orderId: message.orderId || null,
+      orderData: message.orderData || null,
+    };
+  } catch (error) {
+    if (error instanceof HttpsError) throw error;
+    console.error('Error sending message:', error);
+    throw new HttpsError('internal', 'Error sending message');
+  }
+});
+
+/**
+ * Delete a thread (soft delete - marks as deleted for the user)
+ */
+export const deleteThread = onCall(async (request: CallableRequest<DeleteThreadRequest>) => {
+  verifyAuth(request);
+  const { threadId } = request.data;
+
+  if (!threadId) {
+    throw new HttpsError('invalid-argument', 'Thread ID is required');
+  }
+
+  try {
+    // Verify user is a participant of this thread
+    const threadDoc = await db.collection('threads').doc(threadId).get();
+    if (!threadDoc.exists) {
+      throw new HttpsError('not-found', 'Thread not found');
+    }
+
+    const threadData = threadDoc.data();
+    if (!threadData?.participantIds?.includes(request.auth!.uid)) {
+      throw new HttpsError('permission-denied', 'User is not a participant of this thread');
+    }
+
+    // Soft delete: add user to deletedBy array
+    // The thread will be hidden from this user but still visible to the other participant
+    await threadDoc.ref.update({
+      deletedBy: FieldValue.arrayUnion(request.auth!.uid),
+    });
+
+    console.log('Thread deleted for user:', request.auth!.uid);
+    return true;
+  } catch (error) {
+    if (error instanceof HttpsError) throw error;
+    console.error('Error deleting thread:', error);
+    throw new HttpsError('internal', 'Error deleting thread');
+  }
+});
+
+/**
+ * Mark a thread as read
+ */
+export const markThreadAsRead = onCall(
+  async (request: CallableRequest<MarkThreadAsReadRequest>) => {
+    verifyAuth(request);
+    const { threadId } = request.data;
+
+    if (!threadId) {
+      throw new HttpsError('invalid-argument', 'Thread ID is required');
+    }
+
+    try {
+      // Verify user is a participant of this thread
+      const threadDoc = await db.collection('threads').doc(threadId).get();
+      if (!threadDoc.exists) {
+        throw new HttpsError('not-found', 'Thread not found');
+      }
+
+      const threadData = threadDoc.data();
+      if (!threadData?.participantIds?.includes(request.auth!.uid)) {
+        throw new HttpsError('permission-denied', 'User is not a participant of this thread');
+      }
+
+      const batch = db.batch();
+
+      // Mark all messages not sent by this user as read
+      const unreadMessages = await db
+        .collection('threads')
+        .doc(threadId)
+        .collection('messages')
+        .where('senderId', '!=', request.auth!.uid)
+        .where('read', '==', false)
+        .get();
+
+      unreadMessages.docs.forEach((doc) => {
+        batch.update(doc.ref, { read: true });
+      });
+
+      // Store lastReadAt timestamp for this user in the thread document
+      const lastReadBy = threadData.lastReadBy || {};
+      lastReadBy[request.auth!.uid] = FieldValue.serverTimestamp();
+
+      batch.update(threadDoc.ref, {
+        lastReadBy: lastReadBy,
+      });
+
+      await batch.commit();
+
+      console.log(`Marked ${unreadMessages.size} messages as read for user:`, request.auth!.uid);
+      return true;
+    } catch (error) {
+      if (error instanceof HttpsError) throw error;
+      console.error('Error marking thread as read:', error);
+      throw new HttpsError('internal', 'Error marking thread as read');
+    }
+  }
+);
+
+// =============================================================================
+// Push Notification Operations
+// =============================================================================
+
+interface RegisterPushTokenRequest {
+  token: string;
+  platform: 'ios' | 'android' | 'web';
+}
+
+/**
+ * Register a push notification token for a user
+ */
+export const registerPushToken = onCall(
+  async (request: CallableRequest<RegisterPushTokenRequest>) => {
+    verifyAuth(request);
+    const { token, platform } = request.data;
+
+    if (!token || !platform) {
+      throw new HttpsError('invalid-argument', 'Token and platform are required');
+    }
+
+    try {
+      const userId = request.auth!.uid;
+
+      await db
+        .collection('users')
+        .doc(userId)
+        .update({
+          [`pushTokens.${platform}`]: token,
+          [`pushTokens.updatedAt`]: FieldValue.serverTimestamp(),
+        });
+
+      console.log(`Push token registered for user ${userId} on ${platform}`);
+      return true;
+    } catch (error) {
+      console.error('Error registering push token:', error);
+      throw new HttpsError('internal', 'Error registering push token');
+    }
+  }
+);
+
+/**
+ * Send a push notification to a specific user
+ * This is called internally by other functions, not directly by clients
+ */
+async function sendPushNotificationToUser(
+  userId: string,
+  title: string,
+  body: string,
+  data?: Record<string, unknown>
+): Promise<boolean> {
+  try {
+    // Get user's push tokens
+    const userDoc = await db.collection('users').doc(userId).get();
+    if (!userDoc.exists) {
+      console.log('User not found for push notification:', userId);
+      return false;
+    }
+
+    const userData = userDoc.data();
+    const pushTokens = userData?.pushTokens;
+
+    if (!pushTokens) {
+      console.log('No push tokens found for user:', userId);
+      return false;
+    }
+
+    // Collect all valid tokens
+    const tokens: string[] = [];
+    if (pushTokens.ios) tokens.push(pushTokens.ios);
+    if (pushTokens.android) tokens.push(pushTokens.android);
+    if (pushTokens.web) tokens.push(pushTokens.web);
+
+    if (tokens.length === 0) {
+      console.log('No valid push tokens for user:', userId);
+      return false;
+    }
+
+    // Send notification via Expo's push service
+    const messages = tokens.map((token) => ({
+      to: token,
+      sound: 'default' as const,
+      title,
+      body,
+      data: data || {},
+    }));
+
+    // Use fetch to send to Expo's push notification service
+    const response = await fetch('https://exp.host/--/api/v2/push/send', {
+      method: 'POST',
+      headers: {
+        Accept: 'application/json',
+        'Accept-encoding': 'gzip, deflate',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(messages),
+    });
+
+    const result = await response.json();
+    console.log('Push notification sent:', result);
+
+    return true;
+  } catch (error) {
+    console.error('Error sending push notification:', error);
+    return false;
+  }
+}
+
+/**
+ * Send notification when a new message is received
+ * Called after sendMessage succeeds
+ */
+export const sendMessageNotification = onCall(
+  async (
+    request: CallableRequest<{
+      threadId: string;
+      recipientId: string;
+      senderName: string;
+      messagePreview: string;
+      messageType: 'text' | 'order';
+    }>
+  ) => {
+    verifyAuth(request);
+    const { threadId, recipientId, senderName, messagePreview, messageType } = request.data;
+
+    if (!threadId || !recipientId || !senderName) {
+      throw new HttpsError(
+        'invalid-argument',
+        'Thread ID, recipient ID, and sender name are required'
+      );
+    }
+
+    try {
+      const title = messageType === 'order' ? `New order from ${senderName}` : senderName;
+      const body =
+        messageType === 'order' ? 'You have a new order! Tap to view details.' : messagePreview;
+
+      await sendPushNotificationToUser(recipientId, title, body, {
+        type: 'message',
+        threadId,
+        senderId: request.auth!.uid,
+        senderName,
+        messagePreview,
+      });
+
+      return true;
+    } catch (error) {
+      console.error('Error sending message notification:', error);
+      // Don't throw - notification failure shouldn't break the message flow
+      return false;
+    }
+  }
+);
+
+/**
+ * Send notification when order status changes
+ */
+export const sendOrderStatusNotification = onCall(
+  async (
+    request: CallableRequest<{
+      orderId: string;
+      recipientId: string;
+      shopName: string;
+      newStatus: string;
+    }>
+  ) => {
+    verifyAuth(request);
+    const { orderId, recipientId, shopName, newStatus } = request.data;
+
+    if (!orderId || !recipientId || !shopName || !newStatus) {
+      throw new HttpsError(
+        'invalid-argument',
+        'Order ID, recipient ID, shop name, and status are required'
+      );
+    }
+
+    try {
+      const statusMessages: Record<string, string> = {
+        preparing: `${shopName} is preparing your order!`,
+        ready: `Your order from ${shopName} is ready for pickup!`,
+        'in-delivery': `Your order from ${shopName} is on its way!`,
+        completed: `Your order from ${shopName} has been delivered!`,
+        cancelled: `Your order from ${shopName} has been cancelled.`,
+      };
+
+      const body = statusMessages[newStatus] || `Order status updated to: ${newStatus}`;
+
+      await sendPushNotificationToUser(recipientId, 'Order Update', body, {
+        type: 'order_update',
+        orderId,
+        status: newStatus,
+      });
+
+      return true;
+    } catch (error) {
+      console.error('Error sending order status notification:', error);
+      return false;
+    }
+  }
+);

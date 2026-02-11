@@ -17,19 +17,21 @@ import ParallaxScrollView from '@/components/ParallaxScrollView';
 import ItemCard from '@/components/ItemCard';
 import firebaseService from '@/handlers/firebaseService';
 
-import { useLocation, useUser, useShop, ItemData } from '@/store/reduxHooks';
+import { useLocation, useUser, useShop, useMessage, ItemData } from '@/store/reduxHooks';
 import { useAppColors } from '@/hooks/useAppColors';
 
 export default function ShopDetails() {
   const { selectedShop, setSelectedShop } = useShop();
   const { userData } = useUser();
   const { locationData, formatDistance } = useLocation();
+  const { createOrGetThread } = useMessage();
   const colors = useAppColors();
   const [items, setItems] = useState<ItemData[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [uploading, setUploading] = useState<boolean>(false);
   const [uploadProgress, setUploadProgress] = useState<number>(0);
   const [shopOwner, setShopOwner] = useState<any>(null);
+  const [isStartingChat, setIsStartingChat] = useState<boolean>(false);
   const router = useRouter();
 
   // Calculate distance between two coordinates in kilometers
@@ -213,6 +215,28 @@ export default function ShopDetails() {
     }
   };
 
+  const handleMessageShopOwner = async () => {
+    if (!userData?.uid || !selectedShop?.userId) return;
+
+    // Don't allow messaging yourself
+    if (userData.uid === selectedShop.userId) return;
+
+    setIsStartingChat(true);
+    try {
+      const thread = await createOrGetThread([userData.uid, selectedShop.userId]);
+      router.push(`/(home)/(messages)/${thread.id}` as any);
+    } catch (error) {
+      console.error('Error starting chat:', error);
+      Toast.show({
+        type: 'error',
+        text1: 'Error',
+        text2: 'Failed to start conversation',
+      });
+    } finally {
+      setIsStartingChat(false);
+    }
+  };
+
   if (!selectedShop) {
     return (
       <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -261,7 +285,7 @@ export default function ShopDetails() {
               name="image-outline"
               size={24}
               color={
-                colors.buttonText == '#451A03'
+                colors.buttonText === '#451A03'
                   ? '#ffffff'
                   : colors.buttonText /* special case for fall theme */
               }
@@ -341,6 +365,24 @@ export default function ShopDetails() {
                   ? shopOwner.username
                   : 'Loading...'}
             </Text>
+            {/* Message button - only show if not the shop owner */}
+            {selectedShop.userId !== userData?.uid && (
+              <TouchableOpacity
+                style={styles.messageOwnerButton}
+                onPress={handleMessageShopOwner}
+                disabled={isStartingChat}
+              >
+                {isStartingChat ? (
+                  <ActivityIndicator size="small" color="#87CEFA" />
+                ) : (
+                  <Ionicons
+                    name="chatbubble-outline"
+                    size={Platform.OS === 'web' ? 30 : 18}
+                    color="#87CEFA"
+                  />
+                )}
+              </TouchableOpacity>
+            )}
           </View>
           <Text style={[styles.shopDescription, { color: colors.text }]}>
             {selectedShop.description}
@@ -349,7 +391,11 @@ export default function ShopDetails() {
             {selectedShop.type && (
               <View style={styles.infoRow}>
                 <View style={styles.iconContainer}>
-                  <Ionicons name="briefcase-outline" size={18} color={colors.iconMuted} />
+                  <Ionicons
+                    name="briefcase-outline"
+                    size={Platform.OS === 'web' ? 30 : 18}
+                    color={colors.iconMuted}
+                  />
                 </View>
                 <Text style={[styles.infoText, { color: colors.textOnPrimary }]}>
                   {selectedShop.type}
@@ -360,7 +406,11 @@ export default function ShopDetails() {
             {selectedShop.days && selectedShop.days.length > 0 && (
               <View style={styles.infoRow}>
                 <View style={styles.iconContainer}>
-                  <Ionicons name="calendar-outline" size={18} color={colors.iconMuted} />
+                  <Ionicons
+                    name="calendar-outline"
+                    size={Platform.OS === 'web' ? 30 : 18}
+                    color={colors.iconMuted}
+                  />
                 </View>
                 <Text style={[styles.infoText, { color: colors.textOnPrimary }]}>
                   Available: {selectedShop.days.join(', ')}
@@ -371,7 +421,11 @@ export default function ShopDetails() {
             {selectedShop.seasons && selectedShop.seasons.length > 0 && (
               <View style={styles.infoRow}>
                 <View style={styles.iconContainer}>
-                  <Ionicons name="flower-outline" size={18} color={colors.iconMuted} />
+                  <Ionicons
+                    name="flower-outline"
+                    size={Platform.OS === 'web' ? 30 : 18}
+                    color={colors.iconMuted}
+                  />
                 </View>
                 <Text style={[styles.infoText, { color: colors.textOnPrimary }]}>
                   Seasons:{' '}
@@ -387,7 +441,7 @@ export default function ShopDetails() {
                                 ? 'leaf-outline'
                                 : 'snow-outline'
                         }
-                        size={14}
+                        size={Platform.OS === 'web' ? 25 : 14}
                         color={colors.iconMuted}
                       />{' '}
                     </Text>
@@ -399,7 +453,11 @@ export default function ShopDetails() {
             {selectedShop.openTime && selectedShop.closeTime && (
               <View style={styles.infoRow}>
                 <View style={styles.iconContainer}>
-                  <Ionicons name="time-outline" size={18} color={colors.iconMuted} />
+                  <Ionicons
+                    name="time-outline"
+                    size={Platform.OS === 'web' ? 30 : 18}
+                    color={colors.iconMuted}
+                  />
                 </View>
                 <Text style={[styles.infoText, { color: colors.textOnPrimary }]}>
                   Hours: {selectedShop.openTime} - {selectedShop.closeTime}
@@ -408,7 +466,11 @@ export default function ShopDetails() {
             )}
             <View style={styles.infoRow}>
               <View style={styles.iconContainer}>
-                <Ionicons name="location-outline" size={18} color={colors.iconMuted} />
+                <Ionicons
+                  name="location-outline"
+                  size={Platform.OS === 'web' ? 30 : 18}
+                  color={colors.iconMuted}
+                />
               </View>
               <Text style={[styles.infoText, { color: colors.textOnPrimary }]}>
                 {locationData.coords && selectedShop.location
@@ -428,15 +490,23 @@ export default function ShopDetails() {
           <View style={styles.deliveryInfoContainer}>
             {selectedShop.allowPickup && (
               <View style={[styles.deliveryOption, { backgroundColor: colors.primary }]}>
-                <Ionicons name="bag-handle-outline" size={18} color={colors.buttonText} />
+                <Ionicons
+                  name="bag-handle-outline"
+                  size={Platform.OS === 'web' ? 30 : 18}
+                  color={colors.buttonText}
+                />
                 <Text style={[styles.deliveryText, { color: colors.buttonText }]}>
                   Pickup available
                 </Text>
               </View>
             )}
             {selectedShop.localDelivery && (
-              <View style={[styles.deliveryOption, { backgroundColor: colors.text }]}>
-                <Ionicons name="bicycle-outline" size={18} color={colors.buttonText} />
+              <View style={[styles.deliveryOption, { backgroundColor: colors.primary }]}>
+                <Ionicons
+                  name="bicycle-outline"
+                  size={Platform.OS === 'web' ? 30 : 18}
+                  color={colors.buttonText}
+                />
                 <Text style={[styles.deliveryText, { color: colors.buttonText }]}>
                   Local delivery
                 </Text>
@@ -484,7 +554,7 @@ export default function ShopDetails() {
             >
               <Ionicons
                 name="add-circle-outline"
-                size={24}
+                size={Platform.OS === 'web' ? 30 : 24}
                 color={colors.buttonText}
                 style={styles.buttonIcon}
               />
@@ -537,7 +607,7 @@ const styles = StyleSheet.create({
   },
   uploadingText: {
     marginTop: 4,
-    fontSize: 12,
+    fontSize: Platform.OS === 'web' ? 24 : 12,
   },
   headerContainer: {
     position: Platform.OS === 'web' ? 'absolute' : 'relative',
@@ -583,13 +653,18 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   ownerText: {
-    fontSize: 14,
+    fontSize: Platform.OS === 'web' ? 28 : 14,
     fontFamily: 'TextMeOne',
     marginLeft: 4,
   },
+  messageOwnerButton: {
+    marginLeft: 12,
+    padding: 6,
+    backgroundColor: 'rgba(255, 255, 255, 0.69)',
+    borderRadius: 15,
+  },
   shopName: {
     fontSize: Platform.OS === 'web' ? 40 : 30,
-    fontWeight: 'bold',
     marginBottom: 8,
     fontFamily: 'TitanOne',
   },
@@ -600,7 +675,7 @@ const styles = StyleSheet.create({
     marginLeft: 10,
   },
   shopDescription: {
-    fontSize: 16,
+    fontSize: Platform.OS === 'web' ? 28 : 16,
     marginBottom: 16,
     fontFamily: 'TextMeOne',
   },
@@ -620,6 +695,7 @@ const styles = StyleSheet.create({
   infoText: {
     fontFamily: 'TextMeOne',
     flex: 1,
+    fontSize: Platform.OS === 'web' ? 24 : 14,
   },
   deliveryInfoContainer: {
     flexDirection: 'row',
@@ -638,14 +714,14 @@ const styles = StyleSheet.create({
   deliveryText: {
     marginLeft: 6,
     fontFamily: 'TextMeOne',
+    fontSize: Platform.OS === 'web' ? 24 : 14,
   },
   itemsContainer: {
     marginTop: 16,
     paddingBottom: 200,
   },
   sectionTitle: {
-    fontSize: 22,
-    fontWeight: 'bold',
+    fontSize: Platform.OS === 'web' ? 30 : 22,
     marginBottom: 16,
     fontFamily: 'TitanOne',
   },
@@ -655,17 +731,16 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
   buttonText: {
-    fontWeight: 'bold',
     textAlign: 'center',
-    fontSize: 16,
+    fontSize: Platform.OS === 'web' ? 30 : 16,
   },
   errorText: {
-    fontSize: 18,
+    fontSize: Platform.OS === 'web' ? 28 : 18,
     marginBottom: 20,
     fontFamily: 'TextMeOne',
   },
   noItemsText: {
-    fontSize: 16,
+    fontSize: Platform.OS === 'web' ? 28 : 16,
     fontStyle: 'italic',
     textAlign: 'center',
     padding: 20,
