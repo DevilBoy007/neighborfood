@@ -21,7 +21,7 @@ const LoginScreen = () => {
           styles.title,
           {
             color:
-              colors.textOnPrimary === '#00bfff'
+              colors.textOnPrimary == '#00bfff'
                 ? '#fff'
                 : colors.textOnPrimary /* special case for default theme */,
           },
@@ -78,9 +78,6 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     fontFamily: 'TitanOne',
     marginTop: 40,
-    textShadowColor: '#000',
-    textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 8,
   },
   titleWeb: {
     textAlign: 'center',
