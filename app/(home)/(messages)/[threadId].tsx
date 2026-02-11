@@ -224,12 +224,7 @@ export default function MessageThreadScreen() {
       <>
         {showDateSeparator && (
           <View style={styles.dateSeparator}>
-            <Text
-              style={[
-                styles.dateSeparatorText,
-                { color: colors.textMuted, backgroundColor: colors.divider },
-              ]}
-            >
+            <Text style={[styles.dateSeparatorText, { backgroundColor: colors.divider }]}>
               {formatMessageDate(item.createdAt)}
             </Text>
           </View>
@@ -438,7 +433,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     flex: 1,
-    maxWidth: Platform.OS === 'web' ? '100%' : 225,
+    maxWidth: Platform.OS === 'web' ? '100%' : 200,
   },
   headerAvatar: {
     width: 48,
