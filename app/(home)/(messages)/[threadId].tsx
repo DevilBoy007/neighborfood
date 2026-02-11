@@ -74,7 +74,11 @@ const OrderMessageBubble = ({
         <Text style={[styles.orderTitle, { color: colors.text }]}>Order</Text>
       </View>
       {orderData.shopPhotoURL && (
-        <Image source={{ uri: orderData.shopPhotoURL }} style={styles.orderImage} />
+        <Image
+          source={{ uri: orderData.shopPhotoURL }}
+          style={styles.orderImage}
+          resizeMode="cover"
+        />
       )}
       <Text style={[styles.orderShopName, { color: colors.text }]}>{orderData.shopName}</Text>
       <View style={styles.orderItems}>
@@ -581,7 +585,7 @@ const styles = StyleSheet.create({
     fontFamily: 'TextMeOne',
   },
   orderImage: {
-    width: '100%',
+    alignSelf: 'stretch',
     height: 80,
     borderRadius: 8,
     marginBottom: 8,
