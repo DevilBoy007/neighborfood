@@ -501,7 +501,7 @@ export default function ShopDetails() {
               </View>
             )}
             {selectedShop.localDelivery && (
-              <View style={[styles.deliveryOption, { backgroundColor: colors.text }]}>
+              <View style={[styles.deliveryOption, { backgroundColor: colors.primary }]}>
                 <Ionicons
                   name="bicycle-outline"
                   size={Platform.OS === 'web' ? 30 : 18}

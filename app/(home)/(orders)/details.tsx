@@ -168,6 +168,14 @@ const OrderDetailScreen = () => {
           <View style={[styles.statusSection, { borderTopColor: colors.divider }]}>
             <View
               style={[
+                styles.deliveryOption,
+                { borderColor: colors.border, backgroundColor: colors.secondary },
+              ]}
+            >
+              <Text style={{ color: colors.textSecondary }}>{formattedOrder.deliveryOption}</Text>
+            </View>
+            <View
+              style={[
                 styles.statusBadge,
                 { backgroundColor: getStatusColor(formattedOrder.status) },
               ]}
@@ -295,6 +303,15 @@ const styles = StyleSheet.create({
   loadingText: {
     fontSize: 16,
     textAlign: 'center',
+  },
+  deliveryOption: {
+    marginBottom: 8,
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 8,
+    alignSelf: 'flex-start',
   },
   statusSection: {
     alignItems: 'flex-end',
