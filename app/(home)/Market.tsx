@@ -16,6 +16,8 @@ import ShopCard from '@/components/ShopCard';
 import { useUser, useLocation, ShopData } from '@/store/reduxHooks';
 import firebaseService from '@/handlers/firebaseService';
 import { useAppColors } from '@/hooks/useAppColors';
+import { useAppDispatch } from '@/store/hooks';
+import { initializeOrders } from '@/store/slices/orderSlice';
 
 /* eslint-disable @typescript-eslint/no-require-imports */
 const MapScreen =
@@ -36,6 +38,7 @@ const MarketScreen = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const colors = useAppColors();
+  const dispatch = useAppDispatch();
 
   // Use both user context and location context
   const { userData } = useUser();
@@ -78,8 +81,11 @@ const MarketScreen = () => {
           // Update tracking ref
           lastFetchRef.current = { zipPrefix, userId };
 
-          // Use new batch function that fetches shops with items in a single call
-          const shopsWithItems = await firebaseService.getShopsWithItems(zipPrefix, userId);
+          // Fetch shops and orders in parallel for better performance
+          const [shopsWithItems] = await Promise.all([
+            firebaseService.getShopsWithItems(zipPrefix, userId),
+            dispatch(initializeOrders(userId)),
+          ]);
 
           setShops((shopsWithItems || []) as ShopWithItems[]);
         } else {
@@ -97,7 +103,7 @@ const MarketScreen = () => {
         setRefreshing(false);
       }
     },
-    [locationData.zipCode, userData?.location?.zip, userData?.uid, shops.length]
+    [locationData.zipCode, userData?.location?.zip, userData?.uid, shops.length, dispatch]
   );
 
   // Only re-fetch when the actual zip code or user ID changes
