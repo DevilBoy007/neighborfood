@@ -78,9 +78,6 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     fontFamily: 'TitanOne',
     marginTop: 40,
-    textShadowColor: '#000',
-    textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 8,
   },
   titleWeb: {
     textAlign: 'center',

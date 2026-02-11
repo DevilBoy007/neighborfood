@@ -133,7 +133,6 @@ export default function MessageThreadScreen() {
     loadMessages,
     sendMessage,
     markAsRead,
-    setSelectedThread,
   } = useMessage();
 
   const [inputText, setInputText] = useState('');
