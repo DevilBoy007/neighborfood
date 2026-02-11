@@ -616,8 +616,8 @@ const EditDetails = () => {
           <View style={[styles.modalContent, { backgroundColor: colors.card }]}>
             <Text style={[styles.modalTitle, { color: colors.info }]}>ℹ️ About Email</Text>
             <Text style={[styles.modalText, { color: colors.text }]}>
-              Your email address is used as your login credential and is linked to your account's
-              authentication.
+              Your email address is used as your login credential and is linked to your
+              account&#39;s authentication.
             </Text>
             <Text style={[styles.modalText, { color: colors.text }]}>
               For security reasons, changing your email requires identity verification. Please

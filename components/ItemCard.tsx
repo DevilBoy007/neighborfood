@@ -179,7 +179,7 @@ const ItemCard = ({
             styles.quantityButton,
             {
               backgroundColor:
-                colors.inputBackground == '#ffffff' ? '#eee' : colors.inputBackground,
+                colors.inputBackground === '#ffffff' ? '#eee' : colors.inputBackground,
             },
           ]}
         >
@@ -194,7 +194,7 @@ const ItemCard = ({
             styles.quantityButton,
             {
               backgroundColor:
-                colors.inputBackground == '#ffffff' ? '#eee' : colors.inputBackground,
+                colors.inputBackground === '#ffffff' ? '#eee' : colors.inputBackground,
             },
           ]}
         >

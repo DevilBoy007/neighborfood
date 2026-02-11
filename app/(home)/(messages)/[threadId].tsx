@@ -16,7 +16,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { useMessage, useUser, useOrder, MessageData, ThreadData } from '@/store/reduxHooks';
+import { useMessage, useUser, useOrder, MessageData } from '@/store/reduxHooks';
+
 import firebaseService from '@/handlers/firebaseService';
 import { useAppColors } from '@/hooks/useAppColors';
 import { useOrderStatus } from '@/hooks/useOrderStatus';

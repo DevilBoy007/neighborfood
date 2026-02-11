@@ -285,7 +285,7 @@ export default function ShopDetails() {
               name="image-outline"
               size={24}
               color={
-                colors.buttonText == '#451A03'
+                colors.buttonText === '#451A03'
                   ? '#ffffff'
                   : colors.buttonText /* special case for fall theme */
               }
