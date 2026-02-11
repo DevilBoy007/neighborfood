@@ -1,5 +1,32 @@
-import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
+import { createSlice, createAsyncThunk, PayloadAction, createSelector } from '@reduxjs/toolkit';
 import firebaseService from '../../handlers/firebaseService';
+import type { RootState } from '../store';
+
+/**
+ * Helper function to compute unread count for threads
+ * A thread has unread messages if the last message was not sent by the current user
+ */
+function calculateUnreadCounts(threads: ThreadData[], currentUserId: string): ThreadData[] {
+  return threads.map((thread) => {
+    const hasUnread =
+      thread.lastMessage?.senderId &&
+      thread.lastMessage.senderId !== currentUserId &&
+      !thread.deletedBy?.includes(currentUserId);
+
+    return {
+      ...thread,
+      hasUnread,
+      unreadCount: hasUnread ? 1 : 0, // Simplified - could be enhanced with actual message counts
+    };
+  });
+}
+
+/**
+ * Helper function to compute total unread count across all threads
+ */
+function calculateTotalUnreadCount(threads: ThreadData[]): number {
+  return threads.filter((thread) => thread.hasUnread).length;
+}
 
 export type MessageType = 'text' | 'order';
 
@@ -39,6 +66,8 @@ export type ThreadData = {
   updatedAt: { seconds: number; nanoseconds: number };
   createdAt?: { seconds: number; nanoseconds: number };
   deletedBy?: string[];
+  unreadCount?: number; // Client-side computed field
+  hasUnread?: boolean; // Client-side computed field
 };
 
 type MessageState = {
@@ -49,6 +78,7 @@ type MessageState = {
   isLoadingMessages: boolean;
   isSendingMessage: boolean;
   isInitialized: boolean;
+  totalUnreadCount: number;
 };
 
 const initialState: MessageState = {
@@ -59,6 +89,7 @@ const initialState: MessageState = {
   isLoadingMessages: false,
   isSendingMessage: false,
   isInitialized: false,
+  totalUnreadCount: 0,
 };
 
 // Async thunks
@@ -67,7 +98,8 @@ export const fetchThreads = createAsyncThunk(
   async (userId: string, { rejectWithValue }) => {
     try {
       const threads = await firebaseService.getThreadsForUser(userId);
-      return threads as ThreadData[];
+      const threadsWithUnread = calculateUnreadCounts(threads as ThreadData[], userId);
+      return { threads: threadsWithUnread, userId };
     } catch (error) {
       console.error('Error fetching threads:', error);
       return rejectWithValue('Failed to fetch threads');
@@ -194,6 +226,7 @@ const messageSlice = createSlice({
       state.isLoadingMessages = false;
       state.isSendingMessage = false;
       state.isInitialized = false;
+      state.totalUnreadCount = 0;
     },
   },
   extraReducers: (builder) => {
@@ -203,7 +236,8 @@ const messageSlice = createSlice({
         state.isLoadingThreads = true;
       })
       .addCase(fetchThreads.fulfilled, (state, action) => {
-        state.threads = action.payload;
+        state.threads = action.payload.threads;
+        state.totalUnreadCount = calculateTotalUnreadCount(action.payload.threads);
         state.isLoadingThreads = false;
         state.isInitialized = true;
       })
@@ -273,6 +307,26 @@ const messageSlice = createSlice({
         ...msg,
         read: true,
       }));
+
+      // Update thread's unread status
+      const threadIndex = state.threads.findIndex((t) => t.id === action.payload);
+      if (threadIndex >= 0) {
+        state.threads[threadIndex] = {
+          ...state.threads[threadIndex],
+          hasUnread: false,
+          unreadCount: 0,
+        };
+        state.totalUnreadCount = calculateTotalUnreadCount(state.threads);
+      }
+
+      // Update selected thread
+      if (state.selectedThread?.id === action.payload) {
+        state.selectedThread = {
+          ...state.selectedThread,
+          hasUnread: false,
+          unreadCount: 0,
+        };
+      }
     });
   },
 });
@@ -284,5 +338,15 @@ export const {
   addMessageLocally,
   resetMessageState,
 } = messageSlice.actions;
+
+// Selectors
+export const selectUnreadCount = (state: RootState): number => state.message.totalUnreadCount;
+
+// Memoized selector to prevent unnecessary re-renders
+// Only recalculates when threads array actually changes
+export const selectThreadsWithUnread = createSelector(
+  [(state: RootState) => state.message.threads],
+  (threads) => threads.filter((thread) => thread.hasUnread)
+);
 
 export default messageSlice.reducer;

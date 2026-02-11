@@ -6,7 +6,7 @@ import * as Notifications from 'expo-notifications';
 
 import notificationService, { NotificationData } from '@/handlers/notificationService';
 import firebaseService from '@/handlers/firebaseService';
-import { useUser } from '@/store/reduxHooks';
+import { useUser, useMessage } from '@/store/reduxHooks';
 
 /**
  * Hook to manage push notifications throughout the app lifecycle
@@ -18,6 +18,7 @@ import { useUser } from '@/store/reduxHooks';
 export const useNotifications = () => {
   const router = useRouter();
   const { userData } = useUser();
+  const { unreadCount, loadThreads } = useMessage();
   const appState = useRef(AppState.currentState);
   const foregroundListener = useRef<Notifications.Subscription | null>(null);
   const responseListener = useRef<Notifications.Subscription | null>(null);
@@ -143,13 +144,19 @@ export const useNotifications = () => {
   }, [userData?.uid, handleForegroundNotification, handleNotificationResponse]);
 
   // Handle app coming to foreground - refresh badge count
-  const handleAppStateChange = useCallback(async (nextAppState: AppStateStatus) => {
-    if (appState.current.match(/inactive|background/) && nextAppState === 'active') {
-      // App has come to the foreground
-      // Could refresh unread counts here
-    }
-    appState.current = nextAppState;
-  }, []);
+  const handleAppStateChange = useCallback(
+    async (nextAppState: AppStateStatus) => {
+      if (appState.current.match(/inactive|background/) && nextAppState === 'active') {
+        // App has come to the foreground
+        // Refresh threads to get latest unread counts
+        if (userData?.uid) {
+          await loadThreads(userData.uid);
+        }
+      }
+      appState.current = nextAppState;
+    },
+    [userData?.uid, loadThreads]
+  );
 
   // Cleanup function for logout
   const cleanupNotifications = useCallback(async () => {
@@ -159,6 +166,19 @@ export const useNotifications = () => {
     notificationService.cleanup();
     await notificationService.clearAllNotifications();
   }, [userData?.uid]);
+
+  // Synchronize app badge count with unread message count
+  useEffect(() => {
+    const updateBadgeCount = async () => {
+      try {
+        await notificationService.setBadgeCount(unreadCount);
+      } catch (error) {
+        console.error('Error updating badge count:', error);
+      }
+    };
+
+    updateBadgeCount();
+  }, [unreadCount]);
 
   return {
     cleanupNotifications,

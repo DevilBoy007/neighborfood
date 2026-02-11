@@ -18,6 +18,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useMessage, useUser, ThreadData } from '@/store/reduxHooks';
 import { useAppColors } from '@/hooks/useAppColors';
+import NotificationBadge from '@/components/NotificationBadge';
 
 const formatTimestamp = (timestamp: { seconds: number; nanoseconds: number } | undefined) => {
   if (!timestamp) return '';
@@ -96,10 +97,15 @@ export default function MessagesScreen() {
   const renderThreadItem = ({ item }: { item: ThreadData }) => {
     const otherUserId = item.participantIds.find((id) => id !== userData?.uid);
     const otherUserInfo = otherUserId ? item.participantInfo[otherUserId] : null;
+    const hasUnread = item.hasUnread || false;
 
     return (
       <TouchableOpacity
-        style={[styles.threadItem, { borderBottomColor: colors.divider }]}
+        style={[
+          styles.threadItem,
+          { borderBottomColor: colors.divider },
+          hasUnread && { backgroundColor: colors.surface },
+        ]}
         onPress={() => handleThreadPress(item)}
         onLongPress={() => handleDeleteThread(item)}
       >
@@ -113,10 +119,16 @@ export default function MessagesScreen() {
               </Text>
             </View>
           )}
+          {hasUnread && (
+            <NotificationBadge count={item.unreadCount || 1} size="small" position="top-right" />
+          )}
         </View>
         <View style={styles.threadContent}>
           <View style={styles.threadHeader}>
-            <Text style={[styles.username, { color: colors.text }]} numberOfLines={1}>
+            <Text
+              style={[styles.username, { color: colors.text }, hasUnread && { fontWeight: '700' }]}
+              numberOfLines={1}
+            >
               {otherUserInfo?.username || 'Unknown User'}
             </Text>
             <Text
@@ -131,7 +143,10 @@ export default function MessagesScreen() {
           <Text
             style={[
               styles.lastMessage,
-              { color: colors.background === '#D75CF6' ? '#fff' : colors.textSecondary },
+              {
+                color: colors.background === '#D75CF6' ? '#fff' : colors.textSecondary,
+                fontWeight: hasUnread ? '600' : '400',
+              },
             ]}
             numberOfLines={1}
           >

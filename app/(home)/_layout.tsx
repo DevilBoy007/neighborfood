@@ -11,6 +11,7 @@ import profileIcon from '../../assets/images/user.png';
 import { User } from 'firebase/auth';
 
 import CartFAB from '@/components/CartFAB';
+import NotificationBadge from '@/components/NotificationBadge';
 import { useMessage } from '@/store/reduxHooks';
 
 // Helper to get storage - lazily evaluated with guard for bundling
@@ -32,7 +33,7 @@ export default function RootLayout() {
   const router = useRouter();
   const storage = getStorage();
   const [userData, setUser] = useState<User | null>(null);
-  const { loadThreads } = useMessage();
+  const { loadThreads, unreadCount } = useMessage();
   const colors = useAppColors();
 
   useEffect(() => {
@@ -114,7 +115,12 @@ export default function RootLayout() {
                 onPress={navigateToMessages}
                 soundType="tap"
               >
-                <Ionicons name="chatbubbles-outline" size={50} color={colors.navIcon} />
+                <View style={styles.iconContainer}>
+                  <Ionicons name="chatbubbles-outline" size={50} color={colors.navIcon} />
+                  {unreadCount > 0 && (
+                    <NotificationBadge count={unreadCount} size="small" position="top-right" />
+                  )}
+                </View>
               </SoundTouchableOpacity>
               <SoundTouchableOpacity style={styles.iconButton} soundType="tap">
                 <Ionicons name="stats-chart-outline" size={50} color={colors.navIcon} />
@@ -156,7 +162,12 @@ export default function RootLayout() {
             onPress={navigateToMessages}
             soundType="tap"
           >
-            <Ionicons name="chatbubbles-outline" size={35} color={colors.navIcon} />
+            <View style={styles.iconContainer}>
+              <Ionicons name="chatbubbles-outline" size={35} color={colors.navIcon} />
+              {unreadCount > 0 && (
+                <NotificationBadge count={unreadCount} size="small" position="top-right" />
+              )}
+            </View>
           </SoundTouchableOpacity>
           <SoundTouchableOpacity style={styles.iconButton} soundType="tap">
             <Ionicons name="stats-chart-outline" size={35} color={colors.navIcon} />
@@ -246,6 +257,11 @@ const styles = StyleSheet.create({
         marginBottom: 20,
       },
     }),
+  },
+  iconContainer: {
+    position: 'relative',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   icon: {
     width: 50,

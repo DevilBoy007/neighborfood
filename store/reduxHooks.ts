@@ -55,6 +55,8 @@ import {
   clearMessages,
   addMessageLocally,
   resetMessageState,
+  selectUnreadCount,
+  selectThreadsWithUnread,
   ThreadData,
   MessageData,
   MessageType,
@@ -479,6 +481,8 @@ export const useMessage = () => {
   const isLoadingMessages = useAppSelector((state) => state.message?.isLoadingMessages ?? false);
   const isSendingMessage = useAppSelector((state) => state.message?.isSendingMessage ?? false);
   const isInitialized = useAppSelector((state) => state.message?.isInitialized ?? false);
+  const unreadCount = useAppSelector(selectUnreadCount);
+  const threadsWithUnread = useAppSelector(selectThreadsWithUnread);
 
   const loadThreads = useCallback(
     async (userId: string) => {
@@ -569,6 +573,8 @@ export const useMessage = () => {
     isLoadingMessages,
     isSendingMessage,
     isInitialized,
+    unreadCount,
+    threadsWithUnread,
     loadThreads,
     loadMessages,
     sendMessage,
