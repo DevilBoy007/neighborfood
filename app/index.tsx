@@ -21,7 +21,7 @@ const LoginScreen = () => {
           styles.title,
           {
             color:
-              colors.textOnPrimary == '#00bfff'
+              colors.textOnPrimary === '#00bfff'
                 ? '#fff'
                 : colors.textOnPrimary /* special case for default theme */,
           },
