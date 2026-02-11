@@ -4,19 +4,45 @@ import type { RootState } from '../store';
 
 /**
  * Helper function to compute unread count for threads
- * A thread has unread messages if the last message was not sent by the current user
+ * A thread has unread messages if:
+ * - The last message was not sent by the current user AND
+ * - Either there's no lastReadBy timestamp, or it's older than the last message
  */
 function calculateUnreadCounts(threads: ThreadData[], currentUserId: string): ThreadData[] {
   return threads.map((thread) => {
+    // Thread is deleted by current user
+    if (thread.deletedBy?.includes(currentUserId)) {
+      return {
+        ...thread,
+        hasUnread: false,
+        unreadCount: 0,
+      };
+    }
+
+    // No last message or message sent by current user
+    if (!thread.lastMessage?.senderId || thread.lastMessage.senderId === currentUserId) {
+      return {
+        ...thread,
+        hasUnread: false,
+        unreadCount: 0,
+      };
+    }
+
+    // Check if user has read the thread after the last message
+    const lastReadTimestamp = thread.lastReadBy?.[currentUserId];
+    const lastMessageTimestamp = thread.lastMessage.createdAt;
+
+    // If never read, or read before the last message, it's unread
     const hasUnread =
-      thread.lastMessage?.senderId &&
-      thread.lastMessage.senderId !== currentUserId &&
-      !thread.deletedBy?.includes(currentUserId);
+      !lastReadTimestamp ||
+      lastReadTimestamp.seconds < lastMessageTimestamp.seconds ||
+      (lastReadTimestamp.seconds === lastMessageTimestamp.seconds &&
+        (lastReadTimestamp.nanoseconds || 0) < lastMessageTimestamp.nanoseconds);
 
     return {
       ...thread,
       hasUnread,
-      unreadCount: hasUnread ? 1 : 0, // Simplified - could be enhanced with actual message counts
+      unreadCount: hasUnread ? 1 : 0,
     };
   });
 }
@@ -66,6 +92,7 @@ export type ThreadData = {
   updatedAt: { seconds: number; nanoseconds: number };
   createdAt?: { seconds: number; nanoseconds: number };
   deletedBy?: string[];
+  lastReadBy?: Record<string, { seconds: number; nanoseconds: number }>; // Timestamp when each user last read the thread
   unreadCount?: number; // Client-side computed field
   hasUnread?: boolean; // Client-side computed field
 };

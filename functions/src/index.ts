@@ -1647,6 +1647,8 @@ export const markThreadAsRead = onCall(
         throw new HttpsError('permission-denied', 'User is not a participant of this thread');
       }
 
+      const batch = db.batch();
+
       // Mark all messages not sent by this user as read
       const unreadMessages = await db
         .collection('threads')
@@ -1656,9 +1658,16 @@ export const markThreadAsRead = onCall(
         .where('read', '==', false)
         .get();
 
-      const batch = db.batch();
       unreadMessages.docs.forEach((doc) => {
         batch.update(doc.ref, { read: true });
+      });
+
+      // Store lastReadAt timestamp for this user in the thread document
+      const lastReadBy = threadData.lastReadBy || {};
+      lastReadBy[request.auth!.uid] = FieldValue.serverTimestamp();
+
+      batch.update(threadDoc.ref, {
+        lastReadBy: lastReadBy,
       });
 
       await batch.commit();

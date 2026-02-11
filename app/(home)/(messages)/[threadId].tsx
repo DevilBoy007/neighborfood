@@ -307,7 +307,13 @@ export default function MessageThreadScreen() {
               {otherUserInfo?.username || 'Unknown User'}
             </Text>
           </View>
-          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => {
+              // Use replace instead of back to handle cases where there's no navigation history
+              router.replace('/(home)/(messages)' as any);
+            }}
+          >
             <Ionicons
               name="chevron-back"
               size={Platform.OS === 'web' ? 40 : 24}
