@@ -457,8 +457,8 @@ const EditDetails = () => {
       </View>
       <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={{ paddingBottom: 40 }}
-        showsVerticalScrollIndicator={Platform.OS !== 'web'}
+        contentContainerStyle={{ paddingBottom: 120 }}
+        showsVerticalScrollIndicator={Platform.OS === 'web'}
         keyboardShouldPersistTaps="handled"
       >
         <Text style={[styles.subtitle, { color: colors.text }]}>Personal Info</Text>
@@ -467,7 +467,7 @@ const EditDetails = () => {
             style={[
               styles.input,
               styles.emailInput,
-              { borderColor: colors.border, backgroundColor: colors.surface },
+              { color: colors.text, borderColor: colors.border, backgroundColor: colors.surface },
             ]}
             placeholder="email"
             placeholderTextColor={colors.placeholder}
@@ -485,7 +485,11 @@ const EditDetails = () => {
             style={[
               styles.input,
               styles.halfInput,
-              { borderColor: colors.border, backgroundColor: colors.inputBackground },
+              {
+                color: colors.text,
+                borderColor: colors.border,
+                backgroundColor: colors.inputBackground,
+              },
             ]}
             placeholder="first name"
             placeholderTextColor={colors.placeholder}
@@ -496,7 +500,11 @@ const EditDetails = () => {
             style={[
               styles.input,
               styles.halfInput,
-              { borderColor: colors.border, backgroundColor: colors.inputBackground },
+              {
+                color: colors.text,
+                borderColor: colors.border,
+                backgroundColor: colors.inputBackground,
+              },
             ]}
             placeholder="last name"
             placeholderTextColor={colors.placeholder}
@@ -508,7 +516,11 @@ const EditDetails = () => {
         <TextInput
           style={[
             styles.input,
-            { borderColor: colors.border, backgroundColor: colors.inputBackground },
+            {
+              color: colors.text,
+              borderColor: colors.border,
+              backgroundColor: colors.inputBackground,
+            },
           ]}
           placeholder="phone number"
           placeholderTextColor={colors.placeholder}
@@ -535,7 +547,11 @@ const EditDetails = () => {
             styles={{
               textInput: [
                 styles.googlePlacesInput,
-                { borderColor: colors.border, backgroundColor: colors.inputBackground },
+                {
+                  color: colors.text,
+                  borderColor: colors.border,
+                  backgroundColor: colors.inputBackground,
+                },
               ],
               container: {
                 ...styles.googlePlacesContainer,
@@ -581,7 +597,11 @@ const EditDetails = () => {
         <TextInput
           style={[
             styles.input,
-            { borderColor: colors.border, backgroundColor: colors.inputBackground },
+            {
+              color: colors.text,
+              borderColor: colors.border,
+              backgroundColor: colors.inputBackground,
+            },
           ]}
           placeholder="username"
           placeholderTextColor={colors.placeholder}

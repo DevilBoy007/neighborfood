@@ -139,7 +139,7 @@ export const ThemePresets: Record<ThemePresetName, ThemePreset> = {
       // Text colors
       text: '#F9FAFB',
       textSecondary: '#E5E7EB',
-      textMuted: '#3B82F64f',
+      textMuted: '#3b83f6',
       textOnPrimary: '#fff',
       // State colors
       success: '#10B981',
