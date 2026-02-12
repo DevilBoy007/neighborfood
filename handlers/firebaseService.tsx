@@ -1147,6 +1147,72 @@ class FirebaseService {
       return false;
     }
   }
+
+  // =========================================================================
+  // Stripe Payment Methods
+  // =========================================================================
+
+  async createSetupIntent(): Promise<{ clientSecret: string; customerId: string }> {
+    return await this.callFunction<
+      { userId: string },
+      { clientSecret: string; customerId: string }
+    >(
+      'createSetupIntent',
+      { userId: '' } // userId is extracted from auth token on server
+    );
+  }
+
+  async createPaymentIntent(
+    amount: number,
+    paymentMethodId?: string
+  ): Promise<{ clientSecret: string; paymentIntentId: string }> {
+    return await this.callFunction<
+      { amount: number; currency: string; paymentMethodId?: string },
+      { clientSecret: string; paymentIntentId: string }
+    >('createPaymentIntent', {
+      amount,
+      currency: 'usd',
+      paymentMethodId,
+    });
+  }
+
+  async getPaymentMethods(): Promise<{
+    paymentMethods: {
+      id: string;
+      brand: string;
+      last4: string;
+      expMonth: number;
+      expYear: number;
+    }[];
+    defaultPaymentMethodId: string | null;
+  }> {
+    return await this.callFunction<
+      { userId: string },
+      {
+        paymentMethods: {
+          id: string;
+          brand: string;
+          last4: string;
+          expMonth: number;
+          expYear: number;
+        }[];
+        defaultPaymentMethodId: string | null;
+      }
+    >('getPaymentMethods', { userId: '' });
+  }
+
+  async deletePaymentMethod(paymentMethodId: string): Promise<boolean> {
+    return await this.callFunction<{ paymentMethodId: string }, boolean>('deletePaymentMethod', {
+      paymentMethodId,
+    });
+  }
+
+  async setDefaultPaymentMethod(paymentMethodId: string): Promise<boolean> {
+    return await this.callFunction<{ paymentMethodId: string }, boolean>(
+      'setDefaultPaymentMethod',
+      { paymentMethodId }
+    );
+  }
 }
 
 const firebaseService = FirebaseService.getInstance();
