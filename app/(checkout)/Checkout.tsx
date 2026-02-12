@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -7,6 +7,7 @@ import {
   ScrollView,
   TextInput,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -17,8 +18,34 @@ import firebaseService from '@/handlers/firebaseService';
 import { SoundTouchableOpacity } from '@/components/SoundTouchableOpacity';
 import { useAppColors } from '@/hooks/useAppColors';
 
+// Conditionally import Stripe components (native only)
+let useStripe: () => { confirmPayment: any } = () => ({ confirmPayment: null });
+let usePlatformPayHook: () => {
+  isPlatformPaySupported: boolean;
+  confirmPlatformPayPayment: any;
+} = () => ({ isPlatformPaySupported: false, confirmPlatformPayPayment: null });
+let CardField: React.ComponentType<any> | null = null;
+if (Platform.OS !== 'web') {
+  /* eslint-disable @typescript-eslint/no-require-imports */
+  const StripeModule = require('@stripe/stripe-react-native');
+  useStripe = StripeModule.useStripe;
+  CardField = StripeModule.CardField;
+  if (StripeModule.usePlatformPay) {
+    usePlatformPayHook = StripeModule.usePlatformPay;
+  }
+  /* eslint-enable @typescript-eslint/no-require-imports */
+}
+
 type DeliveryOption = 'pickup' | 'delivery';
 type PaymentMethod = 'apple_pay' | 'card' | 'venmo' | 'paypal';
+
+type SavedCard = {
+  id: string;
+  brand: string;
+  last4: string;
+  expMonth: number;
+  expYear: number;
+};
 
 const Checkout = () => {
   const router = useRouter();
@@ -27,6 +54,10 @@ const Checkout = () => {
   const { refreshOrders } = useOrder();
   const { createOrGetThread } = useMessage();
   const colors = useAppColors();
+  const { confirmPayment } = useStripe();
+
+  // Platform Pay (Apple Pay / Google Pay)
+  const platformPay = usePlatformPayHook();
 
   const [shopDeliveryOptions, setShopDeliveryOptions] = useState<Record<string, DeliveryOption>>(
     {}
@@ -37,11 +68,46 @@ const Checkout = () => {
   const [specialInstructions, setSpecialInstructions] = useState('');
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
 
+  // Stripe payment state
+  const [savedCards, setSavedCards] = useState<SavedCard[]>([]);
+  const [defaultCardId, setDefaultCardId] = useState<string | null>(null);
+  const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
+  const [useNewCard, setUseNewCard] = useState(false);
+  const [cardComplete, setCardComplete] = useState(false);
+  const [loadingCards, setLoadingCards] = useState(false);
+
   const subtotal = calculateTotalSubtotal();
   const deliveryFee =
     Object.values(shopDeliveryOptions).filter((option) => option === 'delivery').length * 3.99;
   const tax = subtotal * 0.08; // 8% tax
   const total = subtotal + deliveryFee + tax;
+
+  // Load saved payment methods
+  const loadSavedCards = useCallback(async () => {
+    if (!userData?.uid) return;
+    try {
+      setLoadingCards(true);
+      const result = await firebaseService.getPaymentMethods();
+      setSavedCards(result.paymentMethods);
+      setDefaultCardId(result.defaultPaymentMethodId);
+      if (result.defaultPaymentMethodId) {
+        setSelectedCardId(result.defaultPaymentMethodId);
+      } else if (result.paymentMethods.length > 0) {
+        setSelectedCardId(result.paymentMethods[0].id);
+      } else {
+        setUseNewCard(true);
+      }
+    } catch (error) {
+      console.error('Error loading saved cards:', error);
+      setUseNewCard(true);
+    } finally {
+      setLoadingCards(false);
+    }
+  }, [userData?.uid]);
+
+  useEffect(() => {
+    loadSavedCards();
+  }, [loadSavedCards]);
 
   useEffect(() => {
     // Initialize delivery options for each shop
@@ -122,6 +188,112 @@ const Checkout = () => {
     setIsPlacingOrder(true);
     const orderId = uuidv4();
     try {
+      // Process Stripe payment for card and native pay methods
+      if (paymentMethod === 'card' && Platform.OS !== 'web') {
+        const amountInCents = Math.round(total * 100);
+
+        if (useNewCard) {
+          // Pay with new card via CardField
+          if (!cardComplete) {
+            Toast.show({
+              type: 'error',
+              text1: 'Incomplete',
+              text2: 'Please fill in your card details.',
+              visibilityTime: 3000,
+            });
+            setIsPlacingOrder(false);
+            return;
+          }
+
+          const { clientSecret } = await firebaseService.createPaymentIntent(amountInCents);
+
+          const { error } = await confirmPayment(clientSecret, {
+            paymentMethodType: 'Card',
+          });
+
+          if (error) {
+            Toast.show({
+              type: 'error',
+              text1: 'Payment Failed',
+              text2: error.message || 'Your payment could not be processed.',
+              visibilityTime: 3000,
+            });
+            setIsPlacingOrder(false);
+            return;
+          }
+        } else if (selectedCardId) {
+          // Pay with saved card
+          const { clientSecret } = await firebaseService.createPaymentIntent(
+            amountInCents,
+            selectedCardId
+          );
+
+          const { error } = await confirmPayment(clientSecret, {
+            paymentMethodType: 'Card',
+            paymentMethodData: { paymentMethodId: selectedCardId },
+          });
+
+          if (error) {
+            Toast.show({
+              type: 'error',
+              text1: 'Payment Failed',
+              text2: error.message || 'Your payment could not be processed.',
+              visibilityTime: 3000,
+            });
+            setIsPlacingOrder(false);
+            return;
+          }
+        } else {
+          Toast.show({
+            type: 'error',
+            text1: 'No Card Selected',
+            text2: 'Please select a payment card or add a new one.',
+            visibilityTime: 3000,
+          });
+          setIsPlacingOrder(false);
+          return;
+        }
+      } else if (paymentMethod === 'apple_pay' && Platform.OS !== 'web' && platformPay) {
+        // Native platform pay (Apple Pay / Google Pay)
+        const amountInCents = Math.round(total * 100);
+        const { clientSecret } = await firebaseService.createPaymentIntent(amountInCents);
+
+        const { error } = await platformPay.confirmPlatformPayPayment(clientSecret, {
+          applePay: {
+            cartItems: [
+              {
+                label: 'Neighborfood Order',
+                amount: total.toFixed(2),
+                paymentType: 'Immediate',
+              },
+            ],
+            merchantCountryCode: 'US',
+            currencyCode: 'USD',
+          },
+          googlePay: {
+            testEnv: true,
+            merchantName: 'Neighborfood',
+            merchantCountryCode: 'US',
+            currencyCode: 'USD',
+            billingAddressConfig: {
+              isRequired: false,
+            },
+          },
+        });
+
+        if (error) {
+          Toast.show({
+            type: 'error',
+            text1: 'Payment Failed',
+            text2: error.message || 'Payment could not be processed.',
+            visibilityTime: 3000,
+          });
+          setIsPlacingOrder(false);
+          return;
+        }
+      }
+
+      // Payment successful (or non-Stripe payment method) — create orders
       // First, get shop owner information for each shop to create message threads
       const shopOwnerMap = new Map<string, string>(); // shopId -> ownerId
 
@@ -445,12 +617,23 @@ const Checkout = () => {
         <View style={[styles.section, { backgroundColor: colors.surface }]}>
           <Text style={[styles.sectionTitle, { color: colors.text }]}>Payment Method</Text>
           <View style={styles.paymentOptions}>
-            {[
-              { key: 'apple_pay', icon: 'logo-apple', label: 'Apple Pay' },
-              { key: 'card', icon: 'card', label: 'Card' },
-              { key: 'venmo', icon: 'logo-venmo', label: 'Venmo' },
-              { key: 'paypal', icon: 'logo-paypal', label: 'PayPal' },
-            ].map((payment) => (
+            {(Platform.OS !== 'web' && platformPay.isPlatformPaySupported
+              ? [
+                  {
+                    key: 'apple_pay',
+                    icon: 'logo-apple',
+                    label: Platform.OS === 'ios' ? 'Apple Pay' : 'Google Pay',
+                  },
+                  { key: 'card', icon: 'card', label: 'Card' },
+                  { key: 'venmo', icon: 'logo-venmo', label: 'Venmo' },
+                  { key: 'paypal', icon: 'logo-paypal', label: 'PayPal' },
+                ]
+              : [
+                  { key: 'card', icon: 'card', label: 'Card' },
+                  { key: 'venmo', icon: 'logo-venmo', label: 'Venmo' },
+                  { key: 'paypal', icon: 'logo-paypal', label: 'PayPal' },
+                ]
+            ).map((payment) => (
               <SoundTouchableOpacity
                 key={payment.key}
                 style={[
@@ -481,6 +664,112 @@ const Checkout = () => {
               </SoundTouchableOpacity>
             ))}
           </View>
+
+          {/* Card selection (saved cards + new card) for card payment */}
+          {paymentMethod === 'card' && Platform.OS !== 'web' && (
+            <View style={styles.cardSelection}>
+              {loadingCards ? (
+                <ActivityIndicator size="small" color={colors.primary} style={{ marginTop: 12 }} />
+              ) : (
+                <>
+                  {/* Saved cards */}
+                  {savedCards.map((card) => (
+                    <SoundTouchableOpacity
+                      key={card.id}
+                      style={[
+                        styles.savedCardOption,
+                        { borderColor: colors.divider, backgroundColor: colors.inputBackground },
+                        !useNewCard &&
+                          selectedCardId === card.id && {
+                            borderColor: colors.primary,
+                            backgroundColor: colors.surface,
+                          },
+                      ]}
+                      onPress={() => {
+                        setSelectedCardId(card.id);
+                        setUseNewCard(false);
+                      }}
+                      soundType="tap"
+                    >
+                      <Ionicons
+                        name="card"
+                        size={20}
+                        color={
+                          !useNewCard && selectedCardId === card.id
+                            ? colors.primary
+                            : colors.textMuted
+                        }
+                      />
+                      <Text
+                        style={[
+                          styles.savedCardText,
+                          { color: colors.text },
+                          !useNewCard && selectedCardId === card.id && { color: colors.primary },
+                        ]}
+                      >
+                        {card.brand.charAt(0).toUpperCase() + card.brand.slice(1)} •••• {card.last4}
+                      </Text>
+                      {card.id === defaultCardId && (
+                        <Text style={[styles.defaultLabel, { color: colors.textMuted }]}>
+                          Default
+                        </Text>
+                      )}
+                    </SoundTouchableOpacity>
+                  ))}
+
+                  {/* New card option */}
+                  <SoundTouchableOpacity
+                    style={[
+                      styles.savedCardOption,
+                      { borderColor: colors.divider, backgroundColor: colors.inputBackground },
+                      useNewCard && {
+                        borderColor: colors.primary,
+                        backgroundColor: colors.surface,
+                      },
+                    ]}
+                    onPress={() => setUseNewCard(true)}
+                    soundType="tap"
+                  >
+                    <Ionicons
+                      name="add-circle-outline"
+                      size={20}
+                      color={useNewCard ? colors.primary : colors.textMuted}
+                    />
+                    <Text
+                      style={[
+                        styles.savedCardText,
+                        { color: colors.text },
+                        useNewCard && { color: colors.primary },
+                      ]}
+                    >
+                      New Card
+                    </Text>
+                  </SoundTouchableOpacity>
+
+                  {/* CardField for new card entry */}
+                  {useNewCard && CardField && (
+                    <CardField
+                      postalCodeEnabled={true}
+                      placeholders={{ number: '4242 4242 4242 4242' }}
+                      cardStyle={{
+                        backgroundColor: colors.inputBackground,
+                        textColor: colors.text,
+                        placeholderColor: colors.placeholder,
+                        borderColor: colors.border,
+                        borderWidth: 1,
+                        borderRadius: 8,
+                        fontSize: 16,
+                      }}
+                      style={styles.checkoutCardField}
+                      onCardChange={(details: { complete: boolean }) => {
+                        setCardComplete(details.complete);
+                      }}
+                    />
+                  )}
+                </>
+              )}
+            </View>
+          )}
         </View>
 
         {/* Special Instructions */}
@@ -536,16 +825,25 @@ const Checkout = () => {
       </ScrollView>
       {/* Place Order Button */}
       <View style={styles.buttonContainer}>
-        {paymentMethod === 'apple_pay' ? (
+        {paymentMethod === 'apple_pay' && platformPay.isPlatformPaySupported ? (
           <SoundTouchableOpacity
             style={[styles.applePayButton, isPlacingOrder && { opacity: 0.7 }]}
             onPress={handlePlaceOrder}
             disabled={isPlacingOrder}
             soundType="click"
           >
-            <Ionicons name="logo-apple" size={24} color="white" style={styles.applePayIcon} />
+            <Ionicons
+              name={Platform.OS === 'ios' ? 'logo-apple' : 'logo-google'}
+              size={24}
+              color="white"
+              style={styles.applePayIcon}
+            />
             <Text style={styles.applePayText}>
-              {isPlacingOrder ? 'Processing...' : 'Pay with Apple Pay'}
+              {isPlacingOrder
+                ? 'Processing...'
+                : Platform.OS === 'ios'
+                  ? 'Pay with Apple Pay'
+                  : 'Pay with Google Pay'}
             </Text>
           </SoundTouchableOpacity>
         ) : (
@@ -563,7 +861,7 @@ const Checkout = () => {
             soundType="click"
           >
             <Text style={[styles.placeOrderText, { color: colors.buttonText }]}>
-              {isPlacingOrder ? 'Placing Order...' : 'Place Order'}
+              {isPlacingOrder ? 'Processing Payment...' : `Pay $${total.toFixed(2)}`}
             </Text>
           </SoundTouchableOpacity>
         )}
@@ -827,6 +1125,32 @@ const styles = StyleSheet.create({
   },
   selectedShopOptionText: {
     fontWeight: 'bold',
+  },
+  cardSelection: {
+    marginTop: 12,
+    gap: 8,
+  },
+  savedCardOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 2,
+    gap: 10,
+  },
+  savedCardText: {
+    flex: 1,
+    fontSize: 14,
+    fontFamily: 'TextMeOne',
+  },
+  defaultLabel: {
+    fontSize: 11,
+    fontFamily: 'TextMeOne',
+  },
+  checkoutCardField: {
+    width: '100%',
+    height: 50,
+    marginTop: 4,
   },
 });
 
