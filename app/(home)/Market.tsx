@@ -103,7 +103,7 @@ const MarketScreen = () => {
         setRefreshing(false);
       }
     },
-    [locationData.zipCode, userData?.location?.zip, userData?.uid, shops.length, dispatch]
+    [locationData.zipCode, userData?.location?.zip, userData?.uid, dispatch]
   );
 
   // Only re-fetch when the actual zip code or user ID changes
