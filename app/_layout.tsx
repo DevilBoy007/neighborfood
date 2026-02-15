@@ -7,10 +7,11 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import Toast, { BaseToast } from 'react-native-toast-message';
 import { Provider } from 'react-redux';
 import { PersistGate } from 'redux-persist/integration/react';
+import { StripeProvider } from '@stripe/stripe-react-native';
 import { store, persistor } from '@/store';
 import { GoogleMapsLoader } from '@/components/GoogleMapsLoader';
 import { NotificationProvider } from '@/components/NotificationProvider';
-import { View, Text, LogBox } from 'react-native';
+import { View, Text, LogBox, Platform } from 'react-native';
 
 // Ignore specific warnings about text nodes
 LogBox.ignoreLogs(['Unexpected text node', 'A text node cannot be a child of a <View>']);
@@ -81,7 +82,11 @@ export default function RootLayout() {
   if (!loaded) {
     return null;
   }
-  return (
+
+  const stripePublishableKey =
+    process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY || process.env.STRIPE_TEST_KEY || '';
+
+  const appContent = (
     <Provider store={store}>
       <PersistGate loading={null} persistor={persistor}>
         <NotificationProvider>
@@ -98,6 +103,7 @@ export default function RootLayout() {
                     options={{ headerShown: false, animation: 'fade' }}
                   />
                   <Stack.Screen name="EditDetails" options={{ headerShown: false }} />
+                  <Stack.Screen name="PaymentMethods" options={{ headerShown: false }} />
                   <Stack.Screen
                     name="Settings"
                     options={{
@@ -123,4 +129,18 @@ export default function RootLayout() {
       </PersistGate>
     </Provider>
   );
+
+  // StripeProvider is only available on native platforms
+  if (Platform.OS !== 'web' && stripePublishableKey) {
+    return (
+      <StripeProvider
+        publishableKey={stripePublishableKey}
+        merchantIdentifier="merchant.com.anonymous.neighborfood"
+      >
+        {appContent}
+      </StripeProvider>
+    );
+  }
+
+  return appContent;
 }
