@@ -12,11 +12,16 @@
 
 import * as admin from 'firebase-admin';
 import { onCall, HttpsError, CallableRequest } from 'firebase-functions/v2/https';
+import { defineSecret } from 'firebase-functions/params';
 import { FieldValue } from 'firebase-admin/firestore';
+import Stripe from 'stripe';
 
 // Initialize Firebase Admin SDK
 admin.initializeApp();
 const db = admin.firestore();
+
+// Define Stripe secret key from Firebase environment secrets
+const stripeSecretKey = defineSecret('STRIPE_SECRET_KEY');
 
 // =============================================================================
 // Helper functions to convert Firestore data to JSON-serializable format
@@ -1879,6 +1884,269 @@ export const sendOrderStatusNotification = onCall(
     } catch (error) {
       console.error('Error sending order status notification:', error);
       return false;
+    }
+  }
+);
+
+// =============================================================================
+// Stripe Payment Operations
+// =============================================================================
+
+interface CreateSetupIntentRequest {
+  userId: string;
+}
+
+interface CreatePaymentIntentRequest {
+  amount: number; // in cents
+  currency?: string;
+  paymentMethodId?: string;
+}
+
+interface GetPaymentMethodsRequest {
+  userId: string;
+}
+
+interface DeletePaymentMethodRequest {
+  paymentMethodId: string;
+}
+
+interface SetDefaultPaymentMethodRequest {
+  paymentMethodId: string;
+}
+
+/**
+ * Helper to get or create a Stripe customer for a user
+ */
+async function getOrCreateStripeCustomer(stripe: Stripe, userId: string): Promise<string> {
+  const userDoc = await db.collection('users').doc(userId).get();
+  const userData = userDoc.data();
+
+  if (userData?.stripeCustomerId) {
+    return userData.stripeCustomerId;
+  }
+
+  // Create a new Stripe customer
+  const customer = await stripe.customers.create({
+    metadata: { firebaseUserId: userId },
+    email: userData?.email || undefined,
+    name: userData?.first && userData?.last ? `${userData.first} ${userData.last}` : undefined,
+  });
+
+  // Save the Stripe customer ID to the user's profile
+  await db.collection('users').doc(userId).update({
+    stripeCustomerId: customer.id,
+  });
+
+  return customer.id;
+}
+
+/**
+ * Create a SetupIntent for saving a payment method without charging
+ */
+export const createSetupIntent = onCall(
+  { secrets: [stripeSecretKey] },
+  async (request: CallableRequest<CreateSetupIntentRequest>) => {
+    verifyAuth(request);
+    const userId = request.auth!.uid;
+
+    try {
+      const stripe = new Stripe(stripeSecretKey.value(), {
+        apiVersion: '2026-01-28.clover',
+      });
+
+      const customerId = await getOrCreateStripeCustomer(stripe, userId);
+
+      const setupIntent = await stripe.setupIntents.create({
+        customer: customerId,
+        automatic_payment_methods: { enabled: true },
+      });
+
+      return {
+        clientSecret: setupIntent.client_secret,
+        customerId,
+      };
+    } catch (error) {
+      console.error('Error creating setup intent:', error);
+      throw new HttpsError('internal', 'Failed to create setup intent');
+    }
+  }
+);
+
+/**
+ * Create a PaymentIntent for charging during checkout
+ */
+export const createPaymentIntent = onCall(
+  { secrets: [stripeSecretKey] },
+  async (request: CallableRequest<CreatePaymentIntentRequest>) => {
+    verifyAuth(request);
+    const userId = request.auth!.uid;
+    const { amount, currency = 'usd', paymentMethodId } = request.data;
+
+    if (!amount || amount <= 0) {
+      throw new HttpsError('invalid-argument', 'A valid amount is required');
+    }
+
+    try {
+      const stripe = new Stripe(stripeSecretKey.value(), {
+        apiVersion: '2026-01-28.clover',
+      });
+
+      const customerId = await getOrCreateStripeCustomer(stripe, userId);
+
+      const intentData: Stripe.PaymentIntentCreateParams = {
+        amount: Math.round(amount),
+        currency,
+        customer: customerId,
+        automatic_payment_methods: { enabled: true },
+      };
+
+      if (paymentMethodId) {
+        intentData.payment_method = paymentMethodId;
+      }
+
+      const paymentIntent = await stripe.paymentIntents.create(intentData);
+
+      return {
+        clientSecret: paymentIntent.client_secret,
+        paymentIntentId: paymentIntent.id,
+      };
+    } catch (error) {
+      console.error('Error creating payment intent:', error);
+      throw new HttpsError('internal', 'Failed to create payment intent');
+    }
+  }
+);
+
+/**
+ * Get saved payment methods for the authenticated user
+ */
+export const getPaymentMethods = onCall(
+  { secrets: [stripeSecretKey] },
+  async (request: CallableRequest<GetPaymentMethodsRequest>) => {
+    verifyAuth(request);
+    const userId = request.auth!.uid;
+
+    try {
+      const stripe = new Stripe(stripeSecretKey.value(), {
+        apiVersion: '2026-01-28.clover',
+      });
+
+      const userDoc = await db.collection('users').doc(userId).get();
+      const userData = userDoc.data();
+
+      if (!userData?.stripeCustomerId) {
+        return { paymentMethods: [], defaultPaymentMethodId: null };
+      }
+
+      const customerId = userData.stripeCustomerId;
+
+      const paymentMethods = await stripe.paymentMethods.list({
+        customer: customerId,
+        type: 'card',
+      });
+
+      // Get customer to find default payment method
+      const customer = (await stripe.customers.retrieve(customerId)) as Stripe.Customer;
+      const defaultPmId = customer.invoice_settings?.default_payment_method as string | null;
+
+      return {
+        paymentMethods: paymentMethods.data.map((pm) => ({
+          id: pm.id,
+          brand: pm.card?.brand || 'unknown',
+          last4: pm.card?.last4 || '****',
+          expMonth: pm.card?.exp_month || 0,
+          expYear: pm.card?.exp_year || 0,
+        })),
+        defaultPaymentMethodId: defaultPmId,
+      };
+    } catch (error) {
+      console.error('Error getting payment methods:', error);
+      throw new HttpsError('internal', 'Failed to retrieve payment methods');
+    }
+  }
+);
+
+/**
+ * Delete (detach) a payment method
+ */
+export const deletePaymentMethod = onCall(
+  { secrets: [stripeSecretKey] },
+  async (request: CallableRequest<DeletePaymentMethodRequest>) => {
+    verifyAuth(request);
+    const userId = request.auth!.uid;
+    const { paymentMethodId } = request.data;
+
+    if (!paymentMethodId) {
+      throw new HttpsError('invalid-argument', 'Payment method ID is required');
+    }
+
+    try {
+      const stripe = new Stripe(stripeSecretKey.value(), {
+        apiVersion: '2026-01-28.clover',
+      });
+
+      // Verify this payment method belongs to the user
+      const userDoc = await db.collection('users').doc(userId).get();
+      const userData = userDoc.data();
+      if (!userData?.stripeCustomerId) {
+        throw new HttpsError('not-found', 'No Stripe customer found');
+      }
+
+      const pm = await stripe.paymentMethods.retrieve(paymentMethodId);
+      if (pm.customer !== userData.stripeCustomerId) {
+        throw new HttpsError('permission-denied', 'Payment method does not belong to this user');
+      }
+
+      await stripe.paymentMethods.detach(paymentMethodId);
+      return true;
+    } catch (error) {
+      if (error instanceof HttpsError) throw error;
+      console.error('Error deleting payment method:', error);
+      throw new HttpsError('internal', 'Failed to delete payment method');
+    }
+  }
+);
+
+/**
+ * Set a default payment method for the customer
+ */
+export const setDefaultPaymentMethod = onCall(
+  { secrets: [stripeSecretKey] },
+  async (request: CallableRequest<SetDefaultPaymentMethodRequest>) => {
+    verifyAuth(request);
+    const userId = request.auth!.uid;
+    const { paymentMethodId } = request.data;
+
+    if (!paymentMethodId) {
+      throw new HttpsError('invalid-argument', 'Payment method ID is required');
+    }
+
+    try {
+      const stripe = new Stripe(stripeSecretKey.value(), {
+        apiVersion: '2026-01-28.clover',
+      });
+
+      const userDoc = await db.collection('users').doc(userId).get();
+      const userData = userDoc.data();
+      if (!userData?.stripeCustomerId) {
+        throw new HttpsError('not-found', 'No Stripe customer found');
+      }
+
+      // Verify ownership
+      const pm = await stripe.paymentMethods.retrieve(paymentMethodId);
+      if (pm.customer !== userData.stripeCustomerId) {
+        throw new HttpsError('permission-denied', 'Payment method does not belong to this user');
+      }
+
+      await stripe.customers.update(userData.stripeCustomerId, {
+        invoice_settings: { default_payment_method: paymentMethodId },
+      });
+
+      return true;
+    } catch (error) {
+      if (error instanceof HttpsError) throw error;
+      console.error('Error setting default payment method:', error);
+      throw new HttpsError('internal', 'Failed to set default payment method');
     }
   }
 );
