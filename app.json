@@ -76,6 +76,7 @@
       "expo-font",
       "expo-audio",
       "expo-web-browser",
+      "@react-native-community/datetimepicker",
       "@stripe/stripe-react-native"
     ],
     "experiments": {
