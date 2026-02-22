@@ -37,7 +37,7 @@ if (Platform.OS !== 'web') {
 }
 
 type DeliveryOption = 'pickup' | 'delivery';
-type PaymentMethod = 'apple_pay' | 'card' | 'venmo' | 'paypal';
+type PaymentMethod = 'apple_pay' | 'card' | 'cashapp' | 'paypal';
 
 type SavedCard = {
   id: string;
@@ -80,7 +80,8 @@ const Checkout = () => {
   const deliveryFee =
     Object.values(shopDeliveryOptions).filter((option) => option === 'delivery').length * 3.99;
   const tax = subtotal * 0.08; // 8% tax
-  const total = subtotal + deliveryFee + tax;
+  const platformFee = Math.min(subtotal * 0.1, 1); // lesser of 10% or $1
+  const total = subtotal + deliveryFee + tax + platformFee;
 
   // Load saved payment methods
   const loadSavedCards = useCallback(async () => {
@@ -189,9 +190,10 @@ const Checkout = () => {
     const orderId = uuidv4();
     try {
       // Process Stripe payment for card and native pay methods
-      if (paymentMethod === 'card' && Platform.OS !== 'web') {
-        const amountInCents = Math.round(total * 100);
+      const amountInCents = Math.round(total * 100);
+      const platformFeeInCents = Math.round(platformFee * 100);
 
+      if (paymentMethod === 'card' && Platform.OS !== 'web') {
         if (useNewCard) {
           // Pay with new card via CardField
           if (!cardComplete) {
@@ -205,7 +207,11 @@ const Checkout = () => {
             return;
           }
 
-          const { clientSecret } = await firebaseService.createPaymentIntent(amountInCents);
+          const { clientSecret } = await firebaseService.createPaymentIntent(
+            amountInCents,
+            undefined,
+            platformFeeInCents
+          );
 
           const { error } = await confirmPayment(clientSecret, {
             paymentMethodType: 'Card',
@@ -225,7 +231,8 @@ const Checkout = () => {
           // Pay with saved card
           const { clientSecret } = await firebaseService.createPaymentIntent(
             amountInCents,
-            selectedCardId
+            selectedCardId,
+            platformFeeInCents
           );
 
           const { error } = await confirmPayment(clientSecret, {
@@ -255,8 +262,11 @@ const Checkout = () => {
         }
       } else if (paymentMethod === 'apple_pay' && Platform.OS !== 'web' && platformPay) {
         // Native platform pay (Apple Pay / Google Pay)
-        const amountInCents = Math.round(total * 100);
-        const { clientSecret } = await firebaseService.createPaymentIntent(amountInCents);
+        const { clientSecret } = await firebaseService.createPaymentIntent(
+          amountInCents,
+          undefined,
+          platformFeeInCents
+        );
 
         const { error } = await platformPay.confirmPlatformPayPayment(clientSecret, {
           applePay: {
@@ -291,6 +301,50 @@ const Checkout = () => {
           setIsPlacingOrder(false);
           return;
         }
+      } else if (paymentMethod === 'cashapp' && Platform.OS !== 'web') {
+        // Cash App Pay via Stripe
+        const { clientSecret } = await firebaseService.createPaymentIntent(
+          amountInCents,
+          undefined,
+          platformFeeInCents
+        );
+
+        const { error } = await confirmPayment(clientSecret, {
+          paymentMethodType: 'CashApp',
+        });
+
+        if (error) {
+          Toast.show({
+            type: 'error',
+            text1: 'Payment Failed',
+            text2: error.message || 'Cash App payment could not be processed.',
+            visibilityTime: 3000,
+          });
+          setIsPlacingOrder(false);
+          return;
+        }
+      } else if (paymentMethod === 'paypal' && Platform.OS !== 'web') {
+        // PayPal via Stripe
+        const { clientSecret } = await firebaseService.createPaymentIntent(
+          amountInCents,
+          undefined,
+          platformFeeInCents
+        );
+
+        const { error } = await confirmPayment(clientSecret, {
+          paymentMethodType: 'PayPal',
+        });
+
+        if (error) {
+          Toast.show({
+            type: 'error',
+            text1: 'Payment Failed',
+            text2: error.message || 'PayPal payment could not be processed.',
+            visibilityTime: 3000,
+          });
+          setIsPlacingOrder(false);
+          return;
+        }
       }
 
       // Payment successful (or non-Stripe payment method) — create orders
@@ -309,6 +363,7 @@ const Checkout = () => {
       // Create orders for each shop using the dedicated createOrder function
       const orderPromises = shopCarts.map(async (shopCart) => {
         const deliveryOption = shopDeliveryOptions[shopCart.shopId];
+        const shopPlatformFee = Math.min(shopCart.subtotal * 0.1, 1);
         const orderData = {
           id: orderId,
           userId: userData.uid,
@@ -321,11 +376,13 @@ const Checkout = () => {
           subtotal: shopCart.subtotal,
           tax: shopCart.subtotal * 0.08,
           deliveryFee: deliveryOption === 'delivery' ? 3.99 : 0,
+          platformFee: shopPlatformFee,
           tip: 0, // TODO: implement later
           total:
             shopCart.subtotal +
             shopCart.subtotal * 0.08 +
-            (deliveryOption === 'delivery' ? 3.99 : 0),
+            (deliveryOption === 'delivery' ? 3.99 : 0) +
+            shopPlatformFee,
           status: 'pending' as const,
           estimatedDeliveryTime: new Date(Date.now() + 45 * 60 * 1000), // 45 minutes from now
           paymentMethod,
@@ -625,12 +682,12 @@ const Checkout = () => {
                     label: Platform.OS === 'ios' ? 'Apple Pay' : 'Google Pay',
                   },
                   { key: 'card', icon: 'card', label: 'Card' },
-                  { key: 'venmo', icon: 'logo-venmo', label: 'Venmo' },
+                  { key: 'cashapp', icon: 'cash-outline', label: 'Cash App' },
                   { key: 'paypal', icon: 'logo-paypal', label: 'PayPal' },
                 ]
               : [
                   { key: 'card', icon: 'card', label: 'Card' },
-                  { key: 'venmo', icon: 'logo-venmo', label: 'Venmo' },
+                  { key: 'cashapp', icon: 'cash-outline', label: 'Cash App' },
                   { key: 'paypal', icon: 'logo-paypal', label: 'PayPal' },
                 ]
             ).map((payment) => (
@@ -810,6 +867,12 @@ const Checkout = () => {
               <Text style={[styles.totalLabel, { color: colors.text }]}>Delivery Fees:</Text>
               <Text style={[styles.totalValue, { color: colors.textMuted }]}>
                 ${deliveryFee.toFixed(2)}
+              </Text>
+            </View>
+            <View style={styles.totalRow}>
+              <Text style={[styles.totalLabel, { color: colors.text }]}>Service Fee:</Text>
+              <Text style={[styles.totalValue, { color: colors.textMuted }]}>
+                ${platformFee.toFixed(2)}
               </Text>
             </View>
             <View

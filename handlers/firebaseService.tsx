@@ -1164,15 +1164,17 @@ class FirebaseService {
 
   async createPaymentIntent(
     amount: number,
-    paymentMethodId?: string
+    paymentMethodId?: string,
+    platformFee?: number
   ): Promise<{ clientSecret: string; paymentIntentId: string }> {
     return await this.callFunction<
-      { amount: number; currency: string; paymentMethodId?: string },
+      { amount: number; currency: string; paymentMethodId?: string; platformFee?: number },
       { clientSecret: string; paymentIntentId: string }
     >('createPaymentIntent', {
       amount,
       currency: 'usd',
       paymentMethodId,
+      platformFee,
     });
   }
 
@@ -1212,6 +1214,67 @@ class FirebaseService {
       'setDefaultPaymentMethod',
       { paymentMethodId }
     );
+  }
+
+  // =========================================================================
+  // Stripe Connect — Seller Onboarding & Payouts
+  // =========================================================================
+
+  async createConnectedAccount(): Promise<{ accountId: string }> {
+    return await this.callFunction<{ userId: string }, { accountId: string }>(
+      'createConnectedAccount',
+      { userId: '' }
+    );
+  }
+
+  async createAccountLink(refreshUrl: string, returnUrl: string): Promise<{ url: string }> {
+    return await this.callFunction<{ refreshUrl: string; returnUrl: string }, { url: string }>(
+      'createAccountLink',
+      { refreshUrl, returnUrl }
+    );
+  }
+
+  async getConnectedAccountStatus(): Promise<{
+    hasAccount: boolean;
+    chargesEnabled: boolean;
+    payoutsEnabled: boolean;
+    detailsSubmitted: boolean;
+  }> {
+    return await this.callFunction<
+      { userId: string },
+      {
+        hasAccount: boolean;
+        chargesEnabled: boolean;
+        payoutsEnabled: boolean;
+        detailsSubmitted: boolean;
+      }
+    >('getConnectedAccountStatus', { userId: '' });
+  }
+
+  async createPayout(
+    amount: number,
+    currency: string = 'usd'
+  ): Promise<{
+    payoutId: string;
+    amount: number;
+    status: string;
+    arrivalDate: number;
+  }> {
+    return await this.callFunction<
+      { amount: number; currency: string },
+      { payoutId: string; amount: number; status: string; arrivalDate: number }
+    >('createPayout', { amount, currency });
+  }
+
+  async getPayoutBalance(): Promise<{
+    available: number;
+    pending: number;
+    currency: string;
+  }> {
+    return await this.callFunction<
+      { userId: string },
+      { available: number; pending: number; currency: string }
+    >('getPayoutBalance', { userId: '' });
   }
 }
 

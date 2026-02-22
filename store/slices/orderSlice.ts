@@ -28,6 +28,7 @@ export type OrderData = {
   subtotal: number;
   tax: number;
   deliveryFee: number;
+  platformFee?: number;
   total: number;
   status: OrderStatus;
   createdAt: { seconds: number; nanoseconds: number };
