@@ -1164,17 +1164,15 @@ class FirebaseService {
 
   async createPaymentIntent(
     amount: number,
-    paymentMethodId?: string,
-    platformFee?: number
+    paymentMethodId?: string
   ): Promise<{ clientSecret: string; paymentIntentId: string }> {
     return await this.callFunction<
-      { amount: number; currency: string; paymentMethodId?: string; platformFee?: number },
+      { amount: number; currency: string; paymentMethodId?: string },
       { clientSecret: string; paymentIntentId: string }
     >('createPaymentIntent', {
       amount,
       currency: 'usd',
       paymentMethodId,
-      platformFee,
     });
   }
 
@@ -1217,81 +1215,17 @@ class FirebaseService {
   }
 
   // =========================================================================
-  // Stripe Connect — Seller Onboarding & Payouts
-  // =========================================================================
-
-  async createConnectedAccount(): Promise<{ accountId: string }> {
-    return await this.callFunction<{ userId: string }, { accountId: string }>(
-      'createConnectedAccount',
-      { userId: '' }
-    );
-  }
-
-  async createAccountLink(refreshUrl: string, returnUrl: string): Promise<{ url: string }> {
-    return await this.callFunction<{ refreshUrl: string; returnUrl: string }, { url: string }>(
-      'createAccountLink',
-      { refreshUrl, returnUrl }
-    );
-  }
-
-  async getConnectedAccountStatus(): Promise<{
-    hasAccount: boolean;
-    chargesEnabled: boolean;
-    payoutsEnabled: boolean;
-    detailsSubmitted: boolean;
-  }> {
-    return await this.callFunction<
-      { userId: string },
-      {
-        hasAccount: boolean;
-        chargesEnabled: boolean;
-        payoutsEnabled: boolean;
-        detailsSubmitted: boolean;
-      }
-    >('getConnectedAccountStatus', { userId: '' });
-  }
-
-  async createPayout(
-    amount: number,
-    currency: string = 'usd'
-  ): Promise<{
-    payoutId: string;
-    amount: number;
-    status: string;
-    arrivalDate: number;
-  }> {
-    return await this.callFunction<
-      { amount: number; currency: string },
-      { payoutId: string; amount: number; status: string; arrivalDate: number }
-    >('createPayout', { amount, currency });
-  }
-
-  async getPayoutBalance(): Promise<{
-    available: number;
-    pending: number;
-    currency: string;
-  }> {
-    return await this.callFunction<
-      { userId: string },
-      { available: number; pending: number; currency: string }
-    >('getPayoutBalance', { userId: '' });
-  }
-
-  // =========================================================================
   // PaymentSheet
   // =========================================================================
 
-  async createPaymentSheetParams(
-    amount: number,
-    platformFee?: number
-  ): Promise<{
+  async createPaymentSheetParams(amount: number): Promise<{
     paymentIntent: string;
     ephemeralKey: string;
     customer: string;
     publishableKey: string;
   }> {
     return await this.callFunction<
-      { amount: number; currency: string; platformFee?: number },
+      { amount: number; currency: string },
       {
         paymentIntent: string;
         ephemeralKey: string;
@@ -1301,24 +1235,6 @@ class FirebaseService {
     >('createPaymentSheetParams', {
       amount,
       currency: 'usd',
-      platformFee,
-    });
-  }
-
-  // =========================================================================
-  // Stripe Connect — OAuth for Linking Existing Accounts
-  // =========================================================================
-
-  async getStripeOAuthUrl(redirectUri: string): Promise<{ url: string; state: string }> {
-    return await this.callFunction<{ redirectUri: string }, { url: string; state: string }>(
-      'getStripeOAuthUrl',
-      { redirectUri }
-    );
-  }
-
-  async completeStripeOAuth(code: string): Promise<{ accountId: string }> {
-    return await this.callFunction<{ code: string }, { accountId: string }>('completeStripeOAuth', {
-      code,
     });
   }
 }

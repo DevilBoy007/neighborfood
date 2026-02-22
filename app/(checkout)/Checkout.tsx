@@ -65,10 +65,9 @@ const Checkout = () => {
     try {
       setInitializingSheet(true);
       const amountInCents = Math.round(total * 100);
-      const platformFeeInCents = Math.round(platformFee * 100);
 
       const { paymentIntent, ephemeralKey, customer } =
-        await firebaseService.createPaymentSheetParams(amountInCents, platformFeeInCents);
+        await firebaseService.createPaymentSheetParams(amountInCents);
 
       const { error } = await initPaymentSheet({
         merchantDisplayName: 'Neighborfood',
@@ -102,7 +101,7 @@ const Checkout = () => {
     } finally {
       setInitializingSheet(false);
     }
-  }, [userData, total, platformFee, initPaymentSheet]);
+  }, [userData, total, initPaymentSheet]);
 
   useEffect(() => {
     if (shopCarts.length > 0 && total > 0) {

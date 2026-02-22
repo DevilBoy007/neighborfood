@@ -7,7 +7,6 @@ import {
   Alert,
   Platform,
   TouchableOpacity,
-  Linking,
 } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
 import { router } from 'expo-router';
@@ -49,15 +48,6 @@ const PaymentMethods = () => {
   const [showAddCard, setShowAddCard] = useState(false);
   const [cardComplete, setCardComplete] = useState(false);
 
-  // Stripe Connect state
-  const [connectStatus, setConnectStatus] = useState<{
-    hasAccount: boolean;
-    chargesEnabled: boolean;
-    payoutsEnabled: boolean;
-    detailsSubmitted: boolean;
-  } | null>(null);
-  const [isConnecting, setIsConnecting] = useState(false);
-
   const loadPaymentMethods = useCallback(async () => {
     try {
       setIsLoading(true);
@@ -76,19 +66,9 @@ const PaymentMethods = () => {
     }
   }, []);
 
-  const loadConnectStatus = useCallback(async () => {
-    try {
-      const status = await firebaseService.getConnectedAccountStatus();
-      setConnectStatus(status);
-    } catch (error) {
-      console.error('Error loading connect status:', error);
-    }
-  }, []);
-
   useEffect(() => {
     loadPaymentMethods();
-    loadConnectStatus();
-  }, [loadPaymentMethods, loadConnectStatus]);
+  }, [loadPaymentMethods]);
 
   const handleAddCard = async () => {
     if (Platform.OS === 'web') {
@@ -203,103 +183,6 @@ const PaymentMethods = () => {
         text1: 'Error',
         text2: 'Failed to update default payment method.',
       });
-    }
-  };
-
-  const handleConnectStripeAccount = async () => {
-    try {
-      setIsConnecting(true);
-
-      // First try OAuth flow (for existing Stripe accounts)
-      const redirectUri = 'myapp://stripe-connect';
-      const { url } = await firebaseService.getStripeOAuthUrl(redirectUri);
-
-      // Open the Stripe OAuth URL in the device browser
-      const supported = await Linking.canOpenURL(url);
-      if (supported) {
-        await Linking.openURL(url);
-        Toast.show({
-          type: 'success',
-          text1: 'Stripe Connect',
-          text2: 'Complete the setup in your browser. Return here when done.',
-          visibilityTime: 5000,
-        });
-      } else {
-        // Fallback: create a new Standard account + onboarding link
-        await firebaseService.createConnectedAccount();
-        const { url: onboardingUrl } = await firebaseService.createAccountLink(
-          redirectUri,
-          redirectUri
-        );
-
-        const onboardingSupported = await Linking.canOpenURL(onboardingUrl);
-        if (onboardingSupported) {
-          await Linking.openURL(onboardingUrl);
-          Toast.show({
-            type: 'success',
-            text1: 'Stripe Connect',
-            text2: 'Complete the setup in your browser. Return here when done.',
-            visibilityTime: 5000,
-          });
-        }
-      }
-    } catch (error: any) {
-      // If OAuth fails because user already has an account, just refresh status
-      if (error?.code === 'already-exists') {
-        await loadConnectStatus();
-        Toast.show({
-          type: 'success',
-          text1: 'Already Connected',
-          text2: 'Your Stripe account is already linked.',
-        });
-        return;
-      }
-
-      console.error('Error connecting Stripe account:', error);
-      Toast.show({
-        type: 'error',
-        text1: 'Error',
-        text2: 'Failed to start Stripe account connection.',
-      });
-    } finally {
-      setIsConnecting(false);
-      // Refresh connect status when user returns
-      loadConnectStatus();
-    }
-  };
-
-  const handleNewStripeAccount = async () => {
-    try {
-      setIsConnecting(true);
-      await firebaseService.createConnectedAccount();
-
-      const redirectUri = 'myapp://stripe-connect';
-      const { url } = await firebaseService.createAccountLink(redirectUri, redirectUri);
-
-      const supported = await Linking.canOpenURL(url);
-      if (supported) {
-        await Linking.openURL(url);
-        Toast.show({
-          type: 'success',
-          text1: 'Stripe Connect',
-          text2: 'Complete the setup in your browser. Return here when done.',
-          visibilityTime: 5000,
-        });
-      }
-    } catch (error: any) {
-      if (error?.code === 'already-exists') {
-        await loadConnectStatus();
-        return;
-      }
-      console.error('Error creating Stripe account:', error);
-      Toast.show({
-        type: 'error',
-        text1: 'Error',
-        text2: 'Failed to create Stripe account.',
-      });
-    } finally {
-      setIsConnecting(false);
-      loadConnectStatus();
     }
   };
 
@@ -473,111 +356,6 @@ const PaymentMethods = () => {
                 </TouchableOpacity>
               </View>
             ) : null}
-
-            {/* Stripe Connect Section — for sellers */}
-            <View
-              style={[
-                styles.connectSection,
-                { backgroundColor: colors.surface, borderColor: colors.border },
-              ]}
-            >
-              <View style={styles.connectHeader}>
-                <Ionicons name="storefront-outline" size={24} color={colors.primary} />
-                <Text style={[styles.connectTitle, { color: colors.text }]}>Seller Payouts</Text>
-              </View>
-              <Text style={[styles.connectDescription, { color: colors.textMuted }]}>
-                Connect your Stripe account to receive payouts from sales. You can link an existing
-                Stripe account or create a new one.
-              </Text>
-
-              {connectStatus?.hasAccount ? (
-                <View style={styles.connectStatusContainer}>
-                  <View style={styles.connectStatusRow}>
-                    <Ionicons
-                      name={
-                        connectStatus.detailsSubmitted ? 'checkmark-circle' : 'alert-circle-outline'
-                      }
-                      size={20}
-                      color={connectStatus.detailsSubmitted ? '#4CAF50' : '#FF9800'}
-                    />
-                    <Text style={[styles.connectStatusText, { color: colors.text }]}>
-                      {connectStatus.detailsSubmitted
-                        ? 'Account details submitted'
-                        : 'Onboarding incomplete'}
-                    </Text>
-                  </View>
-                  <View style={styles.connectStatusRow}>
-                    <Ionicons
-                      name={
-                        connectStatus.payoutsEnabled ? 'checkmark-circle' : 'alert-circle-outline'
-                      }
-                      size={20}
-                      color={connectStatus.payoutsEnabled ? '#4CAF50' : '#FF9800'}
-                    />
-                    <Text style={[styles.connectStatusText, { color: colors.text }]}>
-                      {connectStatus.payoutsEnabled ? 'Payouts enabled' : 'Payouts not yet enabled'}
-                    </Text>
-                  </View>
-                  {!connectStatus.detailsSubmitted && (
-                    <TouchableOpacity
-                      style={[styles.connectButton, { backgroundColor: colors.primary }]}
-                      onPress={handleNewStripeAccount}
-                      disabled={isConnecting}
-                    >
-                      {isConnecting ? (
-                        <ActivityIndicator size="small" color={colors.buttonText} />
-                      ) : (
-                        <Text style={[styles.connectButtonText, { color: colors.buttonText }]}>
-                          Complete Onboarding
-                        </Text>
-                      )}
-                    </TouchableOpacity>
-                  )}
-                </View>
-              ) : (
-                <View style={styles.connectActions}>
-                  <TouchableOpacity
-                    style={[styles.connectButton, { backgroundColor: colors.primary }]}
-                    onPress={handleConnectStripeAccount}
-                    disabled={isConnecting}
-                  >
-                    {isConnecting ? (
-                      <ActivityIndicator size="small" color={colors.buttonText} />
-                    ) : (
-                      <>
-                        <Ionicons name="link-outline" size={18} color={colors.buttonText} />
-                        <Text style={[styles.connectButtonText, { color: colors.buttonText }]}>
-                          Connect Existing Stripe Account
-                        </Text>
-                      </>
-                    )}
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[
-                      styles.connectButton,
-                      {
-                        backgroundColor: colors.inputBackground,
-                        borderWidth: 1,
-                        borderColor: colors.border,
-                      },
-                    ]}
-                    onPress={handleNewStripeAccount}
-                    disabled={isConnecting}
-                  >
-                    {isConnecting ? (
-                      <ActivityIndicator size="small" color={colors.primary} />
-                    ) : (
-                      <>
-                        <Ionicons name="add-circle-outline" size={18} color={colors.primary} />
-                        <Text style={[styles.connectButtonText, { color: colors.primary }]}>
-                          Create New Stripe Account
-                        </Text>
-                      </>
-                    )}
-                  </TouchableOpacity>
-                </View>
-              )}
-            </View>
           </>
         )}
       </ScrollView>
@@ -773,58 +551,6 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontFamily: 'TextMeOne',
     fontWeight: 'bold',
-  },
-  connectSection: {
-    borderRadius: 12,
-    borderWidth: 1,
-    padding: 16,
-    marginTop: 24,
-    marginBottom: 12,
-  },
-  connectHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    marginBottom: 8,
-  },
-  connectTitle: {
-    fontSize: 18,
-    fontFamily: 'TextMeOne',
-    fontWeight: 'bold',
-  },
-  connectDescription: {
-    fontSize: 13,
-    fontFamily: 'TextMeOne',
-    marginBottom: 16,
-    lineHeight: 18,
-  },
-  connectActions: {
-    gap: 10,
-  },
-  connectButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 14,
-    borderRadius: 10,
-    gap: 8,
-  },
-  connectButtonText: {
-    fontSize: 15,
-    fontFamily: 'TextMeOne',
-    fontWeight: 'bold',
-  },
-  connectStatusContainer: {
-    gap: 8,
-  },
-  connectStatusRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  connectStatusText: {
-    fontSize: 14,
-    fontFamily: 'TextMeOne',
   },
 });
 
