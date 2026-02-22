@@ -419,9 +419,9 @@ const RegisterScreen = () => {
             <DateTimePicker
               value={formData.dob ? new Date(formData.dob) : new Date()}
               mode="date"
-              display="spinner"
+              display="default"
               onChange={(event, selectedDate) => {
-                setShowDatePicker(false);
+                setShowDatePicker(Platform.OS === 'ios');
                 if (selectedDate) {
                   handleDateChange(selectedDate);
                 }
