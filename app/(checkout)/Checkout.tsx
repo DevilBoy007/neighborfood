@@ -18,34 +18,19 @@ import firebaseService from '@/handlers/firebaseService';
 import { SoundTouchableOpacity } from '@/components/SoundTouchableOpacity';
 import { useAppColors } from '@/hooks/useAppColors';
 
-// Conditionally import Stripe components (native only)
-let useStripe: () => { confirmPayment: any } = () => ({ confirmPayment: null });
-let usePlatformPayHook: () => {
-  isPlatformPaySupported: boolean;
-  confirmPlatformPayPayment: any;
-} = () => ({ isPlatformPaySupported: false, confirmPlatformPayPayment: null });
-let CardField: React.ComponentType<any> | null = null;
+// Conditionally import Stripe PaymentSheet hooks (native only)
+let useStripeHook: () => {
+  initPaymentSheet: any;
+  presentPaymentSheet: any;
+} = () => ({ initPaymentSheet: null, presentPaymentSheet: null });
 if (Platform.OS !== 'web') {
   /* eslint-disable @typescript-eslint/no-require-imports */
   const StripeModule = require('@stripe/stripe-react-native');
-  useStripe = StripeModule.useStripe;
-  CardField = StripeModule.CardField;
-  if (StripeModule.usePlatformPay) {
-    usePlatformPayHook = StripeModule.usePlatformPay;
-  }
+  useStripeHook = StripeModule.useStripe;
   /* eslint-enable @typescript-eslint/no-require-imports */
 }
 
 type DeliveryOption = 'pickup' | 'delivery';
-type PaymentMethod = 'apple_pay' | 'card' | 'cashapp' | 'paypal';
-
-type SavedCard = {
-  id: string;
-  brand: string;
-  last4: string;
-  expMonth: number;
-  expYear: number;
-};
 
 const Checkout = () => {
   const router = useRouter();
@@ -54,27 +39,17 @@ const Checkout = () => {
   const { refreshOrders } = useOrder();
   const { createOrGetThread } = useMessage();
   const colors = useAppColors();
-  const { confirmPayment } = useStripe();
-
-  // Platform Pay (Apple Pay / Google Pay)
-  const platformPay = usePlatformPayHook();
+  const { initPaymentSheet, presentPaymentSheet } = useStripeHook();
 
   const [shopDeliveryOptions, setShopDeliveryOptions] = useState<Record<string, DeliveryOption>>(
     {}
   );
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('card');
   const [deliveryAddress, setDeliveryAddress] = useState('');
   const [contactPhone, setContactPhone] = useState('');
   const [specialInstructions, setSpecialInstructions] = useState('');
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
-
-  // Stripe payment state
-  const [savedCards, setSavedCards] = useState<SavedCard[]>([]);
-  const [defaultCardId, setDefaultCardId] = useState<string | null>(null);
-  const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
-  const [useNewCard, setUseNewCard] = useState(false);
-  const [cardComplete, setCardComplete] = useState(false);
-  const [loadingCards, setLoadingCards] = useState(false);
+  const [paymentSheetReady, setPaymentSheetReady] = useState(false);
+  const [initializingSheet, setInitializingSheet] = useState(false);
 
   const subtotal = calculateTotalSubtotal();
   const deliveryFee =
@@ -83,32 +58,57 @@ const Checkout = () => {
   const platformFee = Math.min(subtotal * 0.1, 1); // lesser of 10% or $1
   const total = subtotal + deliveryFee + tax + platformFee;
 
-  // Load saved payment methods
-  const loadSavedCards = useCallback(async () => {
-    if (!userData?.uid) return;
+  // Initialize PaymentSheet when component mounts or total changes
+  const initializePaymentSheet = useCallback(async () => {
+    if (!userData?.uid || Platform.OS === 'web' || total <= 0) return;
+
     try {
-      setLoadingCards(true);
-      const result = await firebaseService.getPaymentMethods();
-      setSavedCards(result.paymentMethods);
-      setDefaultCardId(result.defaultPaymentMethodId);
-      if (result.defaultPaymentMethodId) {
-        setSelectedCardId(result.defaultPaymentMethodId);
-      } else if (result.paymentMethods.length > 0) {
-        setSelectedCardId(result.paymentMethods[0].id);
+      setInitializingSheet(true);
+      const amountInCents = Math.round(total * 100);
+      const platformFeeInCents = Math.round(platformFee * 100);
+
+      const { paymentIntent, ephemeralKey, customer } =
+        await firebaseService.createPaymentSheetParams(amountInCents, platformFeeInCents);
+
+      const { error } = await initPaymentSheet({
+        merchantDisplayName: 'Neighborfood',
+        customerId: customer,
+        customerEphemeralKeySecret: ephemeralKey,
+        paymentIntentClientSecret: paymentIntent,
+        allowsDelayedPaymentMethods: false,
+        returnURL: 'myapp://stripe-redirect',
+        applePay: {
+          merchantCountryCode: 'US',
+        },
+        googlePay: {
+          merchantCountryCode: 'US',
+          testEnv: true,
+        },
+        defaultBillingDetails: {
+          name:
+            userData?.first && userData?.last ? `${userData.first} ${userData.last}` : undefined,
+          email: userData?.email || undefined,
+          phone: userData?.phone || undefined,
+        },
+      });
+
+      if (!error) {
+        setPaymentSheetReady(true);
       } else {
-        setUseNewCard(true);
+        console.error('PaymentSheet init error:', error);
       }
     } catch (error) {
-      console.error('Error loading saved cards:', error);
-      setUseNewCard(true);
+      console.error('Error initializing payment sheet:', error);
     } finally {
-      setLoadingCards(false);
+      setInitializingSheet(false);
     }
-  }, [userData?.uid]);
+  }, [userData, total, platformFee, initPaymentSheet]);
 
   useEffect(() => {
-    loadSavedCards();
-  }, [loadSavedCards]);
+    if (shopCarts.length > 0 && total > 0) {
+      initializePaymentSheet();
+    }
+  }, [initializePaymentSheet, shopCarts.length, total]);
 
   useEffect(() => {
     // Initialize delivery options for each shop
@@ -189,160 +189,28 @@ const Checkout = () => {
     setIsPlacingOrder(true);
     const orderId = uuidv4();
     try {
-      // Process Stripe payment for card and native pay methods
-      const amountInCents = Math.round(total * 100);
-      const platformFeeInCents = Math.round(platformFee * 100);
+      // Present PaymentSheet for native platforms
+      if (Platform.OS !== 'web') {
+        if (!paymentSheetReady) {
+          // Re-initialize if not ready
+          await initializePaymentSheet();
+        }
 
-      if (paymentMethod === 'card' && Platform.OS !== 'web') {
-        if (useNewCard) {
-          // Pay with new card via CardField
-          if (!cardComplete) {
-            Toast.show({
-              type: 'error',
-              text1: 'Incomplete',
-              text2: 'Please fill in your card details.',
-              visibilityTime: 3000,
-            });
-            setIsPlacingOrder(false);
-            return;
-          }
+        const { error } = await presentPaymentSheet();
 
-          const { clientSecret } = await firebaseService.createPaymentIntent(
-            amountInCents,
-            undefined,
-            platformFeeInCents
-          );
-
-          const { error } = await confirmPayment(clientSecret, {
-            paymentMethodType: 'Card',
-          });
-
-          if (error) {
+        if (error) {
+          if (error.code !== 'Canceled') {
             Toast.show({
               type: 'error',
               text1: 'Payment Failed',
               text2: error.message || 'Your payment could not be processed.',
               visibilityTime: 3000,
             });
-            setIsPlacingOrder(false);
-            return;
           }
-        } else if (selectedCardId) {
-          // Pay with saved card
-          const { clientSecret } = await firebaseService.createPaymentIntent(
-            amountInCents,
-            selectedCardId,
-            platformFeeInCents
-          );
-
-          const { error } = await confirmPayment(clientSecret, {
-            paymentMethodType: 'Card',
-            paymentMethodData: { paymentMethodId: selectedCardId },
-          });
-
-          if (error) {
-            Toast.show({
-              type: 'error',
-              text1: 'Payment Failed',
-              text2: error.message || 'Your payment could not be processed.',
-              visibilityTime: 3000,
-            });
-            setIsPlacingOrder(false);
-            return;
-          }
-        } else {
-          Toast.show({
-            type: 'error',
-            text1: 'No Card Selected',
-            text2: 'Please select a payment card or add a new one.',
-            visibilityTime: 3000,
-          });
           setIsPlacingOrder(false);
-          return;
-        }
-      } else if (paymentMethod === 'apple_pay' && Platform.OS !== 'web' && platformPay) {
-        // Native platform pay (Apple Pay / Google Pay)
-        const { clientSecret } = await firebaseService.createPaymentIntent(
-          amountInCents,
-          undefined,
-          platformFeeInCents
-        );
-
-        const { error } = await platformPay.confirmPlatformPayPayment(clientSecret, {
-          applePay: {
-            cartItems: [
-              {
-                label: 'Neighborfood Order',
-                amount: total.toFixed(2),
-                paymentType: 'Immediate',
-              },
-            ],
-            merchantCountryCode: 'US',
-            currencyCode: 'USD',
-          },
-          googlePay: {
-            testEnv: true,
-            merchantName: 'Neighborfood',
-            merchantCountryCode: 'US',
-            currencyCode: 'USD',
-            billingAddressConfig: {
-              isRequired: false,
-            },
-          },
-        });
-
-        if (error) {
-          Toast.show({
-            type: 'error',
-            text1: 'Payment Failed',
-            text2: error.message || 'Payment could not be processed.',
-            visibilityTime: 3000,
-          });
-          setIsPlacingOrder(false);
-          return;
-        }
-      } else if (paymentMethod === 'cashapp' && Platform.OS !== 'web') {
-        // Cash App Pay via Stripe
-        const { clientSecret } = await firebaseService.createPaymentIntent(
-          amountInCents,
-          undefined,
-          platformFeeInCents
-        );
-
-        const { error } = await confirmPayment(clientSecret, {
-          paymentMethodType: 'CashApp',
-        });
-
-        if (error) {
-          Toast.show({
-            type: 'error',
-            text1: 'Payment Failed',
-            text2: error.message || 'Cash App payment could not be processed.',
-            visibilityTime: 3000,
-          });
-          setIsPlacingOrder(false);
-          return;
-        }
-      } else if (paymentMethod === 'paypal' && Platform.OS !== 'web') {
-        // PayPal via Stripe
-        const { clientSecret } = await firebaseService.createPaymentIntent(
-          amountInCents,
-          undefined,
-          platformFeeInCents
-        );
-
-        const { error } = await confirmPayment(clientSecret, {
-          paymentMethodType: 'PayPal',
-        });
-
-        if (error) {
-          Toast.show({
-            type: 'error',
-            text1: 'Payment Failed',
-            text2: error.message || 'PayPal payment could not be processed.',
-            visibilityTime: 3000,
-          });
-          setIsPlacingOrder(false);
+          // Re-initialize for next attempt
+          setPaymentSheetReady(false);
+          initializePaymentSheet();
           return;
         }
       }
@@ -385,7 +253,7 @@ const Checkout = () => {
             shopPlatformFee,
           status: 'pending' as const,
           estimatedDeliveryTime: new Date(Date.now() + 45 * 60 * 1000), // 45 minutes from now
-          paymentMethod,
+          paymentMethod: 'card',
           deliveryAddress: deliveryOption === 'delivery' ? deliveryAddress : 'Pickup',
           contactPhone,
           deliveryOption,
@@ -670,164 +538,21 @@ const Checkout = () => {
           />
         </View>
 
-        {/* Payment Method */}
-        <View style={[styles.section, { backgroundColor: colors.surface }]}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>Payment Method</Text>
-          <View style={styles.paymentOptions}>
-            {(Platform.OS !== 'web' && platformPay.isPlatformPaySupported
-              ? [
-                  {
-                    key: 'apple_pay',
-                    icon: 'logo-apple',
-                    label: Platform.OS === 'ios' ? 'Apple Pay' : 'Google Pay',
-                  },
-                  { key: 'card', icon: 'card', label: 'Card' },
-                  { key: 'cashapp', icon: 'cash-outline', label: 'Cash App' },
-                  { key: 'paypal', icon: 'logo-paypal', label: 'PayPal' },
-                ]
-              : [
-                  { key: 'card', icon: 'card', label: 'Card' },
-                  { key: 'cashapp', icon: 'cash-outline', label: 'Cash App' },
-                  { key: 'paypal', icon: 'logo-paypal', label: 'PayPal' },
-                ]
-            ).map((payment) => (
-              <SoundTouchableOpacity
-                key={payment.key}
-                style={[
-                  styles.paymentOption,
-                  { borderColor: colors.divider, backgroundColor: colors.inputBackground },
-                  paymentMethod === payment.key && {
-                    borderColor: colors.primary,
-                    backgroundColor: colors.surface,
-                  },
-                ]}
-                onPress={() => setPaymentMethod(payment.key as PaymentMethod)}
-                soundType="tap"
-              >
-                <Ionicons
-                  name={payment.icon as any}
-                  size={24}
-                  color={paymentMethod === payment.key ? colors.primary : colors.textMuted}
-                />
-                <Text
-                  style={[
-                    styles.paymentLabel,
-                    { color: colors.text },
-                    paymentMethod === payment.key && { color: colors.primary },
-                  ]}
-                >
-                  {payment.label}
-                </Text>
-              </SoundTouchableOpacity>
-            ))}
-          </View>
-
-          {/* Card selection (saved cards + new card) for card payment */}
-          {paymentMethod === 'card' && Platform.OS !== 'web' && (
-            <View style={styles.cardSelection}>
-              {loadingCards ? (
-                <ActivityIndicator size="small" color={colors.primary} style={{ marginTop: 12 }} />
-              ) : (
-                <>
-                  {/* Saved cards */}
-                  {savedCards.map((card) => (
-                    <SoundTouchableOpacity
-                      key={card.id}
-                      style={[
-                        styles.savedCardOption,
-                        { borderColor: colors.divider, backgroundColor: colors.inputBackground },
-                        !useNewCard &&
-                          selectedCardId === card.id && {
-                            borderColor: colors.primary,
-                            backgroundColor: colors.surface,
-                          },
-                      ]}
-                      onPress={() => {
-                        setSelectedCardId(card.id);
-                        setUseNewCard(false);
-                      }}
-                      soundType="tap"
-                    >
-                      <Ionicons
-                        name="card"
-                        size={20}
-                        color={
-                          !useNewCard && selectedCardId === card.id
-                            ? colors.primary
-                            : colors.textMuted
-                        }
-                      />
-                      <Text
-                        style={[
-                          styles.savedCardText,
-                          { color: colors.text },
-                          !useNewCard && selectedCardId === card.id && { color: colors.primary },
-                        ]}
-                      >
-                        {card.brand.charAt(0).toUpperCase() + card.brand.slice(1)} •••• {card.last4}
-                      </Text>
-                      {card.id === defaultCardId && (
-                        <Text style={[styles.defaultLabel, { color: colors.textMuted }]}>
-                          Default
-                        </Text>
-                      )}
-                    </SoundTouchableOpacity>
-                  ))}
-
-                  {/* New card option */}
-                  <SoundTouchableOpacity
-                    style={[
-                      styles.savedCardOption,
-                      { borderColor: colors.divider, backgroundColor: colors.inputBackground },
-                      useNewCard && {
-                        borderColor: colors.primary,
-                        backgroundColor: colors.surface,
-                      },
-                    ]}
-                    onPress={() => setUseNewCard(true)}
-                    soundType="tap"
-                  >
-                    <Ionicons
-                      name="add-circle-outline"
-                      size={20}
-                      color={useNewCard ? colors.primary : colors.textMuted}
-                    />
-                    <Text
-                      style={[
-                        styles.savedCardText,
-                        { color: colors.text },
-                        useNewCard && { color: colors.primary },
-                      ]}
-                    >
-                      New Card
-                    </Text>
-                  </SoundTouchableOpacity>
-
-                  {/* CardField for new card entry */}
-                  {useNewCard && CardField && (
-                    <CardField
-                      postalCodeEnabled={true}
-                      placeholders={{ number: '4242 4242 4242 4242' }}
-                      cardStyle={{
-                        backgroundColor: colors.inputBackground,
-                        textColor: colors.text,
-                        placeholderColor: colors.placeholder,
-                        borderColor: colors.border,
-                        borderWidth: 1,
-                        borderRadius: 8,
-                        fontSize: 16,
-                      }}
-                      style={styles.checkoutCardField}
-                      onCardChange={(details: { complete: boolean }) => {
-                        setCardComplete(details.complete);
-                      }}
-                    />
-                  )}
-                </>
-              )}
+        {/* Payment — handled by PaymentSheet */}
+        {Platform.OS !== 'web' && (
+          <View style={[styles.section, { backgroundColor: colors.surface }]}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>Payment</Text>
+            <View style={styles.paymentSheetInfo}>
+              <Ionicons name="shield-checkmark-outline" size={20} color={colors.primary} />
+              <Text style={[styles.paymentSheetText, { color: colors.textMuted }]}>
+                Powered by Stripe — Card, Apple Pay, Google Pay, Cash App, PayPal, and more
+              </Text>
             </View>
-          )}
-        </View>
+            {initializingSheet && (
+              <ActivityIndicator size="small" color={colors.primary} style={{ marginTop: 8 }} />
+            )}
+          </View>
+        )}
 
         {/* Special Instructions */}
         <View style={[styles.section, { backgroundColor: colors.surface }]}>
@@ -888,46 +613,27 @@ const Checkout = () => {
       </ScrollView>
       {/* Place Order Button */}
       <View style={styles.buttonContainer}>
-        {paymentMethod === 'apple_pay' && platformPay.isPlatformPaySupported ? (
-          <SoundTouchableOpacity
-            style={[styles.applePayButton, isPlacingOrder && { opacity: 0.7 }]}
-            onPress={handlePlaceOrder}
-            disabled={isPlacingOrder}
-            soundType="click"
-          >
-            <Ionicons
-              name={Platform.OS === 'ios' ? 'logo-apple' : 'logo-google'}
-              size={24}
-              color="white"
-              style={styles.applePayIcon}
-            />
-            <Text style={styles.applePayText}>
-              {isPlacingOrder
-                ? 'Processing...'
-                : Platform.OS === 'ios'
-                  ? 'Pay with Apple Pay'
-                  : 'Pay with Google Pay'}
-            </Text>
-          </SoundTouchableOpacity>
-        ) : (
-          <SoundTouchableOpacity
-            style={[
-              styles.placeOrderButton,
-              { backgroundColor: colors.buttonPrimary },
-              isPlacingOrder && {
-                opacity: 0.7,
-                backgroundColor: colors.buttonDisabled,
-              },
-            ]}
-            onPress={handlePlaceOrder}
-            disabled={isPlacingOrder}
-            soundType="click"
-          >
-            <Text style={[styles.placeOrderText, { color: colors.buttonText }]}>
-              {isPlacingOrder ? 'Processing Payment...' : `Pay $${total.toFixed(2)}`}
-            </Text>
-          </SoundTouchableOpacity>
-        )}
+        <SoundTouchableOpacity
+          style={[
+            styles.placeOrderButton,
+            { backgroundColor: colors.buttonPrimary },
+            (isPlacingOrder || (Platform.OS !== 'web' && !paymentSheetReady)) && {
+              opacity: 0.7,
+              backgroundColor: colors.buttonDisabled,
+            },
+          ]}
+          onPress={handlePlaceOrder}
+          disabled={isPlacingOrder || (Platform.OS !== 'web' && !paymentSheetReady)}
+          soundType="click"
+        >
+          <Text style={[styles.placeOrderText, { color: colors.buttonText }]}>
+            {isPlacingOrder
+              ? 'Processing Payment...'
+              : initializingSheet
+                ? 'Preparing Checkout...'
+                : `Pay $${total.toFixed(2)}`}
+          </Text>
+        </SoundTouchableOpacity>
       </View>
     </View>
   );
@@ -1019,26 +725,6 @@ const styles = StyleSheet.create({
   optionGroup: {
     gap: 12,
   },
-  option: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 12,
-    borderRadius: 8,
-    borderWidth: 2,
-  },
-  optionContent: {
-    marginLeft: 12,
-    flex: 1,
-  },
-  optionTitle: {
-    fontSize: 16,
-    fontFamily: 'TextMeOne',
-    fontWeight: 'bold',
-  },
-  optionSubtitle: {
-    fontSize: 14,
-    fontFamily: 'TextMeOne',
-  },
   textInput: {
     borderWidth: 1,
     borderRadius: 8,
@@ -1050,26 +736,16 @@ const styles = StyleSheet.create({
     height: 80,
     textAlignVertical: 'top',
   },
-  paymentOptions: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-  },
-  paymentOption: {
+  paymentSheetInfo: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 12,
-    borderRadius: 8,
-    borderWidth: 2,
-    minWidth: '45%',
+    gap: 8,
+    paddingVertical: 4,
   },
-  paymentLabel: {
-    marginLeft: 8,
-    fontSize: 14,
+  paymentSheetText: {
+    flex: 1,
+    fontSize: 13,
     fontFamily: 'TextMeOne',
-  },
-  selectedPaymentText: {
-    fontWeight: 'bold',
   },
   totalBreakdown: {
     gap: 8,
@@ -1104,12 +780,6 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    // uncomment if adding checkout to (home) route
-    // ...Platform.select({
-    //     ios: {
-    //         paddingBottom: 30,
-    //     }
-    // }),
   },
   placeOrderButton: {
     width: '100%',
@@ -1121,24 +791,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontSize: 30,
     fontFamily: 'TextMeOne',
-  },
-  applePayButton: {
-    width: '100%',
-    marginBottom: 0,
-    padding: 10,
-    paddingBottom: 33,
-    backgroundColor: '#000',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  applePayIcon: {
-    marginRight: 8,
-  },
-  applePayText: {
-    color: 'white',
-    textAlign: 'center',
-    fontSize: 30,
   },
   emptyContainer: {
     flex: 1,
@@ -1185,35 +837,6 @@ const styles = StyleSheet.create({
     marginLeft: 6,
     fontSize: 12,
     fontFamily: 'TextMeOne',
-  },
-  selectedShopOptionText: {
-    fontWeight: 'bold',
-  },
-  cardSelection: {
-    marginTop: 12,
-    gap: 8,
-  },
-  savedCardOption: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 12,
-    borderRadius: 8,
-    borderWidth: 2,
-    gap: 10,
-  },
-  savedCardText: {
-    flex: 1,
-    fontSize: 14,
-    fontFamily: 'TextMeOne',
-  },
-  defaultLabel: {
-    fontSize: 11,
-    fontFamily: 'TextMeOne',
-  },
-  checkoutCardField: {
-    width: '100%',
-    height: 50,
-    marginTop: 4,
   },
 });
 

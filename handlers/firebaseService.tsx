@@ -1276,6 +1276,51 @@ class FirebaseService {
       { available: number; pending: number; currency: string }
     >('getPayoutBalance', { userId: '' });
   }
+
+  // =========================================================================
+  // PaymentSheet
+  // =========================================================================
+
+  async createPaymentSheetParams(
+    amount: number,
+    platformFee?: number
+  ): Promise<{
+    paymentIntent: string;
+    ephemeralKey: string;
+    customer: string;
+    publishableKey: string;
+  }> {
+    return await this.callFunction<
+      { amount: number; currency: string; platformFee?: number },
+      {
+        paymentIntent: string;
+        ephemeralKey: string;
+        customer: string;
+        publishableKey: string;
+      }
+    >('createPaymentSheetParams', {
+      amount,
+      currency: 'usd',
+      platformFee,
+    });
+  }
+
+  // =========================================================================
+  // Stripe Connect — OAuth for Linking Existing Accounts
+  // =========================================================================
+
+  async getStripeOAuthUrl(redirectUri: string): Promise<{ url: string; state: string }> {
+    return await this.callFunction<{ redirectUri: string }, { url: string; state: string }>(
+      'getStripeOAuthUrl',
+      { redirectUri }
+    );
+  }
+
+  async completeStripeOAuth(code: string): Promise<{ accountId: string }> {
+    return await this.callFunction<{ code: string }, { accountId: string }>('completeStripeOAuth', {
+      code,
+    });
+  }
 }
 
 const firebaseService = FirebaseService.getInstance();

@@ -22,6 +22,7 @@ const db = admin.firestore();
 
 // Define Stripe secret key from Firebase environment secrets
 const stripeSecretKey = defineSecret('STRIPE_SECRET_KEY');
+const stripeClientId = defineSecret('STRIPE_CLIENT_ID');
 
 // =============================================================================
 // Helper functions to convert Firestore data to JSON-serializable format
@@ -2025,6 +2026,65 @@ export const createPaymentIntent = onCall(
 );
 
 /**
+ * Create parameters for the PaymentSheet (PaymentIntent + EphemeralKey + Customer)
+ */
+interface CreatePaymentSheetParamsRequest {
+  amount: number; // in cents
+  currency?: string;
+  platformFee?: number; // in cents
+}
+
+export const createPaymentSheetParams = onCall(
+  { secrets: [stripeSecretKey] },
+  async (request: CallableRequest<CreatePaymentSheetParamsRequest>) => {
+    verifyAuth(request);
+    const userId = request.auth!.uid;
+    const { amount, currency = 'usd', platformFee } = request.data;
+
+    if (!amount || amount <= 0) {
+      throw new HttpsError('invalid-argument', 'A valid amount is required');
+    }
+
+    try {
+      const stripe = new Stripe(stripeSecretKey.value(), {
+        apiVersion: '2026-01-28.clover',
+      });
+
+      const customerId = await getOrCreateStripeCustomer(stripe, userId);
+
+      const ephemeralKey = await stripe.ephemeralKeys.create(
+        { customer: customerId },
+        { apiVersion: '2026-01-28.clover' }
+      );
+
+      const intentData: Stripe.PaymentIntentCreateParams = {
+        amount: Math.round(amount),
+        currency,
+        customer: customerId,
+        automatic_payment_methods: { enabled: true },
+      };
+
+      if (platformFee && platformFee > 0) {
+        intentData.application_fee_amount = Math.round(platformFee);
+      }
+
+      const paymentIntent = await stripe.paymentIntents.create(intentData);
+
+      return {
+        paymentIntent: paymentIntent.client_secret,
+        ephemeralKey: ephemeralKey.secret,
+        customer: customerId,
+        publishableKey:
+          process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY || process.env.STRIPE_TEST_KEY || '',
+      };
+    } catch (error) {
+      console.error('Error creating payment sheet params:', error);
+      throw new HttpsError('internal', 'Failed to create payment sheet params');
+    }
+  }
+);
+
+/**
  * Get saved payment methods for the authenticated user
  */
 export const getPaymentMethods = onCall(
@@ -2185,7 +2245,8 @@ interface GetPayoutBalanceRequest {
 }
 
 /**
- * Create a Stripe Connect Express account for a seller
+ * Create a Stripe Connect Standard account for a seller.
+ * Standard accounts let sellers use their existing Stripe account or create a new one.
  */
 export const createConnectedAccount = onCall(
   { secrets: [stripeSecretKey] },
@@ -2206,14 +2267,11 @@ export const createConnectedAccount = onCall(
         return { accountId: userData.stripeConnectedAccountId };
       }
 
-      // Create an Express connected account
+      // Create a Standard connected account (allows linking existing Stripe accounts)
       const account = await stripe.accounts.create({
-        type: 'express',
+        type: 'standard',
         metadata: { firebaseUserId: userId },
         email: userData?.email || undefined,
-        capabilities: {
-          transfers: { requested: true },
-        },
       });
 
       // Save the connected account ID to user's Firestore profile
@@ -2404,6 +2462,131 @@ export const getPayoutBalance = onCall(
     } catch (error) {
       console.error('Error getting payout balance:', error);
       throw new HttpsError('internal', 'Failed to get balance');
+    }
+  }
+);
+
+// =============================================================================
+// Stripe Connect — OAuth for Linking Existing Accounts
+// =============================================================================
+
+interface GetStripeOAuthUrlRequest {
+  redirectUri: string;
+}
+
+interface CompleteStripeOAuthRequest {
+  code: string;
+}
+
+/**
+ * Generate a Stripe OAuth authorization URL for connecting an existing Stripe account.
+ * Users who already have a Stripe account can link it to the platform.
+ */
+export const getStripeOAuthUrl = onCall(
+  { secrets: [stripeSecretKey, stripeClientId] },
+  async (request: CallableRequest<GetStripeOAuthUrlRequest>) => {
+    verifyAuth(request);
+    const userId = request.auth!.uid;
+    const { redirectUri } = request.data;
+
+    if (!redirectUri) {
+      throw new HttpsError('invalid-argument', 'redirectUri is required');
+    }
+
+    try {
+      // Check if user already has a connected account
+      const userDoc = await db.collection('users').doc(userId).get();
+      const userData = userDoc.data();
+
+      if (userData?.stripeConnectedAccountId) {
+        throw new HttpsError('already-exists', 'You already have a connected Stripe account');
+      }
+
+      const clientId = stripeClientId.value();
+      const state = `${userId}_${Date.now()}`;
+
+      // Save state to Firestore for CSRF validation
+      await db.collection('stripe_oauth_states').doc(state).set({
+        userId,
+        createdAt: FieldValue.serverTimestamp(),
+      });
+
+      const params = new URLSearchParams({
+        response_type: 'code',
+        client_id: clientId,
+        scope: 'read_write',
+        redirect_uri: redirectUri,
+        state,
+        'stripe_user[email]': userData?.email || '',
+      });
+
+      if (userData?.first) {
+        params.set('stripe_user[first_name]', userData.first);
+      }
+      if (userData?.last) {
+        params.set('stripe_user[last_name]', userData.last);
+      }
+
+      const url = `https://connect.stripe.com/oauth/authorize?${params.toString()}`;
+
+      return { url, state };
+    } catch (error) {
+      if (error instanceof HttpsError) throw error;
+      console.error('Error generating OAuth URL:', error);
+      throw new HttpsError('internal', 'Failed to generate Stripe connect URL');
+    }
+  }
+);
+
+/**
+ * Complete the Stripe OAuth flow by exchanging the authorization code for a connected account ID.
+ */
+export const completeStripeOAuth = onCall(
+  { secrets: [stripeSecretKey] },
+  async (request: CallableRequest<CompleteStripeOAuthRequest>) => {
+    verifyAuth(request);
+    const userId = request.auth!.uid;
+    const { code } = request.data;
+
+    if (!code) {
+      throw new HttpsError('invalid-argument', 'Authorization code is required');
+    }
+
+    try {
+      const stripe = new Stripe(stripeSecretKey.value(), {
+        apiVersion: '2026-01-28.clover',
+      });
+
+      // Check if user already has a connected account
+      const userDoc = await db.collection('users').doc(userId).get();
+      const userData = userDoc.data();
+
+      if (userData?.stripeConnectedAccountId) {
+        throw new HttpsError('already-exists', 'You already have a connected Stripe account');
+      }
+
+      // Exchange authorization code for account ID
+      const response = await stripe.oauth.token({
+        grant_type: 'authorization_code',
+        code,
+      });
+
+      const connectedAccountId = response.stripe_user_id;
+
+      if (!connectedAccountId) {
+        throw new HttpsError('internal', 'Failed to get connected account ID');
+      }
+
+      // Save the connected account ID to user's Firestore profile
+      await db.collection('users').doc(userId).update({
+        stripeConnectedAccountId: connectedAccountId,
+      });
+
+      return { accountId: connectedAccountId };
+    } catch (error) {
+      if (error instanceof HttpsError) throw error;
+      console.error('Error completing Stripe OAuth:', error);
+      throw new HttpsError('internal', 'Failed to connect Stripe account');
     }
   }
 );
