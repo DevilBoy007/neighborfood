@@ -421,6 +421,7 @@ const RegisterScreen = () => {
               mode="date"
               display="default"
               onChange={(event, selectedDate) => {
+                // Android dismisses automatically; iOS inline picker stays visible
                 setShowDatePicker(Platform.OS === 'ios');
                 if (selectedDate) {
                   handleDateChange(selectedDate);
