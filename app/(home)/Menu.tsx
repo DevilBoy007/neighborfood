@@ -68,11 +68,16 @@ const MenuScreen = () => {
         <View style={styles.header}>
           <Text style={[styles.title, { color: colors.navText }]}>menu</Text>
           <View style={[styles.neighborhood, { borderColor: colors.border }]}>
-            {locationData.area && !locationData.loading && (
+            {(locationData.area && !locationData.loading && (
               <Text style={[styles.headerText, { color: colors.text }]}>
                 📍 neighborhood: {locationData.area}
               </Text>
-            )}
+            )) ||
+              (locationData.zipCode && !locationData.loading ? (
+                <Text style={[styles.headerText, { color: colors.text }]}>
+                  📍 {locationData.zipCode}
+                </Text>
+              ) : null)}
             {locationData.loading && (
               <Text style={[styles.headerText, { color: colors.text }]}>
                 📍 Loading location...
