@@ -75,7 +75,7 @@ const Checkout = () => {
         customerEphemeralKeySecret: ephemeralKey,
         paymentIntentClientSecret: paymentIntent,
         allowsDelayedPaymentMethods: false,
-        returnURL: 'myapp://stripe-redirect',
+        returnURL: 'neighborfood://stripe-redirect',
         applePay: {
           merchantCountryCode: 'US',
         },
