@@ -50,6 +50,10 @@ const Checkout = () => {
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
   const [paymentSheetReady, setPaymentSheetReady] = useState(false);
   const [initializingSheet, setInitializingSheet] = useState(false);
+  // Track connected account IDs for each shop owner
+  const [shopConnectedAccounts, setShopConnectedAccounts] = useState<Record<string, string | null>>(
+    {}
+  );
 
   const subtotal = calculateTotalSubtotal();
   const deliveryFee =
@@ -58,50 +62,95 @@ const Checkout = () => {
   const platformFee = Math.min(subtotal * 0.1, 1); // lesser of 10% or $1
   const total = subtotal + deliveryFee + tax + platformFee;
 
-  // Initialize PaymentSheet when component mounts or total changes
+  // Look up connected account IDs for each shop owner on mount
+  useEffect(() => {
+    const loadShopAccounts = async () => {
+      const accounts: Record<string, string | null> = {};
+      await Promise.all(
+        shopCarts.map(async (shopCart) => {
+          try {
+            const shop = await firebaseService.getDocument('shops', shopCart.shopId);
+            if (shop?.userId) {
+              const owner = await firebaseService.getDocument('users', shop.userId as string);
+              accounts[shopCart.shopId] = (owner?.stripeConnectedAccountId as string) || null;
+            }
+          } catch {
+            accounts[shopCart.shopId] = null;
+          }
+        })
+      );
+      setShopConnectedAccounts(accounts);
+    };
+    if (shopCarts.length > 0) {
+      loadShopAccounts();
+    }
+  }, [shopCarts]);
+
+  // Initialize PaymentSheet — only for single-shop orders with a connected account (direct charge)
+  // Multi-shop orders initialize per-shop during handlePlaceOrder
   const initializePaymentSheet = useCallback(async () => {
     if (!userData?.uid || Platform.OS === 'web' || total <= 0) return;
 
-    try {
-      setInitializingSheet(true);
-      const amountInCents = Math.round(total * 100);
+    // For single-shop orders, pre-initialize PaymentSheet
+    if (shopCarts.length === 1) {
+      try {
+        setInitializingSheet(true);
+        const shopCart = shopCarts[0];
+        const shopPlatformFee = Math.min(shopCart.subtotal * 0.1, 1);
+        const deliveryOption = shopDeliveryOptions[shopCart.shopId] || 'pickup';
+        const shopTotal =
+          shopCart.subtotal +
+          shopCart.subtotal * 0.08 +
+          (deliveryOption === 'delivery' ? 3.99 : 0) +
+          shopPlatformFee;
+        const amountInCents = Math.round(shopTotal * 100);
+        const platformFeeInCents = Math.round(shopPlatformFee * 100);
+        const connectedAccountId = shopConnectedAccounts[shopCart.shopId] || undefined;
 
-      const { paymentIntent, ephemeralKey, customer } =
-        await firebaseService.createPaymentSheetParams(amountInCents);
+        const { paymentIntent, ephemeralKey, customer } =
+          await firebaseService.createPaymentSheetParams(
+            amountInCents,
+            connectedAccountId ? platformFeeInCents : undefined,
+            connectedAccountId
+          );
 
-      const { error } = await initPaymentSheet({
-        merchantDisplayName: 'Neighborfood',
-        customerId: customer,
-        customerEphemeralKeySecret: ephemeralKey,
-        paymentIntentClientSecret: paymentIntent,
-        allowsDelayedPaymentMethods: false,
-        returnURL: 'neighborfood://stripe-redirect',
-        applePay: {
-          merchantCountryCode: 'US',
-        },
-        googlePay: {
-          merchantCountryCode: 'US',
-          testEnv: true,
-        },
-        defaultBillingDetails: {
-          name:
-            userData?.first && userData?.last ? `${userData.first} ${userData.last}` : undefined,
-          email: userData?.email || undefined,
-          phone: userData?.phone || undefined,
-        },
-      });
+        const { error } = await initPaymentSheet({
+          merchantDisplayName: 'Neighborfood',
+          customerId: customer,
+          customerEphemeralKeySecret: ephemeralKey,
+          paymentIntentClientSecret: paymentIntent,
+          allowsDelayedPaymentMethods: false,
+          returnURL: 'neighborfood://stripe-redirect',
+          applePay: {
+            merchantCountryCode: 'US',
+          },
+          googlePay: {
+            merchantCountryCode: 'US',
+            testEnv: true,
+          },
+          defaultBillingDetails: {
+            name:
+              userData?.first && userData?.last ? `${userData.first} ${userData.last}` : undefined,
+            email: userData?.email || undefined,
+            phone: userData?.phone || undefined,
+          },
+        });
 
-      if (!error) {
-        setPaymentSheetReady(true);
-      } else {
-        console.error('PaymentSheet init error:', error);
+        if (!error) {
+          setPaymentSheetReady(true);
+        } else {
+          console.error('PaymentSheet init error:', error);
+        }
+      } catch (error) {
+        console.error('Error initializing payment sheet:', error);
+      } finally {
+        setInitializingSheet(false);
       }
-    } catch (error) {
-      console.error('Error initializing payment sheet:', error);
-    } finally {
-      setInitializingSheet(false);
+    } else {
+      // Multi-shop: mark as ready, PaymentSheet will be initialized per-shop during checkout
+      setPaymentSheetReady(true);
     }
-  }, [userData, total, initPaymentSheet]);
+  }, [userData, total, initPaymentSheet, shopCarts, shopDeliveryOptions, shopConnectedAccounts]);
 
   useEffect(() => {
     if (shopCarts.length > 0 && total > 0) {
@@ -188,29 +237,96 @@ const Checkout = () => {
     setIsPlacingOrder(true);
     const orderId = uuidv4();
     try {
-      // Present PaymentSheet for native platforms
+      // For native platforms, process payment per shop (direct charges)
       if (Platform.OS !== 'web') {
-        if (!paymentSheetReady) {
-          // Re-initialize if not ready
-          await initializePaymentSheet();
-        }
-
-        const { error } = await presentPaymentSheet();
-
-        if (error) {
-          if (error.code !== 'Canceled') {
-            Toast.show({
-              type: 'error',
-              text1: 'Payment Failed',
-              text2: error.message || 'Your payment could not be processed.',
-              visibilityTime: 3000,
-            });
+        if (shopCarts.length === 1) {
+          // Single shop — use the pre-initialized PaymentSheet
+          if (!paymentSheetReady) {
+            await initializePaymentSheet();
           }
-          setIsPlacingOrder(false);
-          // Re-initialize for next attempt
-          setPaymentSheetReady(false);
-          initializePaymentSheet();
-          return;
+
+          const { error } = await presentPaymentSheet();
+
+          if (error) {
+            if (error.code !== 'Canceled') {
+              Toast.show({
+                type: 'error',
+                text1: 'Payment Failed',
+                text2: error.message || 'Your payment could not be processed.',
+                visibilityTime: 3000,
+              });
+            }
+            setIsPlacingOrder(false);
+            setPaymentSheetReady(false);
+            initializePaymentSheet();
+            return;
+          }
+        } else {
+          // Multi-shop — present PaymentSheet once per shop
+          for (const shopCart of shopCarts) {
+            const shopPlatformFee = Math.min(shopCart.subtotal * 0.1, 1);
+            const deliveryOption = shopDeliveryOptions[shopCart.shopId] || 'pickup';
+            const shopTotal =
+              shopCart.subtotal +
+              shopCart.subtotal * 0.08 +
+              (deliveryOption === 'delivery' ? 3.99 : 0) +
+              shopPlatformFee;
+            const amountInCents = Math.round(shopTotal * 100);
+            const platformFeeInCents = Math.round(shopPlatformFee * 100);
+            const connectedAccountId = shopConnectedAccounts[shopCart.shopId] || undefined;
+
+            const { paymentIntent, ephemeralKey, customer } =
+              await firebaseService.createPaymentSheetParams(
+                amountInCents,
+                connectedAccountId ? platformFeeInCents : undefined,
+                connectedAccountId
+              );
+
+            const { error: initError } = await initPaymentSheet({
+              merchantDisplayName: 'Neighborfood',
+              customerId: customer,
+              customerEphemeralKeySecret: ephemeralKey,
+              paymentIntentClientSecret: paymentIntent,
+              allowsDelayedPaymentMethods: false,
+              returnURL: 'neighborfood://stripe-redirect',
+              applePay: { merchantCountryCode: 'US' },
+              googlePay: { merchantCountryCode: 'US', testEnv: true },
+              defaultBillingDetails: {
+                name:
+                  userData?.first && userData?.last
+                    ? `${userData.first} ${userData.last}`
+                    : undefined,
+                email: userData?.email || undefined,
+                phone: userData?.phone || undefined,
+              },
+            });
+
+            if (initError) {
+              Toast.show({
+                type: 'error',
+                text1: 'Payment Error',
+                text2: `Failed to prepare payment for ${shopCart.shopName}.`,
+                visibilityTime: 3000,
+              });
+              setIsPlacingOrder(false);
+              return;
+            }
+
+            const { error } = await presentPaymentSheet();
+
+            if (error) {
+              if (error.code !== 'Canceled') {
+                Toast.show({
+                  type: 'error',
+                  text1: 'Payment Failed',
+                  text2: error.message || `Payment failed for ${shopCart.shopName}.`,
+                  visibilityTime: 3000,
+                });
+              }
+              setIsPlacingOrder(false);
+              return;
+            }
+          }
         }
       }
 

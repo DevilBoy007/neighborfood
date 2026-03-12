@@ -7,6 +7,7 @@ import {
   Alert,
   Platform,
   TouchableOpacity,
+  Linking,
 } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
 import { router } from 'expo-router';
@@ -36,6 +37,18 @@ type PaymentMethodCard = {
   expYear: number;
 };
 
+type ConnectedAccountStatus = {
+  chargesEnabled: boolean;
+  payoutsEnabled: boolean;
+  detailsSubmitted: boolean;
+  requirements: string[];
+} | null;
+
+type BalanceInfo = {
+  available: { amount: number; currency: string }[];
+  pending: { amount: number; currency: string }[];
+} | null;
+
 const PaymentMethods = () => {
   const { userData, setUserData } = useUser();
   const colors = useAppColors();
@@ -47,6 +60,15 @@ const PaymentMethods = () => {
   const [isAdding, setIsAdding] = useState(false);
   const [showAddCard, setShowAddCard] = useState(false);
   const [cardComplete, setCardComplete] = useState(false);
+
+  // Seller Payouts state
+  const [isCreatingAccount, setIsCreatingAccount] = useState(false);
+  const [accountStatus, setAccountStatus] = useState<ConnectedAccountStatus>(null);
+  const [isLoadingStatus, setIsLoadingStatus] = useState(false);
+  const [balance, setBalance] = useState<BalanceInfo>(null);
+  const [isLoadingBalance, setIsLoadingBalance] = useState(false);
+  const [isCreatingPayout, setIsCreatingPayout] = useState(false);
+  const [isOpeningDashboard, setIsOpeningDashboard] = useState(false);
 
   const loadPaymentMethods = useCallback(async () => {
     try {
@@ -196,6 +218,166 @@ const PaymentMethods = () => {
         return 'card';
       default:
         return 'card-outline';
+    }
+  };
+
+  // =========================================================================
+  // Seller Payouts — Stripe Connect Express
+  // =========================================================================
+
+  const loadAccountStatus = useCallback(async () => {
+    if (!userData?.stripeConnectedAccountId) return;
+    try {
+      setIsLoadingStatus(true);
+      const status = await firebaseService.getConnectedAccountStatus(
+        userData.stripeConnectedAccountId
+      );
+      setAccountStatus(status);
+    } catch (error) {
+      console.error('Error loading account status:', error);
+    } finally {
+      setIsLoadingStatus(false);
+    }
+  }, [userData?.stripeConnectedAccountId]);
+
+  const loadBalance = useCallback(async () => {
+    if (!userData?.stripeConnectedAccountId || !accountStatus?.payoutsEnabled) return;
+    try {
+      setIsLoadingBalance(true);
+      const bal = await firebaseService.getConnectedBalance(userData.stripeConnectedAccountId);
+      setBalance(bal);
+    } catch (error) {
+      console.error('Error loading balance:', error);
+    } finally {
+      setIsLoadingBalance(false);
+    }
+  }, [userData?.stripeConnectedAccountId, accountStatus?.payoutsEnabled]);
+
+  useEffect(() => {
+    loadAccountStatus();
+  }, [loadAccountStatus]);
+
+  useEffect(() => {
+    loadBalance();
+  }, [loadBalance]);
+
+  const handleCreateConnectedAccount = async () => {
+    try {
+      setIsCreatingAccount(true);
+      const { accountId } = await firebaseService.createConnectedAccount();
+
+      // Update local user data
+      if (userData) {
+        await setUserData({ ...userData, stripeConnectedAccountId: accountId });
+      }
+
+      // Get onboarding link and open it
+      const { url } = await firebaseService.createAccountLink(accountId);
+      await Linking.openURL(url);
+
+      Toast.show({
+        type: 'success',
+        text1: 'Account Created',
+        text2: 'Complete the onboarding in the opened page.',
+      });
+
+      // Reload status after a delay
+      setTimeout(() => loadAccountStatus(), 3000);
+    } catch (error) {
+      console.error('Error creating connected account:', error);
+      Toast.show({
+        type: 'error',
+        text1: 'Error',
+        text2: 'Failed to create seller account.',
+      });
+    } finally {
+      setIsCreatingAccount(false);
+    }
+  };
+
+  const handleContinueOnboarding = async () => {
+    if (!userData?.stripeConnectedAccountId) return;
+    try {
+      const { url } = await firebaseService.createAccountLink(userData.stripeConnectedAccountId);
+      await Linking.openURL(url);
+      setTimeout(() => loadAccountStatus(), 3000);
+    } catch (error) {
+      console.error('Error opening onboarding:', error);
+      Toast.show({
+        type: 'error',
+        text1: 'Error',
+        text2: 'Failed to open onboarding link.',
+      });
+    }
+  };
+
+  const handleOpenDashboard = async () => {
+    if (!userData?.stripeConnectedAccountId) return;
+    try {
+      setIsOpeningDashboard(true);
+      const { url } = await firebaseService.createLoginLink(userData.stripeConnectedAccountId);
+      await Linking.openURL(url);
+    } catch (error) {
+      console.error('Error opening dashboard:', error);
+      Toast.show({
+        type: 'error',
+        text1: 'Error',
+        text2: 'Failed to open Stripe Dashboard.',
+      });
+    } finally {
+      setIsOpeningDashboard(false);
+    }
+  };
+
+  const handlePayout = async () => {
+    if (!userData?.stripeConnectedAccountId || !balance) return;
+
+    const availableUsd = balance.available.find((b) => b.currency === 'usd');
+    if (!availableUsd || availableUsd.amount <= 0) {
+      Toast.show({
+        type: 'error',
+        text1: 'No Funds',
+        text2: 'No available balance to pay out.',
+      });
+      return;
+    }
+
+    const doPayout = async () => {
+      try {
+        setIsCreatingPayout(true);
+        const result = await firebaseService.createPayout(
+          userData!.stripeConnectedAccountId!,
+          availableUsd!.amount
+        );
+        Toast.show({
+          type: 'success',
+          text1: 'Payout Initiated',
+          text2: `$${(result.amount / 100).toFixed(2)} is on the way to your bank.`,
+        });
+        await loadBalance();
+      } catch (error) {
+        console.error('Error creating payout:', error);
+        Toast.show({
+          type: 'error',
+          text1: 'Payout Failed',
+          text2: 'Could not process payout. Please try again.',
+        });
+      } finally {
+        setIsCreatingPayout(false);
+      }
+    };
+
+    if (Platform.OS === 'web') {
+      doPayout();
+    } else {
+      Alert.alert(
+        'Confirm Payout',
+        `Pay out $${(availableUsd.amount / 100).toFixed(2)} to your bank account?`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Pay Out', onPress: doPayout },
+        ]
+      );
     }
   };
 
@@ -356,6 +538,153 @@ const PaymentMethods = () => {
                 </TouchableOpacity>
               </View>
             ) : null}
+
+            {/* Seller Payouts Section */}
+            <View style={[styles.sellerSection, { borderTopColor: colors.divider }]}>
+              <Text style={[styles.sellerSectionTitle, { color: colors.text }]}>
+                Seller Payouts
+              </Text>
+              <Text style={[styles.sellerSectionSubtext, { color: colors.textMuted }]}>
+                Set up your Stripe account to receive payments from orders
+              </Text>
+
+              {!userData?.stripeConnectedAccountId ? (
+                <TouchableOpacity
+                  style={[styles.connectButton, { backgroundColor: colors.buttonPrimary }]}
+                  onPress={handleCreateConnectedAccount}
+                  disabled={isCreatingAccount}
+                >
+                  {isCreatingAccount ? (
+                    <ActivityIndicator size="small" color={colors.buttonText} />
+                  ) : (
+                    <>
+                      <Ionicons name="storefront-outline" size={20} color={colors.buttonText} />
+                      <Text style={[styles.connectButtonText, { color: colors.buttonText }]}>
+                        Set Up Seller Account
+                      </Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+              ) : isLoadingStatus ? (
+                <ActivityIndicator size="small" color={colors.primary} style={{ marginTop: 12 }} />
+              ) : accountStatus ? (
+                <View style={styles.accountStatusContainer}>
+                  {/* Status Indicators */}
+                  <View style={styles.statusRow}>
+                    <Ionicons
+                      name={accountStatus.detailsSubmitted ? 'checkmark-circle' : 'alert-circle'}
+                      size={18}
+                      color={accountStatus.detailsSubmitted ? colors.success : colors.warning}
+                    />
+                    <Text style={[styles.statusText, { color: colors.text }]}>
+                      Details {accountStatus.detailsSubmitted ? 'submitted' : 'incomplete'}
+                    </Text>
+                  </View>
+                  <View style={styles.statusRow}>
+                    <Ionicons
+                      name={accountStatus.chargesEnabled ? 'checkmark-circle' : 'alert-circle'}
+                      size={18}
+                      color={accountStatus.chargesEnabled ? colors.success : colors.warning}
+                    />
+                    <Text style={[styles.statusText, { color: colors.text }]}>
+                      Charges {accountStatus.chargesEnabled ? 'enabled' : 'pending'}
+                    </Text>
+                  </View>
+                  <View style={styles.statusRow}>
+                    <Ionicons
+                      name={accountStatus.payoutsEnabled ? 'checkmark-circle' : 'alert-circle'}
+                      size={18}
+                      color={accountStatus.payoutsEnabled ? colors.success : colors.warning}
+                    />
+                    <Text style={[styles.statusText, { color: colors.text }]}>
+                      Payouts {accountStatus.payoutsEnabled ? 'enabled' : 'pending'}
+                    </Text>
+                  </View>
+
+                  {/* Continue Onboarding if not complete */}
+                  {!accountStatus.detailsSubmitted && (
+                    <TouchableOpacity
+                      style={[styles.connectButton, { backgroundColor: colors.warning }]}
+                      onPress={handleContinueOnboarding}
+                    >
+                      <Ionicons name="arrow-forward" size={18} color={colors.buttonText} />
+                      <Text style={[styles.connectButtonText, { color: colors.buttonText }]}>
+                        Complete Onboarding
+                      </Text>
+                    </TouchableOpacity>
+                  )}
+
+                  {/* Balance & Payout */}
+                  {accountStatus.payoutsEnabled && (
+                    <View style={[styles.balanceCard, { backgroundColor: colors.inputBackground }]}>
+                      <Text style={[styles.balanceTitle, { color: colors.text }]}>Balance</Text>
+                      {isLoadingBalance ? (
+                        <ActivityIndicator size="small" color={colors.primary} />
+                      ) : balance ? (
+                        <>
+                          <Text style={[styles.balanceAmount, { color: colors.primary }]}>
+                            $
+                            {(
+                              (balance.available.find((b) => b.currency === 'usd')?.amount || 0) /
+                              100
+                            ).toFixed(2)}{' '}
+                            available
+                          </Text>
+                          <Text style={[styles.balancePending, { color: colors.textMuted }]}>
+                            $
+                            {(
+                              (balance.pending.find((b) => b.currency === 'usd')?.amount || 0) / 100
+                            ).toFixed(2)}{' '}
+                            pending
+                          </Text>
+                          <TouchableOpacity
+                            style={[
+                              styles.payoutButton,
+                              { backgroundColor: colors.buttonPrimary },
+                              isCreatingPayout && { opacity: 0.6 },
+                            ]}
+                            onPress={handlePayout}
+                            disabled={
+                              isCreatingPayout ||
+                              (balance.available.find((b) => b.currency === 'usd')?.amount || 0) <=
+                                0
+                            }
+                          >
+                            {isCreatingPayout ? (
+                              <ActivityIndicator size="small" color={colors.buttonText} />
+                            ) : (
+                              <Text style={[styles.payoutButtonText, { color: colors.buttonText }]}>
+                                Pay Out to Bank
+                              </Text>
+                            )}
+                          </TouchableOpacity>
+                        </>
+                      ) : null}
+                    </View>
+                  )}
+
+                  {/* Express Dashboard Link */}
+                  {accountStatus.detailsSubmitted && (
+                    <TouchableOpacity
+                      style={[styles.dashboardButton, { backgroundColor: colors.inputBackground }]}
+                      onPress={handleOpenDashboard}
+                      disabled={isOpeningDashboard}
+                    >
+                      {isOpeningDashboard ? (
+                        <ActivityIndicator size="small" color={colors.primary} />
+                      ) : (
+                        <>
+                          <Ionicons name="open-outline" size={18} color={colors.primary} />
+                          <Text style={[styles.dashboardButtonText, { color: colors.primary }]}>
+                            Open Stripe Dashboard
+                          </Text>
+                        </>
+                      )}
+                    </TouchableOpacity>
+                  )}
+                </View>
+              ) : null}
+            </View>
           </>
         )}
       </ScrollView>
@@ -549,6 +878,93 @@ const styles = StyleSheet.create({
   },
   addButtonText: {
     fontSize: 18,
+    fontFamily: 'TextMeOne',
+    fontWeight: 'bold',
+  },
+  sellerSection: {
+    marginTop: 24,
+    paddingTop: 24,
+    borderTopWidth: 1,
+  },
+  sellerSectionTitle: {
+    fontSize: 20,
+    fontFamily: 'TitanOne',
+    marginBottom: 4,
+  },
+  sellerSectionSubtext: {
+    fontSize: 14,
+    fontFamily: 'TextMeOne',
+    marginBottom: 16,
+  },
+  connectButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 14,
+    borderRadius: 10,
+    gap: 8,
+    marginTop: 8,
+  },
+  connectButtonText: {
+    fontSize: 16,
+    fontFamily: 'TextMeOne',
+    fontWeight: 'bold',
+  },
+  accountStatusContainer: {
+    gap: 8,
+    marginTop: 8,
+  },
+  statusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  statusText: {
+    fontSize: 14,
+    fontFamily: 'TextMeOne',
+  },
+  balanceCard: {
+    borderRadius: 10,
+    padding: 16,
+    marginTop: 12,
+    gap: 6,
+  },
+  balanceTitle: {
+    fontSize: 16,
+    fontFamily: 'TextMeOne',
+    fontWeight: 'bold',
+  },
+  balanceAmount: {
+    fontSize: 22,
+    fontFamily: 'TitanOne',
+  },
+  balancePending: {
+    fontSize: 14,
+    fontFamily: 'TextMeOne',
+  },
+  payoutButton: {
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  payoutButtonText: {
+    fontSize: 15,
+    fontFamily: 'TextMeOne',
+    fontWeight: 'bold',
+  },
+  dashboardButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 12,
+    borderRadius: 10,
+    gap: 8,
+    marginTop: 12,
+  },
+  dashboardButtonText: {
+    fontSize: 15,
     fontFamily: 'TextMeOne',
     fontWeight: 'bold',
   },

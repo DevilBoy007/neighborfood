@@ -35,6 +35,7 @@ export type OrderData = {
   estimatedDeliveryTime?: { seconds: number; nanoseconds: number };
   deliveredAt?: { seconds: number; nanoseconds: number };
   paymentMethod: string;
+  paymentIntentId?: string;
   deliveryAddress: string;
   contactPhone: string;
   deliveryOption: 'pickup' | 'delivery';

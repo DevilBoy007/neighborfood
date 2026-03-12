@@ -2019,9 +2019,12 @@ export const createPaymentIntent = onCall(
 
 /**
  * Create parameters for the PaymentSheet (PaymentIntent + EphemeralKey + Customer)
+ * Uses direct charges when a connected account is specified.
  */
 interface CreatePaymentSheetParamsRequest {
   amount: number; // in cents
+  platformFee?: number; // in cents — application fee for platform
+  connectedAccountId?: string; // merchant's Stripe connected account
   currency?: string;
 }
 
@@ -2030,7 +2033,7 @@ export const createPaymentSheetParams = onCall(
   async (request: CallableRequest<CreatePaymentSheetParamsRequest>) => {
     verifyAuth(request);
     const userId = request.auth!.uid;
-    const { amount, currency = 'usd' } = request.data;
+    const { amount, platformFee, connectedAccountId, currency = 'usd' } = request.data;
 
     if (!amount || amount <= 0) {
       throw new HttpsError('invalid-argument', 'A valid amount is required');
@@ -2048,15 +2051,28 @@ export const createPaymentSheetParams = onCall(
         { apiVersion: '2026-01-28.clover' }
       );
 
-      const paymentIntent = await stripe.paymentIntents.create({
+      const intentParams: Stripe.PaymentIntentCreateParams = {
         amount: Math.round(amount),
         currency,
         customer: customerId,
         automatic_payment_methods: { enabled: true },
-      });
+      };
+
+      // For direct charges: set application fee so the platform collects its cut
+      if (connectedAccountId && platformFee && platformFee > 0) {
+        intentParams.application_fee_amount = Math.round(platformFee);
+      }
+
+      // Create PaymentIntent on the connected account (direct charge) or platform
+      const stripeAccountOpts: Stripe.RequestOptions | undefined = connectedAccountId
+        ? { stripeAccount: connectedAccountId }
+        : undefined;
+
+      const paymentIntent = await stripe.paymentIntents.create(intentParams, stripeAccountOpts);
 
       return {
         paymentIntent: paymentIntent.client_secret,
+        paymentIntentId: paymentIntent.id,
         ephemeralKey: ephemeralKey.secret,
         customer: customerId,
         publishableKey:
@@ -2199,6 +2215,314 @@ export const setDefaultPaymentMethod = onCall(
       if (error instanceof HttpsError) throw error;
       console.error('Error setting default payment method:', error);
       throw new HttpsError('internal', 'Failed to set default payment method');
+    }
+  }
+);
+
+// =============================================================================
+// Stripe Connect — Express Accounts (Platform / SaaS model)
+// =============================================================================
+
+/**
+ * Create a Stripe Express connected account for a merchant.
+ * Prefills available info from the user's Firebase profile.
+ */
+interface CreateConnectedAccountRequest {
+  userId: string;
+}
+
+export const createConnectedAccount = onCall(
+  { secrets: [stripeSecretKey] },
+  async (request: CallableRequest<CreateConnectedAccountRequest>) => {
+    verifyAuth(request);
+    const userId = request.auth!.uid;
+
+    try {
+      const stripe = new Stripe(stripeSecretKey.value(), {
+        apiVersion: '2026-01-28.clover',
+      });
+
+      // Check if user already has a connected account
+      const userDoc = await db.collection('users').doc(userId).get();
+      const userData = userDoc.data();
+
+      if (userData?.stripeConnectedAccountId) {
+        return { accountId: userData.stripeConnectedAccountId, alreadyExists: true };
+      }
+
+      // Create Express account with prefilled info
+      const account = await stripe.accounts.create({
+        type: 'express',
+        country: 'US',
+        email: userData?.email || undefined,
+        capabilities: {
+          card_payments: { requested: true },
+          transfers: { requested: true },
+        },
+        business_type: 'individual',
+        individual: {
+          first_name: userData?.first || undefined,
+          last_name: userData?.last || undefined,
+          email: userData?.email || undefined,
+          phone: userData?.phone ? `+1${userData.phone}` : undefined,
+        },
+        metadata: { firebaseUserId: userId },
+      });
+
+      // Save connected account ID to Firestore
+      await db.collection('users').doc(userId).update({
+        stripeConnectedAccountId: account.id,
+      });
+
+      return { accountId: account.id, alreadyExists: false };
+    } catch (error) {
+      console.error('Error creating connected account:', error);
+      throw new HttpsError('internal', 'Failed to create connected account');
+    }
+  }
+);
+
+/**
+ * Create an Account Link for Stripe Express onboarding.
+ * Returns a URL to redirect the merchant to complete KYC/onboarding.
+ */
+interface CreateAccountLinkRequest {
+  accountId: string;
+  refreshUrl?: string;
+  returnUrl?: string;
+}
+
+export const createAccountLink = onCall(
+  { secrets: [stripeSecretKey] },
+  async (request: CallableRequest<CreateAccountLinkRequest>) => {
+    verifyAuth(request);
+    const userId = request.auth!.uid;
+    const { accountId, refreshUrl, returnUrl } = request.data;
+
+    if (!accountId) {
+      throw new HttpsError('invalid-argument', 'Account ID is required');
+    }
+
+    try {
+      const stripe = new Stripe(stripeSecretKey.value(), {
+        apiVersion: '2026-01-28.clover',
+      });
+
+      // Verify ownership
+      const userDoc = await db.collection('users').doc(userId).get();
+      const userData = userDoc.data();
+      if (userData?.stripeConnectedAccountId !== accountId) {
+        throw new HttpsError('permission-denied', 'Account does not belong to this user');
+      }
+
+      const accountLink = await stripe.accountLinks.create({
+        account: accountId,
+        refresh_url: refreshUrl || 'neighborfood://stripe-refresh',
+        return_url: returnUrl || 'neighborfood://stripe-return',
+        type: 'account_onboarding',
+      });
+
+      return { url: accountLink.url };
+    } catch (error) {
+      if (error instanceof HttpsError) throw error;
+      console.error('Error creating account link:', error);
+      throw new HttpsError('internal', 'Failed to create account link');
+    }
+  }
+);
+
+/**
+ * Get the status of a Stripe connected account (onboarding, charges, payouts).
+ */
+interface GetConnectedAccountStatusRequest {
+  accountId: string;
+}
+
+export const getConnectedAccountStatus = onCall(
+  { secrets: [stripeSecretKey] },
+  async (request: CallableRequest<GetConnectedAccountStatusRequest>) => {
+    verifyAuth(request);
+    const userId = request.auth!.uid;
+    const { accountId } = request.data;
+
+    if (!accountId) {
+      throw new HttpsError('invalid-argument', 'Account ID is required');
+    }
+
+    try {
+      const stripe = new Stripe(stripeSecretKey.value(), {
+        apiVersion: '2026-01-28.clover',
+      });
+
+      // Verify ownership
+      const userDoc = await db.collection('users').doc(userId).get();
+      const userData = userDoc.data();
+      if (userData?.stripeConnectedAccountId !== accountId) {
+        throw new HttpsError('permission-denied', 'Account does not belong to this user');
+      }
+
+      const account = await stripe.accounts.retrieve(accountId);
+
+      return {
+        chargesEnabled: account.charges_enabled,
+        payoutsEnabled: account.payouts_enabled,
+        detailsSubmitted: account.details_submitted,
+        requirements: account.requirements?.currently_due || [],
+      };
+    } catch (error) {
+      if (error instanceof HttpsError) throw error;
+      console.error('Error getting connected account status:', error);
+      throw new HttpsError('internal', 'Failed to get connected account status');
+    }
+  }
+);
+
+/**
+ * Get the available balance for a connected account.
+ */
+interface GetConnectedBalanceRequest {
+  accountId: string;
+}
+
+export const getConnectedBalance = onCall(
+  { secrets: [stripeSecretKey] },
+  async (request: CallableRequest<GetConnectedBalanceRequest>) => {
+    verifyAuth(request);
+    const userId = request.auth!.uid;
+    const { accountId } = request.data;
+
+    if (!accountId) {
+      throw new HttpsError('invalid-argument', 'Account ID is required');
+    }
+
+    try {
+      const stripe = new Stripe(stripeSecretKey.value(), {
+        apiVersion: '2026-01-28.clover',
+      });
+
+      // Verify ownership
+      const userDoc = await db.collection('users').doc(userId).get();
+      const userData = userDoc.data();
+      if (userData?.stripeConnectedAccountId !== accountId) {
+        throw new HttpsError('permission-denied', 'Account does not belong to this user');
+      }
+
+      const balance = await stripe.balance.retrieve({
+        stripeAccount: accountId,
+      });
+
+      return {
+        available: balance.available.map((b) => ({
+          amount: b.amount,
+          currency: b.currency,
+        })),
+        pending: balance.pending.map((b) => ({
+          amount: b.amount,
+          currency: b.currency,
+        })),
+      };
+    } catch (error) {
+      if (error instanceof HttpsError) throw error;
+      console.error('Error getting connected balance:', error);
+      throw new HttpsError('internal', 'Failed to get connected balance');
+    }
+  }
+);
+
+/**
+ * Create a payout from a connected account to the merchant's bank.
+ */
+interface CreatePayoutRequest {
+  accountId: string;
+  amount: number; // in cents
+  currency?: string;
+}
+
+export const createPayout = onCall(
+  { secrets: [stripeSecretKey] },
+  async (request: CallableRequest<CreatePayoutRequest>) => {
+    verifyAuth(request);
+    const userId = request.auth!.uid;
+    const { accountId, amount, currency = 'usd' } = request.data;
+
+    if (!accountId) {
+      throw new HttpsError('invalid-argument', 'Account ID is required');
+    }
+    if (!amount || amount <= 0) {
+      throw new HttpsError('invalid-argument', 'A valid amount is required');
+    }
+
+    try {
+      const stripe = new Stripe(stripeSecretKey.value(), {
+        apiVersion: '2026-01-28.clover',
+      });
+
+      // Verify ownership
+      const userDoc = await db.collection('users').doc(userId).get();
+      const userData = userDoc.data();
+      if (userData?.stripeConnectedAccountId !== accountId) {
+        throw new HttpsError('permission-denied', 'Account does not belong to this user');
+      }
+
+      const payout = await stripe.payouts.create(
+        {
+          amount: Math.round(amount),
+          currency,
+        },
+        { stripeAccount: accountId }
+      );
+
+      return {
+        payoutId: payout.id,
+        amount: payout.amount,
+        status: payout.status,
+        arrivalDate: payout.arrival_date,
+      };
+    } catch (error) {
+      if (error instanceof HttpsError) throw error;
+      console.error('Error creating payout:', error);
+      throw new HttpsError('internal', 'Failed to create payout');
+    }
+  }
+);
+
+/**
+ * Create a Stripe Express login link so merchants can access their Express Dashboard.
+ */
+interface CreateLoginLinkRequest {
+  accountId: string;
+}
+
+export const createLoginLink = onCall(
+  { secrets: [stripeSecretKey] },
+  async (request: CallableRequest<CreateLoginLinkRequest>) => {
+    verifyAuth(request);
+    const userId = request.auth!.uid;
+    const { accountId } = request.data;
+
+    if (!accountId) {
+      throw new HttpsError('invalid-argument', 'Account ID is required');
+    }
+
+    try {
+      const stripe = new Stripe(stripeSecretKey.value(), {
+        apiVersion: '2026-01-28.clover',
+      });
+
+      // Verify ownership
+      const userDoc = await db.collection('users').doc(userId).get();
+      const userData = userDoc.data();
+      if (userData?.stripeConnectedAccountId !== accountId) {
+        throw new HttpsError('permission-denied', 'Account does not belong to this user');
+      }
+
+      const loginLink = await stripe.accounts.createLoginLink(accountId);
+
+      return { url: loginLink.url };
+    } catch (error) {
+      if (error instanceof HttpsError) throw error;
+      console.error('Error creating login link:', error);
+      throw new HttpsError('internal', 'Failed to create Express Dashboard link');
     }
   }
 );
