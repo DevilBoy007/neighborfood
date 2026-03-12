@@ -72,7 +72,7 @@ const Checkout = () => {
             const shop = await firebaseService.getDocument('shops', shopCart.shopId);
             if (shop?.userId) {
               const owner = await firebaseService.getDocument('users', shop.userId as string);
-              accounts[shopCart.shopId] = (owner?.stripeConnectedAccountId as string) || null;
+              accounts[shopCart.shopId] = owner?.stripeConnectedAccountId || null;
             }
           } catch {
             accounts[shopCart.shopId] = null;

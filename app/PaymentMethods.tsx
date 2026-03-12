@@ -281,7 +281,7 @@ const PaymentMethods = () => {
         text2: 'Complete the onboarding in the opened page.',
       });
 
-      // Reload status after a delay
+      // Reload status after user returns from onboarding browser page
       setTimeout(() => loadAccountStatus(), 3000);
     } catch (error) {
       console.error('Error creating connected account:', error);
@@ -300,6 +300,7 @@ const PaymentMethods = () => {
     try {
       const { url } = await firebaseService.createAccountLink(userData.stripeConnectedAccountId);
       await Linking.openURL(url);
+      // Reload status after user returns from onboarding browser page
       setTimeout(() => loadAccountStatus(), 3000);
     } catch (error) {
       console.error('Error opening onboarding:', error);
