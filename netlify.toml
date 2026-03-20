@@ -1,0 +1,23 @@
+[build]
+  command = "npx expo export --platform web"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "20"
+
+# Serve the Stripe redirect pages regardless of SPA routing
+[[headers]]
+  for = "/stripe-return.html"
+  [headers.values]
+    Cache-Control = "no-store"
+
+[[headers]]
+  for = "/stripe-refresh.html"
+  [headers.values]
+    Cache-Control = "no-store"
+
+# SPA fallback — let expo-router handle client-side navigation
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
