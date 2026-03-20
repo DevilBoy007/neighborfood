@@ -2302,7 +2302,14 @@ export const createAccountLink = onCall(
     if (!accountId) {
       throw new HttpsError('invalid-argument', 'Account ID is required');
     }
-
+    console.log(
+      'Creating account link for account:',
+      accountId,
+      '. Refresh URL:',
+      refreshUrl,
+      'Return URL:',
+      returnUrl
+    );
     try {
       const stripe = new Stripe(stripeSecretKey.value(), {
         apiVersion: '2026-01-28.clover',
@@ -2317,16 +2324,17 @@ export const createAccountLink = onCall(
 
       const accountLink = await stripe.accountLinks.create({
         account: accountId,
-        refresh_url: refreshUrl || 'neighborfood://stripe-refresh',
-        return_url: returnUrl || 'neighborfood://stripe-return',
+        refresh_url: refreshUrl || 'https://neighborfood.store/stripe-refresh.html',
+        return_url: returnUrl || 'https://neighborfood.store/stripe-return.html',
         type: 'account_onboarding',
       });
 
       return { url: accountLink.url };
     } catch (error) {
       if (error instanceof HttpsError) throw error;
-      console.error('Error creating account link:', error);
-      throw new HttpsError('internal', 'Failed to create account link');
+      const stripeMsg = (error as any)?.raw?.message ?? (error as any)?.message ?? String(error);
+      console.error('Error creating account link:', stripeMsg, error);
+      throw new HttpsError('internal', `Failed to create account link: ${stripeMsg}`);
     }
   }
 );
