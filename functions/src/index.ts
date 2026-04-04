@@ -2259,6 +2259,13 @@ export const createConnectedAccount = onCall(
         }
       }
 
+      // TODO: REVERT THIS COMMIT — remove test-mode prefill before going live.
+      // Running in test mode when the secret key starts with 'sk_test_'.
+      // Test magic values bypass the hosted onboarding form entirely so we can
+      // validate the integration flow without filling out the Stripe UI.
+      // Stripe test magic values: https://docs.stripe.com/connect/testing
+      const isTestMode = stripeSecretKey.value().startsWith('sk_test_');
+
       // Create a V2 connected account using the new accounts architecture.
       // Do NOT pass top-level `type` — V2 uses configuration blocks instead.
       const account = await stripe.v2.core.accounts.create({
@@ -2269,6 +2276,21 @@ export const createConnectedAccount = onCall(
         contact_email: userData?.email || undefined,
         identity: {
           country: 'us',
+          // TODO: REVERT — test magic values, remove before going live.
+          ...(isTestMode && {
+            individual: {
+              date_of_birth: { day: 1, month: 1, year: 1901 }, // magic DOB: successful match
+              id_numbers: [{ type: 'us_ssn', value: '000000000' }], // magic SSN: successful match
+              address: {
+                line1: 'address_full_match', // magic address: enables charges + payouts
+                city: 'San Francisco',
+                state: 'CA',
+                postal_code: '94103',
+                country: 'US',
+              },
+              phone: '+10000000000', // magic phone: successful validation
+            },
+          }),
         },
         // 'full' gives the connected account access to the standard Stripe dashboard.
         dashboard: 'full',
