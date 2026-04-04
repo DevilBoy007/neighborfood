@@ -2238,35 +2238,55 @@ export const createConnectedAccount = onCall(
     const userId = request.auth!.uid;
 
     try {
-      const stripe = new Stripe(stripeSecretKey.value(), {
-        apiVersion: '2026-01-28.clover',
-      });
+      // V2 API: no apiVersion needed — SDK uses the latest automatically
+      const stripe = new Stripe(stripeSecretKey.value());
 
       // Check if user already has a connected account
       const userDoc = await db.collection('users').doc(userId).get();
       const userData = userDoc.data();
 
       if (userData?.stripeConnectedAccountId) {
-        return { accountId: userData.stripeConnectedAccountId, alreadyExists: true };
+        // Verify it is a V2 account by retrieving it through the V2 namespace.
+        // V1 Express accounts will throw, so we fall through to re-create as V2.
+        try {
+          await stripe.v2.core.accounts.retrieve(userData.stripeConnectedAccountId);
+          return { accountId: userData.stripeConnectedAccountId, alreadyExists: true };
+        } catch {
+          console.log(
+            'Existing account is a V1 Express account; re-creating as V2 for user:',
+            userId
+          );
+        }
       }
 
-      // Create Express account with prefilled info
-      const account = await stripe.accounts.create({
-        type: 'express',
-        country: 'US',
-        email: userData?.email || undefined,
-        capabilities: {
-          card_payments: { requested: true },
-          transfers: { requested: true },
+      // Create a V2 connected account using the new accounts architecture.
+      // Do NOT pass top-level `type` — V2 uses configuration blocks instead.
+      const account = await stripe.v2.core.accounts.create({
+        display_name:
+          userData?.displayName ||
+          `${userData?.first ?? ''} ${userData?.last ?? ''}`.trim() ||
+          undefined,
+        contact_email: userData?.email || undefined,
+        identity: {
+          country: 'us',
         },
-        business_type: 'individual',
-        individual: {
-          first_name: userData?.first || undefined,
-          last_name: userData?.last || undefined,
-          email: userData?.email || undefined,
-          phone: userData?.phone ? `+1${userData.phone}` : undefined,
+        // 'full' gives the connected account access to the standard Stripe dashboard.
+        dashboard: 'full',
+        defaults: {
+          responsibilities: {
+            // Stripe collects fees and absorbs losses on our behalf.
+            fees_collector: 'stripe',
+            losses_collector: 'stripe',
+          },
         },
-        metadata: { firebaseUserId: userId },
+        configuration: {
+          customer: {},
+          merchant: {
+            capabilities: {
+              card_payments: { requested: true },
+            },
+          },
+        },
       });
 
       // Save connected account ID to Firestore
@@ -2276,6 +2296,7 @@ export const createConnectedAccount = onCall(
 
       return { accountId: account.id, alreadyExists: false };
     } catch (error) {
+      if (error instanceof HttpsError) throw error;
       console.error('Error creating connected account:', error);
       throw new HttpsError('internal', 'Failed to create connected account');
     }
@@ -2311,9 +2332,8 @@ export const createAccountLink = onCall(
       returnUrl
     );
     try {
-      const stripe = new Stripe(stripeSecretKey.value(), {
-        apiVersion: '2026-01-28.clover',
-      });
+      // V2 API: no apiVersion needed — SDK uses the latest automatically
+      const stripe = new Stripe(stripeSecretKey.value());
 
       // Verify ownership
       const userDoc = await db.collection('users').doc(userId).get();
@@ -2322,11 +2342,18 @@ export const createAccountLink = onCall(
         throw new HttpsError('permission-denied', 'Account does not belong to this user');
       }
 
-      const accountLink = await stripe.accountLinks.create({
+      // V2 account links use a `use_case` block instead of a top-level `type`.
+      // `configurations` controls which onboarding flows are shown to the merchant.
+      const accountLink = await stripe.v2.core.accountLinks.create({
         account: accountId,
-        refresh_url: refreshUrl || 'https://neighborfood.store/stripe-refresh.html',
-        return_url: returnUrl || 'https://neighborfood.store/stripe-return.html',
-        type: 'account_onboarding',
+        use_case: {
+          type: 'account_onboarding',
+          account_onboarding: {
+            configurations: ['merchant', 'customer'],
+            refresh_url: refreshUrl || 'https://neighborfood.store/stripe-refresh.html',
+            return_url: returnUrl || 'https://neighborfood.store/stripe-return.html',
+          },
+        },
       });
 
       return { url: accountLink.url };
@@ -2334,7 +2361,7 @@ export const createAccountLink = onCall(
       if (error instanceof HttpsError) throw error;
       const stripeMsg = (error as any)?.raw?.message ?? (error as any)?.message ?? String(error);
       console.error('Error creating account link:', stripeMsg, error);
-      throw new HttpsError('internal', `Failed to create account link: ${stripeMsg}`);
+      throw new HttpsError('internal', 'Failed to create account link', stripeMsg);
     }
   }
 );
@@ -2358,9 +2385,8 @@ export const getConnectedAccountStatus = onCall(
     }
 
     try {
-      const stripe = new Stripe(stripeSecretKey.value(), {
-        apiVersion: '2026-01-28.clover',
-      });
+      // V2 API: no apiVersion needed — SDK uses the latest automatically
+      const stripe = new Stripe(stripeSecretKey.value());
 
       // Verify ownership
       const userDoc = await db.collection('users').doc(userId).get();
@@ -2369,14 +2395,30 @@ export const getConnectedAccountStatus = onCall(
         throw new HttpsError('permission-denied', 'Account does not belong to this user');
       }
 
-      const account = await stripe.accounts.retrieve(accountId);
+      // Retrieve V2 account with merchant configuration and requirements included.
+      // V2 accounts report status via capability status + requirements summary,
+      // not the V1 `charges_enabled` / `details_submitted` boolean fields.
+      const account = await stripe.v2.core.accounts.retrieve(accountId, {
+        include: ['configuration.merchant', 'requirements'],
+      });
 
-      return {
-        chargesEnabled: account.charges_enabled,
-        payoutsEnabled: account.payouts_enabled,
-        detailsSubmitted: account.details_submitted,
-        requirements: account.requirements?.currently_due || [],
-      };
+      const chargesEnabled =
+        (account as any).configuration?.merchant?.capabilities?.card_payments?.status === 'active';
+
+      // Onboarding is incomplete while requirements have a currently_due or past_due deadline.
+      const requirementsStatus = (account as any).requirements?.summary?.minimum_deadline?.status;
+      const detailsSubmitted =
+        requirementsStatus !== 'currently_due' && requirementsStatus !== 'past_due';
+
+      // For V2 marketplace accounts, payouts become available once charges are enabled.
+      const payoutsEnabled = chargesEnabled;
+
+      const requirements: string[] =
+        requirementsStatus === 'currently_due' || requirementsStatus === 'past_due'
+          ? [requirementsStatus]
+          : [];
+
+      return { chargesEnabled, payoutsEnabled, detailsSubmitted, requirements };
     } catch (error) {
       if (error instanceof HttpsError) throw error;
       console.error('Error getting connected account status:', error);
@@ -2404,9 +2446,7 @@ export const getConnectedBalance = onCall(
     }
 
     try {
-      const stripe = new Stripe(stripeSecretKey.value(), {
-        apiVersion: '2026-01-28.clover',
-      });
+      const stripe = new Stripe(stripeSecretKey.value());
 
       // Verify ownership
       const userDoc = await db.collection('users').doc(userId).get();
@@ -2461,9 +2501,7 @@ export const createPayout = onCall(
     }
 
     try {
-      const stripe = new Stripe(stripeSecretKey.value(), {
-        apiVersion: '2026-01-28.clover',
-      });
+      const stripe = new Stripe(stripeSecretKey.value());
 
       // Verify ownership
       const userDoc = await db.collection('users').doc(userId).get();
@@ -2513,9 +2551,10 @@ export const createLoginLink = onCall(
     }
 
     try {
-      const stripe = new Stripe(stripeSecretKey.value(), {
-        apiVersion: '2026-01-28.clover',
-      });
+      // NOTE: V2 accounts with dashboard: 'full' access the Stripe dashboard directly
+      // at stripe.com. Login links are a V1 Express account concept; this call may
+      // fail for V2 accounts once they complete onboarding.
+      const stripe = new Stripe(stripeSecretKey.value());
 
       // Verify ownership
       const userDoc = await db.collection('users').doc(userId).get();

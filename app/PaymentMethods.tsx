@@ -285,10 +285,13 @@ const PaymentMethods = () => {
       setTimeout(() => loadAccountStatus(), 3000);
     } catch (error) {
       console.error('Error creating connected account:', error);
+      const stripeDetail = (error as any)?.details;
+      const errorMsg =
+        stripeDetail ?? (error as any)?.message ?? 'Failed to create seller account.';
       Toast.show({
         type: 'error',
         text1: 'Error',
-        text2: 'Failed to create seller account.',
+        text2: errorMsg,
       });
     } finally {
       setIsCreatingAccount(false);
@@ -304,10 +307,12 @@ const PaymentMethods = () => {
       setTimeout(() => loadAccountStatus(), 3000);
     } catch (error) {
       console.error('Error opening onboarding:', error);
+      const stripeDetail = (error as any)?.details;
+      const errorMsg = stripeDetail ?? (error as any)?.message ?? 'Failed to open onboarding link.';
       Toast.show({
         type: 'error',
         text1: 'Error',
-        text2: 'Failed to open onboarding link.',
+        text2: errorMsg,
       });
     }
   };
