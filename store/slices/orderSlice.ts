@@ -36,6 +36,10 @@ export type OrderData = {
   deliveredAt?: { seconds: number; nanoseconds: number };
   paymentMethod: string;
   paymentIntentId?: string;
+  escrowStatus?: 'held' | 'released' | 'refunded';
+  escrowReleasedAt?: { seconds: number; nanoseconds: number };
+  stripeTransferId?: string;
+  stripeRefundId?: string;
   deliveryAddress: string;
   contactPhone: string;
   deliveryOption: 'pickup' | 'delivery';

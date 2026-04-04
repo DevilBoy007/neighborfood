@@ -50,10 +50,10 @@ const Checkout = () => {
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
   const [paymentSheetReady, setPaymentSheetReady] = useState(false);
   const [initializingSheet, setInitializingSheet] = useState(false);
-  // Track connected account IDs for each shop owner
-  const [shopConnectedAccounts, setShopConnectedAccounts] = useState<Record<string, string | null>>(
-    {}
-  );
+  // Track PaymentIntent IDs per shop for escrow — populated during PaymentSheet init/present
+  const [shopPaymentIntentIds, setShopPaymentIntentIds] = useState<Record<string, string>>({});
+  // Track shop owner UIDs for escrow metadata
+  const [shopOwnerIds, setShopOwnerIds] = useState<Record<string, string>>({});
 
   const subtotal = calculateTotalSubtotal();
   const deliveryFee =
@@ -62,32 +62,31 @@ const Checkout = () => {
   const platformFee = Math.min(subtotal * 0.1, 1); // lesser of 10% or $1
   const total = subtotal + deliveryFee + tax + platformFee;
 
-  // Look up connected account IDs for each shop owner on mount
+  // Look up shop owner UIDs for escrow metadata (sellerId passed to createPaymentSheetParams)
   useEffect(() => {
-    const loadShopAccounts = async () => {
-      const accounts: Record<string, string | null> = {};
+    const loadShopOwners = async () => {
+      const owners: Record<string, string> = {};
       await Promise.all(
         shopCarts.map(async (shopCart) => {
           try {
             const shop = await firebaseService.getDocument('shops', shopCart.shopId);
             if (shop?.userId) {
-              const owner = await firebaseService.getDocument('users', shop.userId as string);
-              accounts[shopCart.shopId] = owner?.stripeConnectedAccountId || null;
+              owners[shopCart.shopId] = shop.userId as string;
             }
           } catch {
-            accounts[shopCart.shopId] = null;
+            // owner lookup failure is non-fatal; escrow release will fall back gracefully
           }
         })
       );
-      setShopConnectedAccounts(accounts);
+      setShopOwnerIds(owners);
     };
     if (shopCarts.length > 0) {
-      loadShopAccounts();
+      loadShopOwners();
     }
   }, [shopCarts]);
 
-  // Initialize PaymentSheet — only for single-shop orders with a connected account (direct charge)
-  // Multi-shop orders initialize per-shop during handlePlaceOrder
+  // Initialize PaymentSheet (escrow model — platform charge, no stripeAccount header)
+  // Pre-initializes for single-shop orders; multi-shop orders init per-shop during checkout.
   const initializePaymentSheet = useCallback(async () => {
     if (!userData?.uid || Platform.OS === 'web' || total <= 0) return;
 
@@ -104,15 +103,13 @@ const Checkout = () => {
           (deliveryOption === 'delivery' ? 3.99 : 0) +
           shopPlatformFee;
         const amountInCents = Math.round(shopTotal * 100);
-        const platformFeeInCents = Math.round(shopPlatformFee * 100);
-        const connectedAccountId = shopConnectedAccounts[shopCart.shopId] || undefined;
+        const sellerId = shopOwnerIds[shopCart.shopId] || '';
 
-        const { paymentIntent, ephemeralKey, customer } =
-          await firebaseService.createPaymentSheetParams(
-            amountInCents,
-            connectedAccountId ? platformFeeInCents : undefined,
-            connectedAccountId
-          );
+        const { paymentIntent, paymentIntentId, ephemeralKey, customer } =
+          await firebaseService.createPaymentSheetParams(amountInCents, shopCart.shopId, sellerId);
+
+        // Store the paymentIntentId so it can be saved on the order
+        setShopPaymentIntentIds((prev) => ({ ...prev, [shopCart.shopId]: paymentIntentId }));
 
         const { error } = await initPaymentSheet({
           merchantDisplayName: 'Neighborfood',
@@ -150,7 +147,7 @@ const Checkout = () => {
       // Multi-shop: mark as ready, PaymentSheet will be initialized per-shop during checkout
       setPaymentSheetReady(true);
     }
-  }, [userData, total, initPaymentSheet, shopCarts, shopDeliveryOptions, shopConnectedAccounts]);
+  }, [userData, total, initPaymentSheet, shopCarts, shopDeliveryOptions, shopOwnerIds]);
 
   useEffect(() => {
     if (shopCarts.length > 0 && total > 0) {
@@ -237,7 +234,7 @@ const Checkout = () => {
     setIsPlacingOrder(true);
     const orderId = uuidv4();
     try {
-      // For native platforms, process payment per shop (direct charges)
+      // For native platforms, process payment per shop (escrow — platform charge)
       if (Platform.OS !== 'web') {
         if (shopCarts.length === 1) {
           // Single shop — use the pre-initialized PaymentSheet
@@ -262,7 +259,8 @@ const Checkout = () => {
             return;
           }
         } else {
-          // Multi-shop — present PaymentSheet once per shop
+          // Multi-shop — present PaymentSheet once per shop (one escrow PI per shop)
+          const newPaymentIntentIds: Record<string, string> = {};
           for (const shopCart of shopCarts) {
             const shopPlatformFee = Math.min(shopCart.subtotal * 0.1, 1);
             const deliveryOption = shopDeliveryOptions[shopCart.shopId] || 'pickup';
@@ -272,15 +270,16 @@ const Checkout = () => {
               (deliveryOption === 'delivery' ? 3.99 : 0) +
               shopPlatformFee;
             const amountInCents = Math.round(shopTotal * 100);
-            const platformFeeInCents = Math.round(shopPlatformFee * 100);
-            const connectedAccountId = shopConnectedAccounts[shopCart.shopId] || undefined;
+            const sellerId = shopOwnerIds[shopCart.shopId] || '';
 
-            const { paymentIntent, ephemeralKey, customer } =
+            const { paymentIntent, paymentIntentId, ephemeralKey, customer } =
               await firebaseService.createPaymentSheetParams(
                 amountInCents,
-                connectedAccountId ? platformFeeInCents : undefined,
-                connectedAccountId
+                shopCart.shopId,
+                sellerId
               );
+
+            newPaymentIntentIds[shopCart.shopId] = paymentIntentId;
 
             const { error: initError } = await initPaymentSheet({
               merchantDisplayName: 'Neighborfood',
@@ -327,20 +326,24 @@ const Checkout = () => {
               return;
             }
           }
+          setShopPaymentIntentIds((prev) => ({ ...prev, ...newPaymentIntentIds }));
         }
       }
 
-      // Payment successful (or non-Stripe payment method) — create orders
-      // First, get shop owner information for each shop to create message threads
-      const shopOwnerMap = new Map<string, string>(); // shopId -> ownerId
+      // Payment successful (or web fallback) — create orders in Firestore
+      // shopOwnerMap is already populated via shopOwnerIds state; use it for threads too.
+      const shopOwnerMap = new Map<string, string>(Object.entries(shopOwnerIds));
 
+      // Also fetch any owners not yet loaded (e.g. if owner lookup was still in-flight)
       await Promise.all(
-        shopCarts.map(async (shopCart) => {
-          const shop = await firebaseService.getDocument('shops', shopCart.shopId);
-          if (shop?.userId) {
-            shopOwnerMap.set(shopCart.shopId, shop.userId as string);
-          }
-        })
+        shopCarts
+          .filter((shopCart) => !shopOwnerMap.has(shopCart.shopId))
+          .map(async (shopCart) => {
+            const shop = await firebaseService.getDocument('shops', shopCart.shopId);
+            if (shop?.userId) {
+              shopOwnerMap.set(shopCart.shopId, shop.userId as string);
+            }
+          })
       );
 
       // Create orders for each shop using the dedicated createOrder function
@@ -369,6 +372,9 @@ const Checkout = () => {
           status: 'pending' as const,
           estimatedDeliveryTime: new Date(Date.now() + 45 * 60 * 1000), // 45 minutes from now
           paymentMethod: 'card',
+          // Escrow tracking fields
+          paymentIntentId: shopPaymentIntentIds[shopCart.shopId] || null,
+          escrowStatus: shopPaymentIntentIds[shopCart.shopId] ? 'held' : null,
           deliveryAddress: deliveryOption === 'delivery' ? deliveryAddress : 'Pickup',
           contactPhone,
           deliveryOption,

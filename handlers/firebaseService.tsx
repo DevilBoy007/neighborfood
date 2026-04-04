@@ -1220,8 +1220,8 @@ class FirebaseService {
 
   async createPaymentSheetParams(
     amount: number,
-    platformFee?: number,
-    connectedAccountId?: string
+    shopId: string,
+    sellerId: string
   ): Promise<{
     paymentIntent: string;
     paymentIntentId: string;
@@ -1230,7 +1230,7 @@ class FirebaseService {
     publishableKey: string;
   }> {
     return await this.callFunction<
-      { amount: number; currency: string; platformFee?: number; connectedAccountId?: string },
+      { amount: number; currency: string; shopId: string; sellerId: string },
       {
         paymentIntent: string;
         paymentIntentId: string;
@@ -1241,8 +1241,8 @@ class FirebaseService {
     >('createPaymentSheetParams', {
       amount,
       currency: 'usd',
-      platformFee,
-      connectedAccountId,
+      shopId,
+      sellerId,
     });
   }
 
@@ -1317,6 +1317,30 @@ class FirebaseService {
     return await this.callFunction<{ accountId: string }, { url: string }>('createLoginLink', {
       accountId,
     });
+  }
+
+  // =========================================================================
+  // Escrow — Release & Refund
+  // =========================================================================
+
+  async releaseEscrow(
+    orderId: string,
+    shopId: string
+  ): Promise<{ transferId: string; amountReleased: number; alreadyReleased?: boolean }> {
+    return await this.callFunction<
+      { orderId: string; shopId: string },
+      { transferId: string; amountReleased: number; alreadyReleased?: boolean }
+    >('releaseEscrow', { orderId, shopId });
+  }
+
+  async refundOrder(
+    orderId: string,
+    shopId: string
+  ): Promise<{ refundId: string | null; alreadyRefunded?: boolean }> {
+    return await this.callFunction<
+      { orderId: string; shopId: string },
+      { refundId: string | null; alreadyRefunded?: boolean }
+    >('refundOrder', { orderId, shopId });
   }
 }
 

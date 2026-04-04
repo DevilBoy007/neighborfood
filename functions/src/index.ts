@@ -11,7 +11,7 @@
  */
 
 import * as admin from 'firebase-admin';
-import { onCall, HttpsError, CallableRequest } from 'firebase-functions/v2/https';
+import { onCall, onRequest, HttpsError, CallableRequest } from 'firebase-functions/v2/https';
 import { defineSecret } from 'firebase-functions/params';
 import { FieldValue } from 'firebase-admin/firestore';
 import Stripe from 'stripe';
@@ -22,6 +22,7 @@ const db = admin.firestore();
 
 // Define Stripe secret key from Firebase environment secrets
 const stripeSecretKey = defineSecret('STRIPE_SECRET_KEY');
+const stripeWebhookSecret = defineSecret('STRIPE_WEBHOOK_SECRET');
 
 // =============================================================================
 // Helper functions to convert Firestore data to JSON-serializable format
@@ -2018,13 +2019,16 @@ export const createPaymentIntent = onCall(
 );
 
 /**
- * Create parameters for the PaymentSheet (PaymentIntent + EphemeralKey + Customer)
- * Uses direct charges when a connected account is specified.
+ * Create parameters for the PaymentSheet (PaymentIntent + EphemeralKey + Customer).
+ *
+ * Escrow model: the PaymentIntent is always created on the PLATFORM Stripe account
+ * (no stripeAccount header). Funds land in the platform balance and are released to
+ * the seller via a manual Transfer after delivery is confirmed.
  */
 interface CreatePaymentSheetParamsRequest {
   amount: number; // in cents
-  platformFee?: number; // in cents — application fee for platform
-  connectedAccountId?: string; // merchant's Stripe connected account
+  shopId: string; // used as metadata for escrow tracking
+  sellerId: string; // seller's Firebase UID — resolved to connectedAccountId on release
   currency?: string;
 }
 
@@ -2033,10 +2037,13 @@ export const createPaymentSheetParams = onCall(
   async (request: CallableRequest<CreatePaymentSheetParamsRequest>) => {
     verifyAuth(request);
     const userId = request.auth!.uid;
-    const { amount, platformFee, connectedAccountId, currency = 'usd' } = request.data;
+    const { amount, shopId, sellerId, currency = 'usd' } = request.data;
 
     if (!amount || amount <= 0) {
       throw new HttpsError('invalid-argument', 'A valid amount is required');
+    }
+    if (!shopId || !sellerId) {
+      throw new HttpsError('invalid-argument', 'shopId and sellerId are required');
     }
 
     try {
@@ -2051,24 +2058,15 @@ export const createPaymentSheetParams = onCall(
         { apiVersion: '2026-01-28.clover' }
       );
 
-      const intentParams: Stripe.PaymentIntentCreateParams = {
+      // Escrow: capture funds on the PLATFORM account — no stripeAccount header.
+      // The Transfer to the seller's connected account happens in releaseEscrow.
+      const paymentIntent = await stripe.paymentIntents.create({
         amount: Math.round(amount),
         currency,
         customer: customerId,
         automatic_payment_methods: { enabled: true },
-      };
-
-      // For direct charges: set application fee so the platform collects its cut
-      if (connectedAccountId && platformFee && platformFee > 0) {
-        intentParams.application_fee_amount = Math.round(platformFee);
-      }
-
-      // Create PaymentIntent on the connected account (direct charge) or platform
-      const stripeAccountOpts: Stripe.RequestOptions | undefined = connectedAccountId
-        ? { stripeAccount: connectedAccountId }
-        : undefined;
-
-      const paymentIntent = await stripe.paymentIntents.create(intentParams, stripeAccountOpts);
+        metadata: { shopId, sellerId, buyerId: userId },
+      });
 
       return {
         paymentIntent: paymentIntent.client_secret,
@@ -2593,5 +2591,330 @@ export const createLoginLink = onCall(
       console.error('Error creating login link:', error);
       throw new HttpsError('internal', 'Failed to create Express Dashboard link');
     }
+  }
+);
+
+// =============================================================================
+// Escrow — Release & Refund
+// =============================================================================
+
+/**
+ * Release escrowed funds to the seller after delivery is confirmed.
+ *
+ * Looks up the order's paymentIntentId, retrieves the seller's connected account,
+ * and creates a Stripe Transfer for (amount - platformFee). Idempotent: no-ops if
+ * escrowStatus is already 'released'.
+ */
+interface ReleaseEscrowRequest {
+  orderId: string;
+  shopId: string;
+}
+
+export const releaseEscrow = onCall(
+  { secrets: [stripeSecretKey] },
+  async (request: CallableRequest<ReleaseEscrowRequest>) => {
+    verifyAuth(request);
+    const userId = request.auth!.uid;
+    const { orderId, shopId } = request.data;
+
+    if (!orderId || !shopId) {
+      throw new HttpsError('invalid-argument', 'orderId and shopId are required');
+    }
+
+    // Locate the order document
+    const ordersSnapshot = await db
+      .collection('orders')
+      .where('id', '==', orderId)
+      .where('shopId', '==', shopId)
+      .get();
+
+    if (ordersSnapshot.empty) {
+      throw new HttpsError('not-found', 'Order not found');
+    }
+
+    const orderDoc = ordersSnapshot.docs[0];
+    const orderData = orderDoc.data();
+
+    // Only the buyer or the shop owner may trigger release
+    const shopDoc = await db.collection('shops').doc(shopId).get();
+    const shopOwnerId = shopDoc.data()?.userId;
+    const isBuyer = orderData.userId === userId;
+    const isSeller = shopOwnerId === userId;
+    if (!isBuyer && !isSeller) {
+      throw new HttpsError('permission-denied', 'Not authorised to release this escrow');
+    }
+
+    // Idempotency guard
+    if (orderData.escrowStatus === 'released') {
+      return { alreadyReleased: true };
+    }
+
+    const paymentIntentId: string = orderData.paymentIntentId;
+    if (!paymentIntentId) {
+      throw new HttpsError('failed-precondition', 'No paymentIntentId on order — cannot release');
+    }
+
+    // Look up seller's connected account
+    const sellerDoc = await db.collection('users').doc(shopOwnerId).get();
+    const connectedAccountId: string | undefined = sellerDoc.data()?.stripeConnectedAccountId;
+    if (!connectedAccountId) {
+      throw new HttpsError(
+        'failed-precondition',
+        'Seller has not completed Stripe Connect onboarding'
+      );
+    }
+
+    try {
+      const stripe = new Stripe(stripeSecretKey.value(), {
+        apiVersion: '2026-01-28.clover',
+      });
+
+      // Retrieve the PaymentIntent to get the captured amount
+      const pi = await stripe.paymentIntents.retrieve(paymentIntentId);
+      if (pi.status !== 'succeeded') {
+        throw new HttpsError(
+          'failed-precondition',
+          `Cannot release escrow: payment status is ${pi.status}`
+        );
+      }
+
+      const totalCents = pi.amount_received;
+      // Platform fee: lesser of 10% or $1 (100 cents)
+      const platformFeeCents = Math.min(Math.round(totalCents * 0.1), 100);
+      const sellerAmountCents = totalCents - platformFeeCents;
+
+      const transfer = await stripe.transfers.create({
+        amount: sellerAmountCents,
+        currency: pi.currency,
+        destination: connectedAccountId,
+        source_transaction: pi.latest_charge as string,
+        metadata: { orderId, shopId, paymentIntentId },
+      });
+
+      // Update order document
+      await orderDoc.ref.update({
+        escrowStatus: 'released',
+        escrowReleasedAt: FieldValue.serverTimestamp(),
+        stripeTransferId: transfer.id,
+        updatedAt: FieldValue.serverTimestamp(),
+      });
+
+      console.log(`Escrow released for order ${orderId}: transfer ${transfer.id}`);
+      return { transferId: transfer.id, amountReleased: sellerAmountCents };
+    } catch (error) {
+      if (error instanceof HttpsError) throw error;
+      console.error('Error releasing escrow:', error);
+      throw new HttpsError('internal', 'Failed to release escrow');
+    }
+  }
+);
+
+/**
+ * Refund the buyer and mark the order as cancelled.
+ *
+ * Creates a full Stripe Refund on the PaymentIntent and updates the order's
+ * escrowStatus to 'refunded'. Only callable before escrow has been released.
+ */
+interface RefundOrderRequest {
+  orderId: string;
+  shopId: string;
+}
+
+export const refundOrder = onCall(
+  { secrets: [stripeSecretKey] },
+  async (request: CallableRequest<RefundOrderRequest>) => {
+    verifyAuth(request);
+    const userId = request.auth!.uid;
+    const { orderId, shopId } = request.data;
+
+    if (!orderId || !shopId) {
+      throw new HttpsError('invalid-argument', 'orderId and shopId are required');
+    }
+
+    const ordersSnapshot = await db
+      .collection('orders')
+      .where('id', '==', orderId)
+      .where('shopId', '==', shopId)
+      .get();
+
+    if (ordersSnapshot.empty) {
+      throw new HttpsError('not-found', 'Order not found');
+    }
+
+    const orderDoc = ordersSnapshot.docs[0];
+    const orderData = orderDoc.data();
+
+    // Only the buyer or the shop owner may trigger a refund
+    const shopDoc = await db.collection('shops').doc(shopId).get();
+    const shopOwnerId = shopDoc.data()?.userId;
+    const isBuyer = orderData.userId === userId;
+    const isSeller = shopOwnerId === userId;
+    if (!isBuyer && !isSeller) {
+      throw new HttpsError('permission-denied', 'Not authorised to refund this order');
+    }
+
+    if (orderData.escrowStatus === 'released') {
+      throw new HttpsError('failed-precondition', 'Escrow already released — cannot refund');
+    }
+    if (orderData.escrowStatus === 'refunded') {
+      return { alreadyRefunded: true };
+    }
+
+    const paymentIntentId: string = orderData.paymentIntentId;
+    if (!paymentIntentId) {
+      // No real payment was captured (e.g. web fallback) — just cancel the order
+      await orderDoc.ref.update({
+        status: 'cancelled',
+        escrowStatus: 'refunded',
+        updatedAt: FieldValue.serverTimestamp(),
+      });
+      return { refundId: null };
+    }
+
+    try {
+      const stripe = new Stripe(stripeSecretKey.value(), {
+        apiVersion: '2026-01-28.clover',
+      });
+
+      const refund = await stripe.refunds.create({
+        payment_intent: paymentIntentId,
+        metadata: { orderId, shopId },
+      });
+
+      await orderDoc.ref.update({
+        status: 'cancelled',
+        escrowStatus: 'refunded',
+        stripeRefundId: refund.id,
+        updatedAt: FieldValue.serverTimestamp(),
+      });
+
+      console.log(`Refund created for order ${orderId}: refund ${refund.id}`);
+      return { refundId: refund.id };
+    } catch (error) {
+      if (error instanceof HttpsError) throw error;
+      console.error('Error refunding order:', error);
+      throw new HttpsError('internal', 'Failed to refund order');
+    }
+  }
+);
+
+// =============================================================================
+// Stripe Webhook Handler
+// =============================================================================
+
+/**
+ * HTTP endpoint that receives Stripe webhook events.
+ *
+ * Handles:
+ *   payment_intent.succeeded  → marks order escrowStatus = 'held'
+ *   payment_intent.payment_failed → marks order status = 'payment_failed'
+ *   charge.refunded            → ensures escrowStatus = 'refunded' in Firestore
+ *   transfer.created           → logs transfer completion
+ *
+ * Deploy with:  firebase deploy --only functions:stripeWebhook
+ * Register the HTTPS trigger URL in your Stripe dashboard as a webhook endpoint.
+ */
+export const stripeWebhook = onRequest(
+  { secrets: [stripeSecretKey, stripeWebhookSecret] },
+  async (req, res) => {
+    const sig = req.headers['stripe-signature'];
+    if (!sig) {
+      res.status(400).send('Missing stripe-signature header');
+      return;
+    }
+
+    let event: Stripe.Event;
+    try {
+      const stripe = new Stripe(stripeSecretKey.value(), {
+        apiVersion: '2026-01-28.clover',
+      });
+      // req.rawBody is populated by Cloud Functions HTTP triggers
+      event = stripe.webhooks.constructEvent(
+        (req as any).rawBody,
+        sig,
+        stripeWebhookSecret.value()
+      );
+    } catch (err) {
+      console.error('Webhook signature verification failed:', err);
+      res.status(400).send(`Webhook error: ${(err as Error).message}`);
+      return;
+    }
+
+    try {
+      switch (event.type) {
+        case 'payment_intent.succeeded': {
+          const pi = event.data.object as Stripe.PaymentIntent;
+          const { shopId, buyerId } = pi.metadata || {};
+          if (shopId && buyerId) {
+            const snapshot = await db
+              .collection('orders')
+              .where('paymentIntentId', '==', pi.id)
+              .limit(1)
+              .get();
+            if (!snapshot.empty) {
+              await snapshot.docs[0].ref.update({
+                escrowStatus: 'held',
+                updatedAt: FieldValue.serverTimestamp(),
+              });
+              console.log(`Escrow marked held for PI ${pi.id}`);
+            }
+          }
+          break;
+        }
+
+        case 'payment_intent.payment_failed': {
+          const pi = event.data.object as Stripe.PaymentIntent;
+          const snapshot = await db
+            .collection('orders')
+            .where('paymentIntentId', '==', pi.id)
+            .limit(1)
+            .get();
+          if (!snapshot.empty) {
+            await snapshot.docs[0].ref.update({
+              status: 'payment_failed',
+              updatedAt: FieldValue.serverTimestamp(),
+            });
+            console.log(`Payment failed for PI ${pi.id}`);
+          }
+          break;
+        }
+
+        case 'charge.refunded': {
+          const charge = event.data.object as Stripe.Charge;
+          const piId = charge.payment_intent as string;
+          if (piId) {
+            const snapshot = await db
+              .collection('orders')
+              .where('paymentIntentId', '==', piId)
+              .limit(1)
+              .get();
+            if (!snapshot.empty && snapshot.docs[0].data().escrowStatus !== 'refunded') {
+              await snapshot.docs[0].ref.update({
+                escrowStatus: 'refunded',
+                updatedAt: FieldValue.serverTimestamp(),
+              });
+            }
+          }
+          break;
+        }
+
+        case 'transfer.created': {
+          const transfer = event.data.object as Stripe.Transfer;
+          console.log(
+            `Transfer created: ${transfer.id} → ${transfer.destination} for ${transfer.amount} ${transfer.currency}`
+          );
+          break;
+        }
+
+        default:
+          console.log(`Unhandled webhook event type: ${event.type}`);
+      }
+    } catch (err) {
+      console.error('Error processing webhook event:', err);
+      res.status(500).send('Internal error processing webhook');
+      return;
+    }
+
+    res.json({ received: true });
   }
 );
