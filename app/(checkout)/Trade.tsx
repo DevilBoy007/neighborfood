@@ -323,7 +323,7 @@ const Trade = () => {
             <View style={styles.emptyItems}>
               <Ionicons name="alert-circle-outline" size={40} color={colors.textMuted} />
               <Text style={[styles.emptyItemsText, { color: colors.textMuted }]}>
-                You don&apos;t have any items to trade
+                {"You don't have any items to trade"}
               </Text>
             </View>
           ) : (
