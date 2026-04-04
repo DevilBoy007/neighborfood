@@ -1105,6 +1105,66 @@ export const updateOrderStatus = onCall(
 );
 
 /**
+ * Update trade items on an existing order
+ */
+export const updateOrderTradeItems = onCall(
+  async (
+    request: CallableRequest<{
+      orderId: string;
+      shopId: string;
+      tradeItems: { itemId: string; name: string; imageUrl?: string }[];
+    }>
+  ) => {
+    verifyAuth(request);
+    const { orderId, shopId, tradeItems } = request.data;
+
+    if (!orderId || !shopId || !tradeItems) {
+      throw new HttpsError('invalid-argument', 'Order ID, shop ID, and trade items are required');
+    }
+
+    try {
+      const ordersSnapshot = await db
+        .collection('orders')
+        .where('id', '==', orderId)
+        .where('shopId', '==', shopId)
+        .get();
+
+      if (ordersSnapshot.empty) {
+        throw new HttpsError('not-found', 'Order not found');
+      }
+
+      const orderDoc = ordersSnapshot.docs[0];
+      const orderData = orderDoc.data();
+
+      // Verify user has permission (either shop owner or the customer)
+      const shopDoc = await db.collection('shops').doc(shopId).get();
+      const shopOwner = shopDoc.data()?.userId;
+      const isShopOwner = shopOwner === request.auth?.uid;
+      const isCustomer = orderData.userId === request.auth?.uid;
+
+      if (!isShopOwner && !isCustomer) {
+        throw new HttpsError(
+          'permission-denied',
+          'Only the shop owner or the customer can update trade items'
+        );
+      }
+
+      await orderDoc.ref.update({
+        tradeItems,
+        updatedAt: FieldValue.serverTimestamp(),
+      });
+
+      console.log('Trade items updated for order:', orderId);
+      return true;
+    } catch (error) {
+      if (error instanceof HttpsError) throw error;
+      console.error('Error updating trade items:', error);
+      throw new HttpsError('internal', 'Error updating trade items');
+    }
+  }
+);
+
+/**
  * Get comprehensive orders for a user (both placed and received)
  */
 export const getOrdersForUser = onCall(

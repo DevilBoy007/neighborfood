@@ -1,10 +1,11 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'expo-router';
 import { View, Text, StyleSheet, Animated, Dimensions, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useCart, ShopCart, CartItem } from '@/store/reduxHooks';
+import { useCart, ShopCart, CartItem, useUser } from '@/store/reduxHooks';
 import { SoundTouchableOpacity } from '@/components/SoundTouchableOpacity';
 import { useAppColors } from '@/hooks/useAppColors';
+import firebaseService from '@/handlers/firebaseService';
 
 const { height } = Dimensions.get('window');
 
@@ -13,6 +14,8 @@ interface ShopSectionProps {
   updateItemQuantityFn: (shopId: string, itemId: string, quantity: number) => void;
   removeFromCartFn: (shopId: string, itemId: string | null, clearShop?: boolean) => void;
   colors: ReturnType<typeof useAppColors>;
+  userHasItems: boolean;
+  onTrade: (shopId: string) => void;
 }
 
 const CartScreen = () => {
@@ -20,6 +23,7 @@ const CartScreen = () => {
   const slideAnim = useRef(new Animated.Value(height)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const colors = useAppColors();
+  const { userData } = useUser();
   const {
     shopCarts,
     updateItemQuantity,
@@ -28,6 +32,7 @@ const CartScreen = () => {
     calculateTotalSubtotal,
     getItemCount,
   } = useCart();
+  const [userHasItems, setUserHasItems] = useState(false);
 
   const totalAmount = calculateTotalSubtotal();
   const itemCount = getItemCount();
@@ -48,6 +53,20 @@ const CartScreen = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Check if the current user has any items (for trade button)
+  useEffect(() => {
+    const checkUserItems = async () => {
+      if (!userData?.uid) return;
+      try {
+        const items = await firebaseService.getAllItemsForUser(userData.uid);
+        setUserHasItems(items.length > 0);
+      } catch {
+        setUserHasItems(false);
+      }
+    };
+    checkUserItems();
+  }, [userData?.uid]);
+
   const handleRemoveItem = (shopId: string, itemId: string | null, clearShop: boolean = false) => {
     if (clearShop) {
       clearShopCart(shopId);
@@ -60,22 +79,39 @@ const CartScreen = () => {
     router.navigate('/Checkout');
   };
 
+  const handleTrade = (shopId: string) => {
+    router.navigate({ pathname: '/Trade', params: { shopId } });
+  };
+
   const ShopSection = ({
     shopCart,
     updateItemQuantityFn,
     removeFromCartFn,
     colors: sectionColors,
+    userHasItems: hasItems,
+    onTrade,
   }: ShopSectionProps) => (
     <View style={styles.shopSection}>
       <View style={styles.shopHeader}>
         <Text style={[styles.shopName, { color: sectionColors.primary }]}>{shopCart.shopName}</Text>
-        <SoundTouchableOpacity
-          style={styles.clearShopButton}
-          onPress={() => removeFromCartFn(shopCart.shopId, null, true)}
-          soundType="tap"
-        >
-          <Text style={[styles.clearShopText, { color: sectionColors.error }]}>Clear</Text>
-        </SoundTouchableOpacity>
+        <View style={styles.shopHeaderActions}>
+          {hasItems && (
+            <SoundTouchableOpacity
+              style={styles.tradeButton}
+              onPress={() => onTrade(shopCart.shopId)}
+              soundType="tap"
+            >
+              <Text style={styles.tradeButtonText}>Trade ✨</Text>
+            </SoundTouchableOpacity>
+          )}
+          <SoundTouchableOpacity
+            style={styles.clearShopButton}
+            onPress={() => removeFromCartFn(shopCart.shopId, null, true)}
+            soundType="tap"
+          >
+            <Text style={[styles.clearShopText, { color: sectionColors.error }]}>Clear</Text>
+          </SoundTouchableOpacity>
+        </View>
       </View>
 
       {shopCart.items.map((item: CartItem) => (
@@ -177,6 +213,8 @@ const CartScreen = () => {
                 updateItemQuantityFn={updateItemQuantity}
                 removeFromCartFn={handleRemoveItem}
                 colors={colors}
+                userHasItems={userHasItems}
+                onTrade={handleTrade}
               />
             ))}
 
@@ -281,6 +319,23 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 12,
+  },
+  shopHeaderActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  tradeButton: {
+    backgroundColor: '#E040FB',
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 14,
+  },
+  tradeButtonText: {
+    color: '#fff',
+    fontFamily: 'TextMeOne',
+    fontSize: 14,
+    fontWeight: '600',
   },
   shopName: {
     fontSize: 18,

@@ -86,12 +86,66 @@ const OrderCard = ({ order, onPress }) => {
     console.log('selected order:', orderToSet);
   };
 
+  const handleTradeAction = (targetStatus: string) => {
+    if (!selectedOrder) return;
+
+    if (targetStatus === 'counteroffer') {
+      // Shop owner counteroffers — navigate to Trade screen with buyer's items preselected
+      const preselectedItems = selectedOrder.tradeItems?.map((t) => t.itemId) ?? [];
+      router.push({
+        pathname: '/Trade',
+        params: {
+          shopId: selectedOrder.shopId,
+          orderId: selectedOrder.id,
+          preselectedItems: JSON.stringify(preselectedItems),
+        },
+      });
+      setIsPressed(false);
+      return;
+    }
+
+    if (targetStatus === 'update_trade') {
+      // Buyer updates their trade offer
+      const preselectedItems = selectedOrder.tradeItems?.map((t) => t.itemId) ?? [];
+      router.push({
+        pathname: '/Trade',
+        params: {
+          shopId: selectedOrder.shopId,
+          orderId: selectedOrder.id,
+          preselectedItems: JSON.stringify(preselectedItems),
+        },
+      });
+      setIsPressed(false);
+      return;
+    }
+
+    if (targetStatus === 'buy_instead') {
+      // Buyer wants to pay instead — update to pending and go to checkout
+      updateOrderStatus(selectedOrder.id, selectedOrder.shopId, 'pending' as OrderStatus);
+      setIsPressed(false);
+      router.push('/Checkout');
+      return;
+    }
+
+    // Default: standard status update
+    updateOrderStatus(selectedOrder.id, selectedOrder.shopId, targetStatus as OrderStatus);
+    setIsPressed(false);
+    if (targetStatus === 'preparing') {
+      router.push('/success');
+    }
+  };
+
+  const isTrade = order.status === 'trade';
+
   return (
     <>
       <TouchableOpacity style={styles.orderCard} onPress={onPress}>
         <View style={styles.orderHeader}>
           <Text style={styles.dateText}>{date}</Text>
-          <Ionicons name="chevron-forward" size={24} color="black" />
+          <View style={styles.headerRight}>
+            {isTrade && <Text style={styles.tradeBadge}>✨ Trade</Text>}
+            <Ionicons name="chevron-forward" size={24} color="black" />
+          </View>
         </View>
 
         <View style={styles.orderDetails}>
@@ -101,7 +155,7 @@ const OrderCard = ({ order, onPress }) => {
           </View>
           <View style={styles.detailRow}>
             <Text style={styles.detailLabel}>total:</Text>
-            <Text style={styles.detailValue}>${total}</Text>
+            <Text style={styles.detailValue}>{isTrade ? 'Trade' : `$${total}`}</Text>
           </View>
 
           <View style={styles.detailRow}>
@@ -116,11 +170,7 @@ const OrderCard = ({ order, onPress }) => {
         {isPressed && (
           <View>
             {buildStatusButtons(order.status, order.shopOwnerView || false, (newStatus) => {
-              updateOrderStatus(selectedOrder.id, selectedOrder.shopId, newStatus as OrderStatus);
-              setIsPressed(false);
-              if (newStatus === 'preparing') {
-                router.push('/success');
-              }
+              handleTradeAction(newStatus);
             }).map((button) => (
               <TouchableOpacity key={button.key} onPress={button.onPress}>
                 <View style={{ backgroundColor: button.color }}>
@@ -172,6 +222,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 12,
     fontFamily: 'TextMeOne',
+  },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  tradeBadge: {
+    fontSize: 12,
+    fontFamily: 'TextMeOne',
+    color: '#E040FB',
+    fontWeight: '600',
   },
   dateText: {
     fontSize: Platform.OS === 'web' ? 30 : 24,

@@ -6,7 +6,7 @@
 // Re-export types from store slices to maintain consistency
 export type { ItemData } from '@/store/slices/itemSlice';
 export type { ShopData, ShopLocation } from '@/store/slices/shopSlice';
-export type { OrderData, OrderStatus } from '@/store/slices/orderSlice';
+export type { OrderData, OrderStatus, TradeItem } from '@/store/slices/orderSlice';
 export type { UserData } from '@/store/slices/userSlice';
 export type { ThreadData, MessageData, MessageType } from '@/store/slices/messageSlice';
 

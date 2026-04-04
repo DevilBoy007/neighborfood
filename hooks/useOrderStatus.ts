@@ -3,6 +3,8 @@ export const useOrderStatus = () => {
     switch (status) {
       case 'pending':
         return '#FF9800';
+      case 'trade':
+        return '#E040FB';
       case 'preparing':
         return '#9C27B0';
       case 'ready':
@@ -20,6 +22,8 @@ export const useOrderStatus = () => {
     switch (status) {
       case 'pending':
         return 'Order Received';
+      case 'trade':
+        return 'Trade Offer';
       case 'preparing':
         return 'Being Prepared';
       case 'ready':
@@ -44,6 +48,12 @@ export const useOrderStatus = () => {
             { label: 'Accept', targetStatus: 'preparing', color: '#00bfff' },
             { label: 'Deny', targetStatus: 'cancelled', color: '#f44336' },
           ];
+        case 'trade':
+          return [
+            { label: 'Accept', targetStatus: 'preparing', color: '#00bfff' },
+            { label: 'Counteroffer', targetStatus: 'counteroffer', color: '#E040FB' },
+            { label: 'Deny', targetStatus: 'cancelled', color: '#f44336' },
+          ];
         case 'preparing':
           return [
             { label: 'Ready', targetStatus: 'ready', color: '#00bfff' },
@@ -65,6 +75,12 @@ export const useOrderStatus = () => {
       switch (status) {
         case 'pending':
           return [{ label: 'Cancel', targetStatus: 'cancelled', color: '#f44336' }];
+        case 'trade':
+          return [
+            { label: 'Update Offer', targetStatus: 'update_trade', color: '#E040FB' },
+            { label: 'Buy Instead', targetStatus: 'buy_instead', color: '#00bfff' },
+            { label: 'Revoke', targetStatus: 'cancelled', color: '#f44336' },
+          ];
         case 'preparing':
           return [{ label: 'Cancel', targetStatus: 'cancelled', color: '#f44336' }];
         case 'ready':

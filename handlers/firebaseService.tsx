@@ -781,6 +781,31 @@ class FirebaseService {
   }
 
   /**
+   * Update trade items on an existing trade order
+   */
+  async updateOrderTradeItems(
+    orderId: string,
+    shopId: string,
+    tradeItems: { itemId: string; name: string; imageUrl?: string }[]
+  ): Promise<void> {
+    console.log('Updating trade items for order:', orderId);
+    try {
+      await this.callFunction<
+        {
+          orderId: string;
+          shopId: string;
+          tradeItems: { itemId: string; name: string; imageUrl?: string }[];
+        },
+        boolean
+      >('updateOrderTradeItems', { orderId, shopId, tradeItems });
+      console.log('Trade items updated:', orderId);
+    } catch (error) {
+      console.error('Error updating trade items:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Comprehensive method to get all orders for a user
    * Returns both orders placed by the user (as customer) and orders received (as shop owner)
    */

@@ -12,11 +12,18 @@ type OrderItem = {
 
 export type OrderStatus =
   | 'pending'
+  | 'trade'
   | 'preparing'
   | 'ready'
   | 'in-delivery'
   | 'completed'
   | 'cancelled';
+
+export type TradeItem = {
+  itemId: string;
+  name: string;
+  imageUrl?: string;
+};
 
 export type OrderData = {
   id: string;
@@ -39,6 +46,7 @@ export type OrderData = {
   deliveryAddress: string;
   contactPhone: string;
   deliveryOption: 'pickup' | 'delivery';
+  tradeItems?: TradeItem[];
 };
 
 type OrderState = {
