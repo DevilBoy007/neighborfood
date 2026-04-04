@@ -28,12 +28,14 @@ export type OrderData = {
   subtotal: number;
   tax: number;
   deliveryFee: number;
+  platformFee?: number;
   total: number;
   status: OrderStatus;
   createdAt: { seconds: number; nanoseconds: number };
   estimatedDeliveryTime?: { seconds: number; nanoseconds: number };
   deliveredAt?: { seconds: number; nanoseconds: number };
   paymentMethod: string;
+  paymentIntentId?: string;
   deliveryAddress: string;
   contactPhone: string;
   deliveryOption: 'pickup' | 'delivery';
