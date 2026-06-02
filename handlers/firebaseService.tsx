@@ -1147,6 +1147,201 @@ class FirebaseService {
       return false;
     }
   }
+
+  // =========================================================================
+  // Stripe Payment Methods
+  // =========================================================================
+
+  async createSetupIntent(): Promise<{ clientSecret: string; customerId: string }> {
+    return await this.callFunction<
+      { userId: string },
+      { clientSecret: string; customerId: string }
+    >(
+      'createSetupIntent',
+      { userId: '' } // userId is extracted from auth token on server
+    );
+  }
+
+  async createPaymentIntent(
+    amount: number,
+    paymentMethodId?: string
+  ): Promise<{ clientSecret: string; paymentIntentId: string }> {
+    return await this.callFunction<
+      { amount: number; currency: string; paymentMethodId?: string },
+      { clientSecret: string; paymentIntentId: string }
+    >('createPaymentIntent', {
+      amount,
+      currency: 'usd',
+      paymentMethodId,
+    });
+  }
+
+  async getPaymentMethods(): Promise<{
+    paymentMethods: {
+      id: string;
+      brand: string;
+      last4: string;
+      expMonth: number;
+      expYear: number;
+    }[];
+    defaultPaymentMethodId: string | null;
+  }> {
+    return await this.callFunction<
+      { userId: string },
+      {
+        paymentMethods: {
+          id: string;
+          brand: string;
+          last4: string;
+          expMonth: number;
+          expYear: number;
+        }[];
+        defaultPaymentMethodId: string | null;
+      }
+    >('getPaymentMethods', { userId: '' });
+  }
+
+  async deletePaymentMethod(paymentMethodId: string): Promise<boolean> {
+    return await this.callFunction<{ paymentMethodId: string }, boolean>('deletePaymentMethod', {
+      paymentMethodId,
+    });
+  }
+
+  async setDefaultPaymentMethod(paymentMethodId: string): Promise<boolean> {
+    return await this.callFunction<{ paymentMethodId: string }, boolean>(
+      'setDefaultPaymentMethod',
+      { paymentMethodId }
+    );
+  }
+
+  // =========================================================================
+  // PaymentSheet
+  // =========================================================================
+
+  async createPaymentSheetParams(
+    amount: number,
+    shopId: string,
+    sellerId: string
+  ): Promise<{
+    paymentIntent: string;
+    paymentIntentId: string;
+    ephemeralKey: string;
+    customer: string;
+    publishableKey: string;
+  }> {
+    return await this.callFunction<
+      { amount: number; currency: string; shopId: string; sellerId: string },
+      {
+        paymentIntent: string;
+        paymentIntentId: string;
+        ephemeralKey: string;
+        customer: string;
+        publishableKey: string;
+      }
+    >('createPaymentSheetParams', {
+      amount,
+      currency: 'usd',
+      shopId,
+      sellerId,
+    });
+  }
+
+  // =========================================================================
+  // Stripe Connect — Express Accounts
+  // =========================================================================
+
+  async createConnectedAccount(): Promise<{ accountId: string; alreadyExists: boolean }> {
+    return await this.callFunction<
+      { userId: string },
+      { accountId: string; alreadyExists: boolean }
+    >('createConnectedAccount', { userId: '' });
+  }
+
+  async createAccountLink(
+    accountId: string,
+    refreshUrl?: string,
+    returnUrl?: string
+  ): Promise<{ url: string }> {
+    return await this.callFunction<
+      { accountId: string; refreshUrl?: string; returnUrl?: string },
+      { url: string }
+    >('createAccountLink', { accountId, refreshUrl, returnUrl });
+  }
+
+  async getConnectedAccountStatus(accountId: string): Promise<{
+    chargesEnabled: boolean;
+    payoutsEnabled: boolean;
+    detailsSubmitted: boolean;
+    requirements: string[];
+  }> {
+    return await this.callFunction<
+      { accountId: string },
+      {
+        chargesEnabled: boolean;
+        payoutsEnabled: boolean;
+        detailsSubmitted: boolean;
+        requirements: string[];
+      }
+    >('getConnectedAccountStatus', { accountId });
+  }
+
+  async getConnectedBalance(accountId: string): Promise<{
+    available: { amount: number; currency: string }[];
+    pending: { amount: number; currency: string }[];
+  }> {
+    return await this.callFunction<
+      { accountId: string },
+      {
+        available: { amount: number; currency: string }[];
+        pending: { amount: number; currency: string }[];
+      }
+    >('getConnectedBalance', { accountId });
+  }
+
+  async createPayout(
+    accountId: string,
+    amount: number
+  ): Promise<{
+    payoutId: string;
+    amount: number;
+    status: string;
+    arrivalDate: number;
+  }> {
+    return await this.callFunction<
+      { accountId: string; amount: number; currency: string },
+      { payoutId: string; amount: number; status: string; arrivalDate: number }
+    >('createPayout', { accountId, amount, currency: 'usd' });
+  }
+
+  async createLoginLink(accountId: string): Promise<{ url: string }> {
+    return await this.callFunction<{ accountId: string }, { url: string }>('createLoginLink', {
+      accountId,
+    });
+  }
+
+  // =========================================================================
+  // Escrow — Release & Refund
+  // =========================================================================
+
+  async releaseEscrow(
+    orderId: string,
+    shopId: string
+  ): Promise<{ transferId: string; amountReleased: number; alreadyReleased?: boolean }> {
+    return await this.callFunction<
+      { orderId: string; shopId: string },
+      { transferId: string; amountReleased: number; alreadyReleased?: boolean }
+    >('releaseEscrow', { orderId, shopId });
+  }
+
+  async refundOrder(
+    orderId: string,
+    shopId: string
+  ): Promise<{ refundId: string | null; alreadyRefunded?: boolean }> {
+    return await this.callFunction<
+      { orderId: string; shopId: string },
+      { refundId: string | null; alreadyRefunded?: boolean }
+    >('refundOrder', { orderId, shopId });
+  }
 }
 
 const firebaseService = FirebaseService.getInstance();

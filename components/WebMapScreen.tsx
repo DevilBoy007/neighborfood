@@ -4,6 +4,7 @@ import { APIProvider, Map, AdvancedMarker, Pin, InfoWindow } from '@vis.gl/react
 import { StyleSheet, Text, View, ActivityIndicator } from 'react-native';
 
 import { useShop, useLocation, ShopData } from '@/store/reduxHooks';
+import { getShopCoordinates } from '@/types';
 
 interface MarkerData {
   id: string;
@@ -20,6 +21,26 @@ interface WebMapScreenProps {
   shops?: ShopData[];
 }
 
+const toValidNumber = (value: unknown): number | null => {
+  const parsed =
+    typeof value === 'number' ? value : typeof value === 'string' ? Number(value) : NaN;
+  return Number.isFinite(parsed) ? parsed : null;
+};
+
+const getValidMapPosition = (
+  latitude: unknown,
+  longitude: unknown
+): { lat: number; lng: number } | null => {
+  const lat = toValidNumber(latitude);
+  const lng = toValidNumber(longitude);
+
+  if (lat === null || lng === null) {
+    return null;
+  }
+
+  return { lat, lng };
+};
+
 const MapScreenWeb = ({ shops = [] }: WebMapScreenProps) => {
   const router = useRouter();
   const { locationData, fetchCurrentLocation } = useLocation();
@@ -35,31 +56,45 @@ const MapScreenWeb = ({ shops = [] }: WebMapScreenProps) => {
 
   useEffect(() => {
     if (locationData.coords) {
+      const userPosition = getValidMapPosition(
+        locationData.coords.latitude,
+        locationData.coords.longitude
+      );
+
       // Create user location marker
-      const baseMarkers = [
-        {
-          id: 'user-location',
-          position: {
-            lat: locationData.coords.latitude,
-            lng: locationData.coords.longitude,
-          },
-          title: 'You are here',
-          description: 'This is your current location',
-          image: '',
-        },
-      ];
+      const baseMarkers = userPosition
+        ? [
+            {
+              id: 'user-location',
+              position: userPosition,
+              title: 'You are here',
+              description: 'This is your current location',
+              image: '',
+            },
+          ]
+        : [];
 
       // Create shop markers
-      const shopMarkers = shops.map((shop) => ({
-        id: shop.id,
-        position: {
-          lat: shop.location.latitude,
-          lng: shop.location.longitude,
-        },
-        title: shop.name,
-        description: shop.description,
-        image: shop.backgroundImageUrl,
-      }));
+      const shopMarkers = shops.reduce<MarkerData[]>((accumulator, shop) => {
+        const shopCoordinates = getShopCoordinates(shop.location);
+        const shopPosition = shopCoordinates
+          ? getValidMapPosition(shopCoordinates.latitude, shopCoordinates.longitude)
+          : null;
+
+        if (!shopPosition) {
+          return accumulator;
+        }
+
+        accumulator.push({
+          id: shop.id,
+          position: shopPosition,
+          title: shop.name,
+          description: shop.description,
+          image: shop.backgroundImageUrl,
+        });
+
+        return accumulator;
+      }, []);
 
       setMarkers([...baseMarkers, ...shopMarkers]);
 
@@ -97,6 +132,15 @@ const MapScreenWeb = ({ shops = [] }: WebMapScreenProps) => {
     return <Text style={styles.loadingText}>Waiting for location data...</Text>;
   }
 
+  const defaultCenter = getValidMapPosition(
+    locationData.coords.latitude,
+    locationData.coords.longitude
+  );
+
+  if (!defaultCenter) {
+    return <Text style={styles.errorText}>Could not load valid map coordinates.</Text>;
+  }
+
   return (
     <APIProvider
       apiKey={process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || ''}
@@ -104,10 +148,7 @@ const MapScreenWeb = ({ shops = [] }: WebMapScreenProps) => {
     >
       <Map
         style={styles.map}
-        defaultCenter={{
-          lat: locationData.coords.latitude,
-          lng: locationData.coords.longitude,
-        }}
+        defaultCenter={defaultCenter}
         defaultZoom={12}
         mapId={'market'}
         reuseMaps={true}
