@@ -701,6 +701,13 @@ class FirebaseService {
     }
   }
 
+  async getTradeItemsForOrder(orderId: string, shopId: string): Promise<ItemData[]> {
+    return await this.callFunction<{ orderId: string; shopId: string }, ItemData[]>(
+      'getTradeItemsForOrder',
+      { orderId, shopId }
+    );
+  }
+
   async updateItemQuantity(itemId: string, quantityChange: number): Promise<void> {
     try {
       await this.callFunction<
@@ -776,6 +783,31 @@ class FirebaseService {
       console.log('Order status updated:', orderId, status);
     } catch (error) {
       console.error('Error updating order status:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Update trade items on an existing trade order
+   */
+  async updateOrderTradeItems(
+    orderId: string,
+    shopId: string,
+    tradeItems: { itemId: string; name: string; imageUrl?: string }[]
+  ): Promise<void> {
+    console.log('Updating trade items for order:', orderId);
+    try {
+      await this.callFunction<
+        {
+          orderId: string;
+          shopId: string;
+          tradeItems: { itemId: string; name: string; imageUrl?: string }[];
+        },
+        boolean
+      >('updateOrderTradeItems', { orderId, shopId, tradeItems });
+      console.log('Trade items updated:', orderId);
+    } catch (error) {
+      console.error('Error updating trade items:', error);
       throw error;
     }
   }
@@ -1212,6 +1244,144 @@ class FirebaseService {
       'setDefaultPaymentMethod',
       { paymentMethodId }
     );
+  }
+
+  // =========================================================================
+  // PaymentSheet
+  // =========================================================================
+
+  async createPaymentSheetParams(
+    amount: number,
+    platformFee?: number,
+    connectedAccountId?: string,
+    orderId?: string
+  ): Promise<{
+    paymentIntent: string;
+    paymentIntentId: string;
+    ephemeralKey: string;
+    customer: string;
+    publishableKey: string;
+  }> {
+    return await this.callFunction<
+      {
+        amount: number;
+        currency: string;
+        platformFee?: number;
+        connectedAccountId?: string;
+        orderId?: string;
+      },
+      {
+        paymentIntent: string;
+        paymentIntentId: string;
+        ephemeralKey: string;
+        customer: string;
+        publishableKey: string;
+      }
+    >('createPaymentSheetParams', {
+      amount,
+      currency: 'usd',
+      platformFee,
+      connectedAccountId,
+      orderId,
+    });
+  }
+
+  async completeTradePurchase(
+    orderId: string,
+    shopId: string,
+    paymentIntentId: string,
+    contactPhone: string,
+    specialInstructions: string
+  ): Promise<void> {
+    await this.callFunction<
+      {
+        orderId: string;
+        shopId: string;
+        paymentIntentId: string;
+        contactPhone: string;
+        specialInstructions: string;
+      },
+      boolean
+    >('completeTradePurchase', {
+      orderId,
+      shopId,
+      paymentIntentId,
+      contactPhone,
+      specialInstructions,
+    });
+  }
+
+  // =========================================================================
+  // Stripe Connect — Express Accounts
+  // =========================================================================
+
+  async createConnectedAccount(): Promise<{ accountId: string; alreadyExists: boolean }> {
+    return await this.callFunction<
+      { userId: string },
+      { accountId: string; alreadyExists: boolean }
+    >('createConnectedAccount', { userId: '' });
+  }
+
+  async createAccountLink(
+    accountId: string,
+    refreshUrl?: string,
+    returnUrl?: string
+  ): Promise<{ url: string }> {
+    return await this.callFunction<
+      { accountId: string; refreshUrl?: string; returnUrl?: string },
+      { url: string }
+    >('createAccountLink', { accountId, refreshUrl, returnUrl });
+  }
+
+  async getConnectedAccountStatus(accountId: string): Promise<{
+    chargesEnabled: boolean;
+    payoutsEnabled: boolean;
+    detailsSubmitted: boolean;
+    requirements: string[];
+  }> {
+    return await this.callFunction<
+      { accountId: string },
+      {
+        chargesEnabled: boolean;
+        payoutsEnabled: boolean;
+        detailsSubmitted: boolean;
+        requirements: string[];
+      }
+    >('getConnectedAccountStatus', { accountId });
+  }
+
+  async getConnectedBalance(accountId: string): Promise<{
+    available: { amount: number; currency: string }[];
+    pending: { amount: number; currency: string }[];
+  }> {
+    return await this.callFunction<
+      { accountId: string },
+      {
+        available: { amount: number; currency: string }[];
+        pending: { amount: number; currency: string }[];
+      }
+    >('getConnectedBalance', { accountId });
+  }
+
+  async createPayout(
+    accountId: string,
+    amount: number
+  ): Promise<{
+    payoutId: string;
+    amount: number;
+    status: string;
+    arrivalDate: number;
+  }> {
+    return await this.callFunction<
+      { accountId: string; amount: number; currency: string },
+      { payoutId: string; amount: number; status: string; arrivalDate: number }
+    >('createPayout', { accountId, amount, currency: 'usd' });
+  }
+
+  async createLoginLink(accountId: string): Promise<{ url: string }> {
+    return await this.callFunction<{ accountId: string }, { url: string }>('createLoginLink', {
+      accountId,
+    });
   }
 }
 

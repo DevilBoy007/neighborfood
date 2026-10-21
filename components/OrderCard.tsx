@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Platform, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
@@ -86,12 +86,64 @@ const OrderCard = ({ order, onPress }) => {
     console.log('selected order:', orderToSet);
   };
 
+  const handleTradeAction = (targetStatus: string) => {
+    if (!selectedOrder) return;
+
+    if (targetStatus === 'counteroffer') {
+      // Shop owner counteroffers — navigate to Trade screen with buyer's items preselected
+      const preselectedItems = selectedOrder.tradeItems?.map((t) => t.itemId) ?? [];
+      router.push({
+        pathname: '/Trade',
+        params: {
+          shopId: selectedOrder.shopId,
+          orderId: selectedOrder.id,
+          preselectedItems: JSON.stringify(preselectedItems),
+        },
+      });
+      setIsPressed(false);
+      return;
+    }
+
+    if (targetStatus === 'update_trade') {
+      // Buyer updates their trade offer
+      const preselectedItems = selectedOrder.tradeItems?.map((t) => t.itemId) ?? [];
+      router.push({
+        pathname: '/Trade',
+        params: {
+          shopId: selectedOrder.shopId,
+          orderId: selectedOrder.id,
+          preselectedItems: JSON.stringify(preselectedItems),
+        },
+      });
+      setIsPressed(false);
+      return;
+    }
+
+    if (targetStatus === 'buy_instead') {
+      setIsPressed(false);
+      router.push({ pathname: '/Checkout', params: { orderId: selectedOrder.id } });
+      return;
+    }
+
+    // Default: standard status update
+    updateOrderStatus(selectedOrder.id, selectedOrder.shopId, targetStatus as OrderStatus);
+    setIsPressed(false);
+    if (targetStatus === 'preparing') {
+      router.push('/success');
+    }
+  };
+
+  const isTrade = order.status === 'trade';
+
   return (
     <>
       <TouchableOpacity style={styles.orderCard} onPress={onPress}>
         <View style={styles.orderHeader}>
           <Text style={styles.dateText}>{date}</Text>
-          <Ionicons name="chevron-forward" size={24} color="black" />
+          <View style={styles.headerRight}>
+            {isTrade && <Text style={styles.tradeBadge}>✨ Trade</Text>}
+            <Ionicons name="chevron-forward" size={24} color="black" />
+          </View>
         </View>
 
         <View style={styles.orderDetails}>
@@ -101,7 +153,7 @@ const OrderCard = ({ order, onPress }) => {
           </View>
           <View style={styles.detailRow}>
             <Text style={styles.detailLabel}>total:</Text>
-            <Text style={styles.detailValue}>${total}</Text>
+            <Text style={styles.detailValue}>{isTrade ? 'Trade' : `$${total}`}</Text>
           </View>
 
           <View style={styles.detailRow}>
@@ -110,17 +162,28 @@ const OrderCard = ({ order, onPress }) => {
           </View>
 
           <Text style={styles.itemsText}>items: {items}</Text>
+          {isTrade && order.tradeItems?.length > 0 && (
+            <View style={styles.tradeItems}>
+              <Text style={styles.tradeItemsLabel}>offered:</Text>
+              {order.tradeItems.map(
+                (tradeItem: { itemId: string; name: string; imageUrl?: string }) => (
+                  <View key={tradeItem.itemId} style={styles.tradeItem}>
+                    {tradeItem.imageUrl ? (
+                      <Image source={{ uri: tradeItem.imageUrl }} style={styles.tradeItemImage} />
+                    ) : null}
+                    <Text style={styles.itemsText}>{tradeItem.name}</Text>
+                  </View>
+                )
+              )}
+            </View>
+          )}
         </View>
       </TouchableOpacity>
       <View style={styles.statusMetaContainer}>
         {isPressed && (
           <View>
             {buildStatusButtons(order.status, order.shopOwnerView || false, (newStatus) => {
-              updateOrderStatus(selectedOrder.id, selectedOrder.shopId, newStatus as OrderStatus);
-              setIsPressed(false);
-              if (newStatus === 'preparing') {
-                router.push('/success');
-              }
+              handleTradeAction(newStatus);
             }).map((button) => (
               <TouchableOpacity key={button.key} onPress={button.onPress}>
                 <View style={{ backgroundColor: button.color }}>
@@ -173,6 +236,17 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     fontFamily: 'TextMeOne',
   },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  tradeBadge: {
+    fontSize: 12,
+    fontFamily: 'TextMeOne',
+    color: '#E040FB',
+    fontWeight: '600',
+  },
   dateText: {
     fontSize: Platform.OS === 'web' ? 30 : 24,
     fontWeight: 'bold',
@@ -203,6 +277,24 @@ const styles = StyleSheet.create({
     color: '#999',
     marginTop: 8,
     fontFamily: 'TextMeOne',
+  },
+  tradeItems: {
+    marginTop: 8,
+  },
+  tradeItemsLabel: {
+    fontSize: Platform.OS === 'web' ? 18 : 12,
+    color: '#999',
+    fontFamily: 'TextMeOne',
+  },
+  tradeItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  tradeItemImage: {
+    width: 32,
+    height: 32,
+    borderRadius: 6,
   },
   statusMetaContainer: {
     zIndex: -2,

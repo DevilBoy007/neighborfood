@@ -43,14 +43,14 @@ if (Platform.OS !== 'web') {
 }
 
 // Conditionally import DatePicker
-let DatePicker;
+let DateTimePicker;
 if (Platform.OS !== 'web') {
-  DatePicker = require('react-native-date-picker').default;
+  DateTimePicker = require('@react-native-community/datetimepicker').default;
 } else {
   // Web doesn't need the native DatePicker component
   const WebDatePicker = () => null;
   WebDatePicker.displayName = 'WebDatePicker';
-  DatePicker = WebDatePicker;
+  DateTimePicker = WebDatePicker;
 }
 /* eslint-enable @typescript-eslint/no-require-imports */
 const RegisterScreen = () => {
@@ -407,7 +407,7 @@ const RegisterScreen = () => {
       );
     }
 
-    if (Platform.OS !== 'web' && DatePicker) {
+    if (Platform.OS !== 'web' && DateTimePicker) {
       return (
         <View style={[styles.input, styles.flex1, styles.thin]}>
           <Button
@@ -416,13 +416,17 @@ const RegisterScreen = () => {
             color={formData.dob ? '#00bfff' : '#999'}
           />
           {showDatePicker && (
-            <DatePicker
-              modal
-              open={showDatePicker}
-              date={formData.dob ? new Date(formData.dob) : new Date()}
+            <DateTimePicker
+              value={formData.dob ? new Date(formData.dob) : new Date()}
               mode="date"
-              onConfirm={handleDateChange}
-              onCancel={() => setShowDatePicker(false)}
+              display="default"
+              onChange={(event, selectedDate) => {
+                // Android dismisses automatically; iOS inline picker stays visible
+                setShowDatePicker(Platform.OS === 'ios');
+                if (selectedDate) {
+                  handleDateChange(selectedDate);
+                }
+              }}
             />
           )}
         </View>
