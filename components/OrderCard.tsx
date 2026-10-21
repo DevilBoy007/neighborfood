@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Platform, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import Toast from 'react-native-toast-message';
@@ -92,7 +92,10 @@ const OrderCard = ({ order, onPress }) => {
       <TouchableOpacity style={styles.orderCard} onPress={onPress}>
         <View style={styles.orderHeader}>
           <Text style={styles.dateText}>{date}</Text>
-          <Ionicons name="chevron-forward" size={24} color="black" />
+          <View style={styles.headerRight}>
+            {order.status === 'trade' && <Text style={styles.tradeBadge}>✨ Trade</Text>}
+            <Ionicons name="chevron-forward" size={24} color="black" />
+          </View>
         </View>
 
         <View style={styles.orderDetails}>
@@ -111,6 +114,21 @@ const OrderCard = ({ order, onPress }) => {
           </View>
 
           <Text style={styles.itemsText}>items: {items}</Text>
+          {order.status === 'trade' && order.tradeItems?.length > 0 && (
+            <View style={styles.tradeItems}>
+              <Text style={styles.tradeItemsLabel}>offered:</Text>
+              {order.tradeItems.map(
+                (tradeItem: { itemId: string; name: string; imageUrl?: string }) => (
+                  <View key={tradeItem.itemId} style={styles.tradeItem}>
+                    {tradeItem.imageUrl ? (
+                      <Image source={{ uri: tradeItem.imageUrl }} style={styles.tradeItemImage} />
+                    ) : null}
+                    <Text style={styles.itemsText}>{tradeItem.name}</Text>
+                  </View>
+                )
+              )}
+            </View>
+          )}
         </View>
       </TouchableOpacity>
       <View style={styles.statusMetaContainer}>
@@ -118,6 +136,27 @@ const OrderCard = ({ order, onPress }) => {
           <View>
             {buildStatusButtons(order.status, order.shopOwnerView || false, async (newStatus) => {
               if (!selectedOrder) return;
+              if (newStatus === 'counteroffer' || newStatus === 'update_trade') {
+                const preselectedItems = selectedOrder.tradeItems?.map((item) => item.itemId) ?? [];
+                router.push({
+                  pathname: '/Trade',
+                  params: {
+                    shopId: selectedOrder.shopId,
+                    orderId: selectedOrder.id,
+                    preselectedItems: JSON.stringify(preselectedItems),
+                  },
+                });
+                setIsPressed(false);
+                return;
+              }
+              if (newStatus === 'buy_instead') {
+                router.push({
+                  pathname: '/Checkout',
+                  params: { orderId: selectedOrder.id },
+                });
+                setIsPressed(false);
+                return;
+              }
               const orderToUpdate = selectedOrder;
               try {
                 await updateOrderStatus(
@@ -191,6 +230,17 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     fontFamily: 'TextMeOne',
   },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  tradeBadge: {
+    fontSize: 12,
+    fontFamily: 'TextMeOne',
+    color: '#E040FB',
+    fontWeight: '600',
+  },
   dateText: {
     fontSize: Platform.OS === 'web' ? 30 : 24,
     fontWeight: 'bold',
@@ -221,6 +271,24 @@ const styles = StyleSheet.create({
     color: '#999',
     marginTop: 8,
     fontFamily: 'TextMeOne',
+  },
+  tradeItems: {
+    marginTop: 8,
+  },
+  tradeItemsLabel: {
+    fontSize: Platform.OS === 'web' ? 18 : 12,
+    color: '#999',
+    fontFamily: 'TextMeOne',
+  },
+  tradeItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  tradeItemImage: {
+    width: 32,
+    height: 32,
+    borderRadius: 6,
   },
   statusMetaContainer: {
     zIndex: -2,

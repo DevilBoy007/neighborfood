@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   View,
   Text,
@@ -10,7 +10,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import Toast from 'react-native-toast-message';
 import { v4 as uuidv4 } from 'uuid';
 import { useCart, useUser, useOrder, useMessage } from '@/store/reduxHooks';
@@ -35,9 +35,10 @@ type DeliveryOption = 'pickup' | 'delivery';
 
 const Checkout = () => {
   const router = useRouter();
-  const { shopCarts, clearCart, calculateTotalSubtotal } = useCart();
+  const params = useLocalSearchParams<{ orderId?: string }>();
+  const { shopCarts: cartShopCarts, clearCart, calculateTotalSubtotal } = useCart();
   const { userData } = useUser();
-  const { refreshOrders } = useOrder();
+  const { refreshOrders, selectedOrder, placedOrders } = useOrder();
   const { createOrGetThread } = useMessage();
   const colors = useAppColors();
   const { initPaymentSheet, presentPaymentSheet } = useStripeHook();
@@ -51,7 +52,34 @@ const Checkout = () => {
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
   const [paymentSheetReady, setPaymentSheetReady] = useState(false);
   const [initializingSheet, setInitializingSheet] = useState(false);
-  const [checkoutOrderId] = useState(() => uuidv4());
+  const tradeOrderId = typeof params.orderId === 'string' ? params.orderId : undefined;
+  const existingTradeOrder = tradeOrderId
+    ? [selectedOrder, ...placedOrders].find(
+        (order) =>
+          order?.id === tradeOrderId && order.status === 'trade' && order.userId === userData?.uid
+      )
+    : undefined;
+  const [generatedCheckoutOrderId] = useState(() => uuidv4());
+  const checkoutOrderId = tradeOrderId || generatedCheckoutOrderId;
+  const shopCarts = useMemo(
+    () =>
+      tradeOrderId
+        ? existingTradeOrder
+          ? [
+              {
+                shopId: existingTradeOrder.shopId,
+                shopName: existingTradeOrder.shopName,
+                shopPhotoURL: existingTradeOrder.shopPhotoURL,
+                allowPickup: true,
+                localDelivery: false,
+                items: existingTradeOrder.items,
+                subtotal: existingTradeOrder.subtotal,
+              },
+            ]
+          : []
+        : cartShopCarts,
+    [tradeOrderId, existingTradeOrder, cartShopCarts]
+  );
   const paymentIntentIdsRef = useRef<Record<string, string>>({});
   const paidPaymentIntentIdsRef = useRef<Record<string, boolean>>({});
   const initializationRef = useRef<Promise<void> | null>(null);
@@ -61,7 +89,7 @@ const Checkout = () => {
   // Track shop owner UIDs for escrow metadata
   const [shopOwnerIds, setShopOwnerIds] = useState<Record<string, string>>({});
 
-  const subtotal = calculateTotalSubtotal();
+  const subtotal = existingTradeOrder ? existingTradeOrder.subtotal : calculateTotalSubtotal();
   const deliveryFee =
     Object.values(shopDeliveryOptions).filter((option) => option === 'delivery').length * 3.99;
   const tax = shopCarts.reduce(
@@ -353,6 +381,45 @@ const Checkout = () => {
     setIsPlacingOrder(true);
     const completedPayments: string[] = [];
     try {
+      if (existingTradeOrder) {
+        const shopId = existingTradeOrder.shopId;
+        if (!paymentSheetIsCurrent) await initializePaymentSheet();
+        const paymentIntentId = paymentIntentIdsRef.current[shopId];
+        if (!paymentIntentId) {
+          throw new Error('Payment is still being prepared. Please try again.');
+        }
+        const { error } = paidPaymentIntentIdsRef.current[shopId]
+          ? { error: undefined }
+          : await presentPaymentSheet();
+        if (error) {
+          if (error.code !== 'Canceled') {
+            Toast.show({
+              type: 'error',
+              text1: 'Payment Failed',
+              text2: error.message || 'Your payment could not be processed.',
+              visibilityTime: 3000,
+            });
+          }
+          setPaymentSheetReady(false);
+          readyPaymentKeyRef.current = null;
+          delete paymentIntentIdsRef.current[shopId];
+          delete paidPaymentIntentIdsRef.current[shopId];
+          void initializePaymentSheet();
+          return;
+        }
+        await firebaseService.completeTradePurchase(existingTradeOrder.id, shopId, paymentIntentId);
+        await refreshOrders(userData.uid);
+        Toast.show({
+          type: 'success',
+          text1: 'Order Placed!',
+          text2: 'Your trade was converted to a paid order.',
+          visibilityTime: 3000,
+        });
+        router.navigate('/success');
+        setTimeout(() => router.navigate('/(home)/(orders)'), IS_WEB ? 2100 : 2000);
+        return;
+      }
+
       const getOrderData = (shopCart: (typeof shopCarts)[number]) => {
         const deliveryOption = shopDeliveryOptions[shopCart.shopId];
         const shopPlatformFee = Math.min(shopCart.subtotal * 0.1, 1);
@@ -612,7 +679,9 @@ const Checkout = () => {
           <Text style={[styles.headerTitle, { color: colors.textOnPrimary }]}>checkout</Text>
         </View>
         <View style={styles.emptyContainer}>
-          <Text style={[styles.emptyText, { color: colors.textMuted }]}>Your cart is empty</Text>
+          <Text style={[styles.emptyText, { color: colors.textMuted }]}>
+            {tradeOrderId ? 'This trade order is no longer available.' : 'Your cart is empty'}
+          </Text>
           <SoundTouchableOpacity
             style={[styles.continueShoppingButton, { backgroundColor: colors.buttonPrimary }]}
             onPress={() => router.navigate('/Market')}

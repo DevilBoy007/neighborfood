@@ -85,6 +85,7 @@ const OrdersScreen = () => {
       shops: [order.shopName],
       items: order.items.length,
       status: order.status,
+      tradeItems: order.tradeItems,
       originalOrder: order,
       shopOwnerView: isReceivedOrder,
       orderType: isReceivedOrder ? 'received' : 'placed',

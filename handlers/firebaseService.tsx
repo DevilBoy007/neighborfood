@@ -733,6 +733,11 @@ class FirebaseService {
 
   async createOrder(orderData: object): Promise<string> {
     try {
+      if ((orderData as { status?: string }).status === 'trade') {
+        return await this.callFunction<{ orderData: object }, string>('createTradeOrder', {
+          orderData,
+        });
+      }
       const result = await this.callFunction<{ orderData: object }, string>('createOrder', {
         orderData,
       });
@@ -778,6 +783,35 @@ class FirebaseService {
       console.error('Error updating order status:', error);
       throw error;
     }
+  }
+
+  async getTradeItemsForOrder(orderId: string, shopId: string): Promise<ItemData[]> {
+    return await this.callFunction<{ orderId: string; shopId: string }, ItemData[]>(
+      'getTradeItemsForOrder',
+      { orderId, shopId }
+    );
+  }
+
+  async updateOrderTradeItems(
+    orderId: string,
+    shopId: string,
+    tradeItems: { itemId: string; name?: string; imageUrl?: string }[]
+  ): Promise<void> {
+    await this.callFunction<
+      { orderId: string; shopId: string; tradeItems: { itemId: string }[] },
+      boolean
+    >('updateOrderTradeItems', { orderId, shopId, tradeItems });
+  }
+
+  async completeTradePurchase(
+    orderId: string,
+    shopId: string,
+    paymentIntentId: string
+  ): Promise<void> {
+    await this.callFunction<{ orderId: string; shopId: string; paymentIntentId: string }, boolean>(
+      'completeTradePurchase',
+      { orderId, shopId, paymentIntentId }
+    );
   }
 
   /**
