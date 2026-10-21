@@ -299,7 +299,7 @@ export const useOrder = () => {
 
   const updateOrderStatus = useCallback(
     async (orderId: string, shopId: string, status: OrderStatus) => {
-      await dispatch(updateOrderStatusAsync({ orderId, shopId, status }));
+      await dispatch(updateOrderStatusAsync({ orderId, shopId, status })).unwrap();
     },
     [dispatch]
   );

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -17,13 +17,14 @@ import { useCart, useUser, useOrder, useMessage } from '@/store/reduxHooks';
 import firebaseService from '@/handlers/firebaseService';
 import { SoundTouchableOpacity } from '@/components/SoundTouchableOpacity';
 import { useAppColors } from '@/hooks/useAppColors';
+const IS_WEB = Platform.OS === 'web';
 
 // Conditionally import Stripe PaymentSheet hooks (native only)
 let useStripeHook: () => {
   initPaymentSheet: any;
   presentPaymentSheet: any;
 } = () => ({ initPaymentSheet: null, presentPaymentSheet: null });
-if (Platform.OS !== 'web') {
+if (!IS_WEB) {
   /* eslint-disable @typescript-eslint/no-require-imports */
   const StripeModule = require('@stripe/stripe-react-native');
   useStripeHook = StripeModule.useStripe;
@@ -50,16 +51,27 @@ const Checkout = () => {
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
   const [paymentSheetReady, setPaymentSheetReady] = useState(false);
   const [initializingSheet, setInitializingSheet] = useState(false);
-  // Track PaymentIntent IDs per shop for escrow — populated during PaymentSheet init/present
-  const [shopPaymentIntentIds, setShopPaymentIntentIds] = useState<Record<string, string>>({});
+  const [checkoutOrderId] = useState(() => uuidv4());
+  const paymentIntentIdsRef = useRef<Record<string, string>>({});
+  const paidPaymentIntentIdsRef = useRef<Record<string, boolean>>({});
+  const initializationRef = useRef<Promise<void> | null>(null);
+  const initializationKeyRef = useRef<string | null>(null);
+  const readyPaymentKeyRef = useRef<string | null>(null);
+  const initializationVersionRef = useRef(0);
   // Track shop owner UIDs for escrow metadata
   const [shopOwnerIds, setShopOwnerIds] = useState<Record<string, string>>({});
 
   const subtotal = calculateTotalSubtotal();
   const deliveryFee =
     Object.values(shopDeliveryOptions).filter((option) => option === 'delivery').length * 3.99;
-  const tax = subtotal * 0.08; // 8% tax
-  const platformFee = Math.min(subtotal * 0.1, 1); // lesser of 10% or $1
+  const tax = shopCarts.reduce(
+    (sum, shopCart) => sum + Math.round(shopCart.subtotal * 0.08 * 100) / 100,
+    0
+  );
+  const platformFee = shopCarts.reduce(
+    (sum, shopCart) => sum + Math.min(Math.round(shopCart.subtotal * 0.1 * 100) / 100, 1),
+    0
+  );
   const total = subtotal + deliveryFee + tax + platformFee;
 
   // Look up shop owner UIDs for escrow metadata (sellerId passed to createPaymentSheetParams)
@@ -88,29 +100,61 @@ const Checkout = () => {
   // Initialize PaymentSheet (escrow model — platform charge, no stripeAccount header)
   // Pre-initializes for single-shop orders; multi-shop orders init per-shop during checkout.
   const initializePaymentSheet = useCallback(async () => {
-    if (!userData?.uid || Platform.OS === 'web' || total <= 0) return;
+    if (!userData?.uid || IS_WEB || total <= 0) return;
+    if (shopCarts.length !== 1) {
+      setPaymentSheetReady(shopCarts.length > 1);
+      return;
+    }
 
-    // For single-shop orders, pre-initialize PaymentSheet
-    if (shopCarts.length === 1) {
-      try {
-        setInitializingSheet(true);
-        const shopCart = shopCarts[0];
-        const shopPlatformFee = Math.min(shopCart.subtotal * 0.1, 1);
-        const deliveryOption = shopDeliveryOptions[shopCart.shopId] || 'pickup';
-        const shopTotal =
-          shopCart.subtotal +
-          shopCart.subtotal * 0.08 +
-          (deliveryOption === 'delivery' ? 3.99 : 0) +
-          shopPlatformFee;
-        const amountInCents = Math.round(shopTotal * 100);
-        const sellerId = shopOwnerIds[shopCart.shopId] || '';
+    const shopCart = shopCarts[0];
+    const deliveryOption = shopDeliveryOptions[shopCart.shopId];
+    if (
+      !deliveryOption ||
+      !contactPhone.trim() ||
+      (deliveryOption === 'delivery' && !deliveryAddress.trim())
+    ) {
+      setPaymentSheetReady(false);
+      return;
+    }
 
-        const { paymentIntent, paymentIntentId, ephemeralKey, customer } =
-          await firebaseService.createPaymentSheetParams(amountInCents, shopCart.shopId, sellerId);
+    const paymentKey = JSON.stringify([
+      shopCart.shopId,
+      shopCart.items.map(({ itemId, quantity }) => [itemId, quantity]),
+      deliveryOption,
+      deliveryAddress,
+      contactPhone,
+      specialInstructions,
+    ]);
+    if (readyPaymentKeyRef.current === paymentKey && paymentIntentIdsRef.current[shopCart.shopId]) {
+      setPaymentSheetReady(true);
+      return;
+    }
+    if (initializationRef.current && initializationKeyRef.current === paymentKey) {
+      await initializationRef.current;
+      return;
+    }
 
-        // Store the paymentIntentId so it can be saved on the order
-        setShopPaymentIntentIds((prev) => ({ ...prev, [shopCart.shopId]: paymentIntentId }));
+    const version = ++initializationVersionRef.current;
+    setPaymentSheetReady(false);
+    setInitializingSheet(true);
+    const previousInitialization = initializationRef.current;
+    const initialization = (async () => {
+      if (previousInitialization) await previousInitialization;
+      if (version !== initializationVersionRef.current) return;
 
+      const { paymentIntent, paymentIntentId, ephemeralKey, customer, alreadyPaid } =
+        await firebaseService.createPaymentSheetParams(
+          checkoutOrderId,
+          shopCart.shopId,
+          shopCart.items.map(({ itemId, quantity }) => ({ itemId, quantity })),
+          deliveryOption,
+          deliveryAddress,
+          contactPhone,
+          specialInstructions
+        );
+      if (version !== initializationVersionRef.current) return;
+
+      if (!alreadyPaid) {
         const { error } = await initPaymentSheet({
           merchantDisplayName: 'Neighborfood',
           customerId: customer,
@@ -118,12 +162,14 @@ const Checkout = () => {
           paymentIntentClientSecret: paymentIntent,
           allowsDelayedPaymentMethods: false,
           returnURL: 'neighborfood://stripe-redirect',
-          applePay: {
-            merchantCountryCode: 'US',
-          },
+          applePay: { merchantCountryCode: 'US' },
           googlePay: {
             merchantCountryCode: 'US',
-            testEnv: true,
+            testEnv: (
+              process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY ||
+              process.env.STRIPE_TEST_KEY ||
+              ''
+            ).startsWith('pk_test_'),
           },
           defaultBillingDetails: {
             name:
@@ -132,22 +178,45 @@ const Checkout = () => {
             phone: userData?.phone || undefined,
           },
         });
-
-        if (!error) {
-          setPaymentSheetReady(true);
-        } else {
+        if (version !== initializationVersionRef.current) return;
+        if (error) {
           console.error('PaymentSheet init error:', error);
+          return;
         }
-      } catch (error) {
-        console.error('Error initializing payment sheet:', error);
-      } finally {
+      }
+
+      paymentIntentIdsRef.current = {
+        ...paymentIntentIdsRef.current,
+        [shopCart.shopId]: paymentIntentId,
+      };
+      paidPaymentIntentIdsRef.current[shopCart.shopId] = alreadyPaid;
+      readyPaymentKeyRef.current = paymentKey;
+      setPaymentSheetReady(true);
+    })();
+    initializationRef.current = initialization;
+    initializationKeyRef.current = paymentKey;
+    try {
+      await initialization;
+    } catch (error) {
+      console.error('Error initializing payment sheet:', error);
+    } finally {
+      if (initializationRef.current === initialization) {
+        initializationRef.current = null;
+        initializationKeyRef.current = null;
         setInitializingSheet(false);
       }
-    } else {
-      // Multi-shop: mark as ready, PaymentSheet will be initialized per-shop during checkout
-      setPaymentSheetReady(true);
     }
-  }, [userData, total, initPaymentSheet, shopCarts, shopDeliveryOptions, shopOwnerIds]);
+  }, [
+    userData,
+    total,
+    initPaymentSheet,
+    shopCarts,
+    shopDeliveryOptions,
+    checkoutOrderId,
+    deliveryAddress,
+    contactPhone,
+    specialInstructions,
+  ]);
 
   useEffect(() => {
     if (shopCarts.length > 0 && total > 0) {
@@ -178,6 +247,9 @@ const Checkout = () => {
   }, [shopCarts, userData]);
 
   const updateShopDeliveryOption = (shopId: string, option: DeliveryOption) => {
+    if (shopDeliveryOptions[shopId] === option) return;
+    initializationVersionRef.current += 1;
+    setPaymentSheetReady(false);
     setShopDeliveryOptions((prev) => ({
       ...prev,
       [shopId]: option,
@@ -187,8 +259,34 @@ const Checkout = () => {
   const hasDeliveryOrders = Object.values(shopDeliveryOptions).some(
     (option) => option === 'delivery'
   );
+  const singleShopPaymentKey =
+    shopCarts.length === 1 && shopDeliveryOptions[shopCarts[0].shopId]
+      ? JSON.stringify([
+          shopCarts[0].shopId,
+          shopCarts[0].items.map(({ itemId, quantity }) => [itemId, quantity]),
+          shopDeliveryOptions[shopCarts[0].shopId],
+          deliveryAddress,
+          contactPhone,
+          specialInstructions,
+        ])
+      : null;
+  const paymentSheetIsCurrent =
+    paymentSheetReady &&
+    singleShopPaymentKey !== null &&
+    readyPaymentKeyRef.current === singleShopPaymentKey &&
+    Boolean(paymentIntentIdsRef.current[shopCarts[0]?.shopId]);
 
   const handlePlaceOrder = async () => {
+    if (IS_WEB) {
+      Toast.show({
+        type: 'error',
+        text1: 'Payments unavailable',
+        text2: 'Checkout is not available on web yet. Please use the mobile app.',
+        visibilityTime: 3000,
+      });
+      return;
+    }
+
     if (!userData) {
       Toast.show({
         type: 'error',
@@ -232,105 +330,155 @@ const Checkout = () => {
     }
 
     setIsPlacingOrder(true);
-    const orderId = uuidv4();
     try {
-      // For native platforms, process payment per shop (escrow — platform charge)
-      if (Platform.OS !== 'web') {
-        if (shopCarts.length === 1) {
-          // Single shop — use the pre-initialized PaymentSheet
-          if (!paymentSheetReady) {
-            await initializePaymentSheet();
+      const completedPayments: string[] = [];
+      const getOrderData = (shopCart: (typeof shopCarts)[number]) => {
+        const deliveryOption = shopDeliveryOptions[shopCart.shopId];
+        const shopPlatformFee = Math.min(shopCart.subtotal * 0.1, 1);
+        return {
+          id: checkoutOrderId,
+          userId: userData.uid,
+          shopId: shopCart.shopId,
+          shopName: shopCart.shopName,
+          shopPhotoURL: shopCart.shopPhotoURL || '',
+          items: shopCart.items.map((item) => ({ ...item })),
+          subtotal: shopCart.subtotal,
+          tax: shopCart.subtotal * 0.08,
+          deliveryFee: deliveryOption === 'delivery' ? 3.99 : 0,
+          platformFee: shopPlatformFee,
+          tip: 0,
+          total:
+            shopCart.subtotal +
+            shopCart.subtotal * 0.08 +
+            (deliveryOption === 'delivery' ? 3.99 : 0) +
+            shopPlatformFee,
+          status: 'pending' as const,
+          estimatedDeliveryTime: new Date(Date.now() + 45 * 60 * 1000),
+          paymentMethod: 'card',
+          paymentIntentId: '',
+          escrowStatus: 'held',
+          deliveryAddress: deliveryOption === 'delivery' ? deliveryAddress : 'Pickup',
+          contactPhone,
+          deliveryOption,
+          specialInstructions,
+        };
+      };
+      const createdOrders: ReturnType<typeof getOrderData>[] = [];
+
+      const createPaidOrder = async (
+        shopCart: (typeof shopCarts)[number],
+        paymentIntentId: string
+      ) => {
+        try {
+          await firebaseService.createOrder({ paymentIntentId });
+        } catch (error) {
+          if (shopCarts.length === 1) {
+            readyPaymentKeyRef.current = null;
+            setPaymentSheetReady(false);
+            void initializePaymentSheet();
+          }
+          throw error;
+        }
+        completedPayments.push(shopCart.shopId);
+        createdOrders.push({ ...getOrderData(shopCart), paymentIntentId });
+      };
+
+      if (shopCarts.length === 1) {
+        const shopCart = shopCarts[0];
+        if (!paymentSheetIsCurrent) await initializePaymentSheet();
+        const paymentIntentId = paymentIntentIdsRef.current[shopCart.shopId];
+        if (!paymentIntentId) {
+          throw new Error('Payment is still being prepared. Please try again.');
+        }
+        const { error } = paidPaymentIntentIdsRef.current[shopCart.shopId]
+          ? { error: undefined }
+          : await presentPaymentSheet();
+        if (error) {
+          if (error.code !== 'Canceled') {
+            Toast.show({
+              type: 'error',
+              text1: 'Payment Failed',
+              text2: error.message || 'Your payment could not be processed.',
+              visibilityTime: 3000,
+            });
+          }
+          setPaymentSheetReady(false);
+          readyPaymentKeyRef.current = null;
+          delete paymentIntentIdsRef.current[shopCart.shopId];
+          delete paidPaymentIntentIdsRef.current[shopCart.shopId];
+          void initializePaymentSheet();
+          return;
+        }
+        await createPaidOrder(shopCart, paymentIntentId);
+      } else {
+        for (const shopCart of shopCarts) {
+          const deliveryOption = shopDeliveryOptions[shopCart.shopId];
+          const { paymentIntent, paymentIntentId, ephemeralKey, customer, alreadyPaid } =
+            await firebaseService.createPaymentSheetParams(
+              checkoutOrderId,
+              shopCart.shopId,
+              shopCart.items.map(({ itemId, quantity }) => ({ itemId, quantity })),
+              deliveryOption,
+              deliveryAddress,
+              contactPhone,
+              specialInstructions
+            );
+
+          if (alreadyPaid) {
+            await createPaidOrder(shopCart, paymentIntentId);
+            continue;
+          }
+
+          const { error: initError } = await initPaymentSheet({
+            merchantDisplayName: 'Neighborfood',
+            customerId: customer,
+            customerEphemeralKeySecret: ephemeralKey,
+            paymentIntentClientSecret: paymentIntent,
+            allowsDelayedPaymentMethods: false,
+            returnURL: 'neighborfood://stripe-redirect',
+            applePay: { merchantCountryCode: 'US' },
+            googlePay: {
+              merchantCountryCode: 'US',
+              testEnv: (
+                process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY ||
+                process.env.STRIPE_TEST_KEY ||
+                ''
+              ).startsWith('pk_test_'),
+            },
+            defaultBillingDetails: {
+              name:
+                userData?.first && userData?.last
+                  ? `${userData.first} ${userData.last}`
+                  : undefined,
+              email: userData?.email || undefined,
+              phone: userData?.phone || undefined,
+            },
+          });
+          if (initError) {
+            throw new Error(`Failed to prepare payment for ${shopCart.shopName}.`);
           }
 
           const { error } = await presentPaymentSheet();
-
           if (error) {
             if (error.code !== 'Canceled') {
               Toast.show({
                 type: 'error',
                 text1: 'Payment Failed',
-                text2: error.message || 'Your payment could not be processed.',
+                text2:
+                  `${error.message || `Payment failed for ${shopCart.shopName}.`} ` +
+                  (completedPayments.length
+                    ? 'Orders from shops already paid remain placed; you can retry the remaining shops.'
+                    : ''),
                 visibilityTime: 3000,
               });
             }
-            setIsPlacingOrder(false);
-            setPaymentSheetReady(false);
-            initializePaymentSheet();
             return;
           }
-        } else {
-          // Multi-shop — present PaymentSheet once per shop (one escrow PI per shop)
-          const newPaymentIntentIds: Record<string, string> = {};
-          for (const shopCart of shopCarts) {
-            const shopPlatformFee = Math.min(shopCart.subtotal * 0.1, 1);
-            const deliveryOption = shopDeliveryOptions[shopCart.shopId] || 'pickup';
-            const shopTotal =
-              shopCart.subtotal +
-              shopCart.subtotal * 0.08 +
-              (deliveryOption === 'delivery' ? 3.99 : 0) +
-              shopPlatformFee;
-            const amountInCents = Math.round(shopTotal * 100);
-            const sellerId = shopOwnerIds[shopCart.shopId] || '';
 
-            const { paymentIntent, paymentIntentId, ephemeralKey, customer } =
-              await firebaseService.createPaymentSheetParams(
-                amountInCents,
-                shopCart.shopId,
-                sellerId
-              );
-
-            newPaymentIntentIds[shopCart.shopId] = paymentIntentId;
-
-            const { error: initError } = await initPaymentSheet({
-              merchantDisplayName: 'Neighborfood',
-              customerId: customer,
-              customerEphemeralKeySecret: ephemeralKey,
-              paymentIntentClientSecret: paymentIntent,
-              allowsDelayedPaymentMethods: false,
-              returnURL: 'neighborfood://stripe-redirect',
-              applePay: { merchantCountryCode: 'US' },
-              googlePay: { merchantCountryCode: 'US', testEnv: true },
-              defaultBillingDetails: {
-                name:
-                  userData?.first && userData?.last
-                    ? `${userData.first} ${userData.last}`
-                    : undefined,
-                email: userData?.email || undefined,
-                phone: userData?.phone || undefined,
-              },
-            });
-
-            if (initError) {
-              Toast.show({
-                type: 'error',
-                text1: 'Payment Error',
-                text2: `Failed to prepare payment for ${shopCart.shopName}.`,
-                visibilityTime: 3000,
-              });
-              setIsPlacingOrder(false);
-              return;
-            }
-
-            const { error } = await presentPaymentSheet();
-
-            if (error) {
-              if (error.code !== 'Canceled') {
-                Toast.show({
-                  type: 'error',
-                  text1: 'Payment Failed',
-                  text2: error.message || `Payment failed for ${shopCart.shopName}.`,
-                  visibilityTime: 3000,
-                });
-              }
-              setIsPlacingOrder(false);
-              return;
-            }
-          }
-          setShopPaymentIntentIds((prev) => ({ ...prev, ...newPaymentIntentIds }));
+          await createPaidOrder(shopCart, paymentIntentId);
         }
       }
 
-      // Payment successful (or web fallback) — create orders in Firestore
       // shopOwnerMap is already populated via shopOwnerIds state; use it for threads too.
       const shopOwnerMap = new Map<string, string>(Object.entries(shopOwnerIds));
 
@@ -345,48 +493,6 @@ const Checkout = () => {
             }
           })
       );
-
-      // Create orders for each shop using the dedicated createOrder function
-      const orderPromises = shopCarts.map(async (shopCart) => {
-        const deliveryOption = shopDeliveryOptions[shopCart.shopId];
-        const shopPlatformFee = Math.min(shopCart.subtotal * 0.1, 1);
-        const orderData = {
-          id: orderId,
-          userId: userData.uid,
-          shopId: shopCart.shopId,
-          shopName: shopCart.shopName,
-          shopPhotoURL: shopCart.shopPhotoURL || '',
-          items: shopCart.items.map((item) => ({
-            ...item,
-          })),
-          subtotal: shopCart.subtotal,
-          tax: shopCart.subtotal * 0.08,
-          deliveryFee: deliveryOption === 'delivery' ? 3.99 : 0,
-          platformFee: shopPlatformFee,
-          tip: 0, // TODO: implement later
-          total:
-            shopCart.subtotal +
-            shopCart.subtotal * 0.08 +
-            (deliveryOption === 'delivery' ? 3.99 : 0) +
-            shopPlatformFee,
-          status: 'pending' as const,
-          estimatedDeliveryTime: new Date(Date.now() + 45 * 60 * 1000), // 45 minutes from now
-          paymentMethod: 'card',
-          // Escrow tracking fields
-          paymentIntentId: shopPaymentIntentIds[shopCart.shopId] || null,
-          escrowStatus: shopPaymentIntentIds[shopCart.shopId] ? 'held' : null,
-          deliveryAddress: deliveryOption === 'delivery' ? deliveryAddress : 'Pickup',
-          contactPhone,
-          deliveryOption,
-          specialInstructions,
-        };
-
-        await firebaseService.createOrder(orderData);
-
-        return orderData;
-      });
-
-      const createdOrders = await Promise.all(orderPromises);
 
       // Create message threads with shop owners (one per unique owner)
       // Group orders by owner to avoid creating duplicate threads
@@ -454,7 +560,7 @@ const Checkout = () => {
             router.navigate('/(home)/(orders)');
           }, 100);
         },
-        Platform.OS === 'web' ? 2100 : 2000
+        IS_WEB ? 2100 : 2000
       );
     } catch (error) {
       console.error('Error placing order:', error);
@@ -660,7 +766,7 @@ const Checkout = () => {
         </View>
 
         {/* Payment — handled by PaymentSheet */}
-        {Platform.OS !== 'web' && (
+        {!IS_WEB && (
           <View style={[styles.section, { backgroundColor: colors.surface }]}>
             <Text style={[styles.sectionTitle, { color: colors.text }]}>Payment</Text>
             <View style={styles.paymentSheetInfo}>
@@ -738,21 +844,31 @@ const Checkout = () => {
           style={[
             styles.placeOrderButton,
             { backgroundColor: colors.buttonPrimary },
-            (isPlacingOrder || (Platform.OS !== 'web' && !paymentSheetReady)) && {
+            (isPlacingOrder ||
+              initializingSheet ||
+              IS_WEB ||
+              (shopCarts.length === 1 && !paymentSheetIsCurrent)) && {
               opacity: 0.7,
               backgroundColor: colors.buttonDisabled,
             },
           ]}
           onPress={handlePlaceOrder}
-          disabled={isPlacingOrder || (Platform.OS !== 'web' && !paymentSheetReady)}
+          disabled={
+            isPlacingOrder ||
+            initializingSheet ||
+            IS_WEB ||
+            (shopCarts.length === 1 && !paymentSheetIsCurrent)
+          }
           soundType="click"
         >
           <Text style={[styles.placeOrderText, { color: colors.buttonText }]}>
             {isPlacingOrder
               ? 'Processing Payment...'
-              : initializingSheet
-                ? 'Preparing Checkout...'
-                : `Pay $${total.toFixed(2)}`}
+              : IS_WEB
+                ? 'Mobile checkout required'
+                : initializingSheet
+                  ? 'Preparing Checkout...'
+                  : `Pay $${total.toFixed(2)}`}
           </Text>
         </SoundTouchableOpacity>
       </View>

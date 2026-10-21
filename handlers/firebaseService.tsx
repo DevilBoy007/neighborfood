@@ -1219,30 +1219,47 @@ class FirebaseService {
   // =========================================================================
 
   async createPaymentSheetParams(
-    amount: number,
+    orderId: string,
     shopId: string,
-    sellerId: string
+    items: { itemId: string; quantity: number }[],
+    deliveryOption: 'pickup' | 'delivery',
+    deliveryAddress: string,
+    contactPhone: string,
+    specialInstructions: string
   ): Promise<{
     paymentIntent: string;
     paymentIntentId: string;
     ephemeralKey: string;
     customer: string;
     publishableKey: string;
+    alreadyPaid: boolean;
   }> {
     return await this.callFunction<
-      { amount: number; currency: string; shopId: string; sellerId: string },
+      {
+        orderId: string;
+        shopId: string;
+        items: { itemId: string; quantity: number }[];
+        deliveryOption: 'pickup' | 'delivery';
+        deliveryAddress: string;
+        contactPhone: string;
+        specialInstructions: string;
+      },
       {
         paymentIntent: string;
         paymentIntentId: string;
         ephemeralKey: string;
         customer: string;
         publishableKey: string;
+        alreadyPaid: boolean;
       }
     >('createPaymentSheetParams', {
-      amount,
-      currency: 'usd',
+      orderId,
       shopId,
-      sellerId,
+      items,
+      deliveryOption,
+      deliveryAddress,
+      contactPhone,
+      specialInstructions,
     });
   }
 

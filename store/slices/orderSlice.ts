@@ -36,7 +36,8 @@ export type OrderData = {
   deliveredAt?: { seconds: number; nanoseconds: number };
   paymentMethod: string;
   paymentIntentId?: string;
-  escrowStatus?: 'held' | 'released' | 'refunded';
+  escrowStatus?: 'held' | 'releasing' | 'refunding' | 'released' | 'refunded';
+  refundedAmountCents?: number;
   escrowReleasedAt?: { seconds: number; nanoseconds: number };
   stripeTransferId?: string;
   stripeRefundId?: string;

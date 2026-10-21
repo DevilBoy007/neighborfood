@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -8,9 +8,10 @@ import {
   Platform,
   TouchableOpacity,
   Linking,
+  AppState,
 } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import Toast from 'react-native-toast-message';
 
@@ -53,6 +54,11 @@ const PaymentMethods = () => {
   const { userData, setUserData } = useUser();
   const colors = useAppColors();
   const { confirmSetupIntent } = useStripe();
+  const { refreshOnboarding, onboardingComplete } = useLocalSearchParams<{
+    refreshOnboarding?: string;
+    onboardingComplete?: string;
+  }>();
+  const refreshHandledRef = useRef(false);
 
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethodCard[]>([]);
   const [defaultPaymentMethodId, setDefaultPaymentMethodId] = useState<string | null>(null);
@@ -258,6 +264,42 @@ const PaymentMethods = () => {
   }, [loadAccountStatus]);
 
   useEffect(() => {
+    const subscription = AppState.addEventListener('change', (state) => {
+      if (state === 'active') loadAccountStatus();
+    });
+    return () => subscription.remove();
+  }, [loadAccountStatus]);
+
+  useEffect(() => {
+    if (onboardingComplete === '1') loadAccountStatus();
+  }, [onboardingComplete, loadAccountStatus]);
+
+  useEffect(() => {
+    if (
+      refreshOnboarding !== '1' ||
+      !userData?.stripeConnectedAccountId ||
+      refreshHandledRef.current
+    ) {
+      return;
+    }
+    refreshHandledRef.current = true;
+    const reopenOnboarding = async () => {
+      try {
+        const { url } = await firebaseService.createAccountLink(userData.stripeConnectedAccountId!);
+        await Linking.openURL(url);
+      } catch (error) {
+        console.error('Error refreshing onboarding:', error);
+        Toast.show({
+          type: 'error',
+          text1: 'Error',
+          text2: 'Could not resume Stripe onboarding. Please try again.',
+        });
+      }
+    };
+    reopenOnboarding();
+  }, [refreshOnboarding, userData?.stripeConnectedAccountId]);
+
+  useEffect(() => {
     loadBalance();
   }, [loadBalance]);
 
@@ -280,9 +322,6 @@ const PaymentMethods = () => {
         text1: 'Account Created',
         text2: 'Complete the onboarding in the opened page.',
       });
-
-      // Reload status after user returns from onboarding browser page
-      setTimeout(() => loadAccountStatus(), 3000);
     } catch (error) {
       console.error('Error creating connected account:', error);
       const stripeDetail = (error as any)?.details;
@@ -303,8 +342,6 @@ const PaymentMethods = () => {
     try {
       const { url } = await firebaseService.createAccountLink(userData.stripeConnectedAccountId);
       await Linking.openURL(url);
-      // Reload status after user returns from onboarding browser page
-      setTimeout(() => loadAccountStatus(), 3000);
     } catch (error) {
       console.error('Error opening onboarding:', error);
       const stripeDetail = (error as any)?.details;

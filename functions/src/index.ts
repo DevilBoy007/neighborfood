@@ -340,9 +340,20 @@ export const addDocument = onCall(async (request: CallableRequest<AddDocumentReq
     throw new HttpsError('invalid-argument', 'Collection path and data are required');
   }
 
+  if (isProtectedGenericWrite(collectionPath, data)) {
+    throw new HttpsError('permission-denied', 'This document must be written through its service');
+  }
+
   try {
     if (id) {
       const docRef = db.collection(collectionPath).doc(id);
+      if (collectionPath === 'users') {
+        if (id !== request.auth!.uid) {
+          throw new HttpsError('permission-denied', 'Users can only create their own profile');
+        }
+        await docRef.create(data);
+        return id;
+      }
       await docRef.set(data);
       return id;
     } else {
@@ -366,6 +377,13 @@ export const updateDocument = onCall(async (request: CallableRequest<UpdateDocum
   if (!collectionPath || !docId || !data) {
     throw new HttpsError('invalid-argument', 'Collection path, document ID, and data are required');
   }
+  if (collectionPath === 'users' && docId !== request.auth!.uid) {
+    throw new HttpsError('permission-denied', 'Users can only update their own profile');
+  }
+
+  if (isProtectedGenericWrite(collectionPath, data)) {
+    throw new HttpsError('permission-denied', 'This document must be written through its service');
+  }
 
   try {
     const docRef = db.collection(collectionPath).doc(docId);
@@ -388,6 +406,10 @@ export const deleteDocument = onCall(async (request: CallableRequest<DeleteDocum
     throw new HttpsError('invalid-argument', 'Collection path and document ID are required');
   }
 
+  if (['users', 'orders', 'checkoutPayments'].includes(collectionPath.split('/')[0])) {
+    throw new HttpsError('permission-denied', 'This document must be deleted through its service');
+  }
+
   try {
     const docRef = db.collection(collectionPath).doc(docId);
     await docRef.delete();
@@ -397,6 +419,23 @@ export const deleteDocument = onCall(async (request: CallableRequest<DeleteDocum
     throw new HttpsError('internal', 'Error deleting document');
   }
 });
+
+function isProtectedGenericWrite(collectionPath: string, data: DocumentData): boolean {
+  const collection = collectionPath.split('/')[0];
+  if (collection === 'orders' || collection === 'checkoutPayments') return true;
+  if (collection !== 'users') return false;
+
+  const protectedFields = [
+    'stripeCustomerId',
+    'stripeConnectedAccountId',
+    'stripePaymentIntentId',
+    'paymentIntentId',
+    'escrowStatus',
+    'stripeTransferId',
+    'stripeRefundId',
+  ];
+  return Object.keys(data).some((key) => protectedFields.includes(key.split('.')[0]));
+}
 
 // =============================================================================
 // Shop Operations
@@ -935,36 +974,100 @@ export const updateItemDetails = onCall(
 // Order Operations
 // =============================================================================
 
+async function finalizePaidOrder(
+  paymentIntent: Stripe.PaymentIntent,
+  userId: string
+): Promise<string> {
+  const paymentSnapshot = await db
+    .collection('checkoutPayments')
+    .where('paymentIntentId', '==', paymentIntent.id)
+    .limit(1)
+    .get();
+  if (paymentSnapshot.empty) {
+    throw new HttpsError('failed-precondition', 'Payment is not associated with a prepared order');
+  }
+
+  const paymentRef = paymentSnapshot.docs[0].ref;
+  const payment = paymentSnapshot.docs[0].data();
+  if (
+    payment.buyerId !== userId ||
+    paymentIntent.status !== 'succeeded' ||
+    paymentIntent.amount_received !== payment.amount ||
+    paymentIntent.amount !== payment.amount ||
+    paymentIntent.currency !== payment.currency ||
+    paymentIntent.customer !== payment.customerId ||
+    paymentIntent.metadata?.buyerId !== payment.buyerId ||
+    paymentIntent.metadata?.sellerId !== payment.sellerId ||
+    paymentIntent.metadata?.shopId !== payment.shopId ||
+    paymentIntent.metadata?.checkoutId !== payment.checkoutId
+  ) {
+    throw new HttpsError('failed-precondition', 'Payment does not match the prepared order');
+  }
+
+  const orderRef = db.collection('orders').doc(payment.orderDocumentId);
+  await db.runTransaction(async (transaction) => {
+    const [currentPayment, existingOrder] = await Promise.all([
+      transaction.get(paymentRef),
+      transaction.get(orderRef),
+    ]);
+    if (!currentPayment.exists) {
+      throw new HttpsError('not-found', 'Prepared payment not found');
+    }
+    if (existingOrder.exists) return;
+
+    const currentData = currentPayment.data()!;
+    if (currentData.status !== 'pending' && currentData.status !== 'paid') {
+      throw new HttpsError('failed-precondition', 'Prepared payment is no longer active');
+    }
+    transaction.create(orderRef, {
+      ...currentData.pendingOrder,
+      paymentIntentId: paymentIntent.id,
+      checkoutPaymentId: paymentRef.id,
+      escrowStatus: 'held',
+      refundedAmountCents: 0,
+      createdAt: FieldValue.serverTimestamp(),
+    });
+    transaction.update(paymentRef, {
+      status: 'paid',
+      paidAt: FieldValue.serverTimestamp(),
+    });
+  });
+
+  return payment.pendingOrder.id;
+}
+
 /**
  * Create an order
  */
-export const createOrder = onCall(async (request: CallableRequest<CreateOrderRequest>) => {
-  verifyAuth(request);
-  const { orderData } = request.data;
+export const createOrder = onCall(
+  { secrets: [stripeSecretKey] },
+  async (request: CallableRequest<CreateOrderRequest>) => {
+    verifyAuth(request);
+    const { orderData } = request.data;
 
-  if (!orderData) {
-    throw new HttpsError('invalid-argument', 'Order data is required');
+    if (!orderData) {
+      throw new HttpsError('invalid-argument', 'Order data is required');
+    }
+
+    try {
+      const paymentIntentId = orderData.paymentIntentId;
+      if (typeof paymentIntentId !== 'string' || !paymentIntentId) {
+        throw new HttpsError('invalid-argument', 'A payment intent is required');
+      }
+      const stripe = new Stripe(stripeSecretKey.value(), {
+        apiVersion: '2026-01-28.clover',
+      });
+      const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+      const orderId = await finalizePaidOrder(paymentIntent, request.auth!.uid);
+      console.log('Order created from verified payment:', orderId);
+      return orderId;
+    } catch (error) {
+      if (error instanceof HttpsError) throw error;
+      console.error('Error creating order:', error);
+      throw new HttpsError('internal', 'Error creating order');
+    }
   }
-
-  // Verify the authenticated user matches the userId in the order
-  if (orderData.userId && orderData.userId !== request.auth?.uid) {
-    throw new HttpsError('permission-denied', 'User can only create orders for themselves');
-  }
-
-  try {
-    const ordersCollectionRef = db.collection('orders');
-    const docRef = await ordersCollectionRef.add({
-      ...orderData,
-      createdAt: FieldValue.serverTimestamp(),
-    });
-
-    console.log('Order created with ID:', docRef.id);
-    return docRef.id;
-  } catch (error) {
-    console.error('Error creating order:', error);
-    throw new HttpsError('internal', 'Error creating order');
-  }
-});
+);
 
 /**
  * Get orders from a user (orders placed by user)
@@ -1053,7 +1156,133 @@ export const getOrdersForShop = onCall(
 /**
  * Update order status
  */
+async function getVerifiedOrderPayment(
+  stripe: Stripe,
+  orderRef: FirebaseFirestore.DocumentReference,
+  orderData: FirebaseFirestore.DocumentData
+): Promise<{
+  recordRef: FirebaseFirestore.DocumentReference;
+  record: DocumentData;
+  paymentIntent: Stripe.PaymentIntent;
+} | null> {
+  const paymentIntentId = orderData.paymentIntentId;
+  if (!paymentIntentId) return null;
+
+  const checkoutPaymentId = orderData.checkoutPaymentId;
+  if (typeof checkoutPaymentId !== 'string') {
+    throw new HttpsError('failed-precondition', 'Order has no server-managed payment association');
+  }
+  const recordRef = db.collection('checkoutPayments').doc(checkoutPaymentId);
+  const recordSnapshot = await recordRef.get();
+  if (!recordSnapshot.exists) {
+    throw new HttpsError('failed-precondition', 'Order payment record is missing');
+  }
+  const record = recordSnapshot.data()!;
+  const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+  if (
+    record.paymentIntentId !== paymentIntentId ||
+    record.orderDocumentId !== orderRef.id ||
+    record.buyerId !== orderData.userId ||
+    record.sellerId !== orderData.sellerId ||
+    record.shopId !== orderData.shopId ||
+    paymentIntent.status !== 'succeeded' ||
+    paymentIntent.amount_received !== record.amount ||
+    paymentIntent.amount !== record.amount ||
+    paymentIntent.currency !== record.currency ||
+    paymentIntent.customer !== record.customerId ||
+    paymentIntent.metadata?.buyerId !== record.buyerId ||
+    paymentIntent.metadata?.sellerId !== record.sellerId ||
+    paymentIntent.metadata?.shopId !== record.shopId ||
+    paymentIntent.metadata?.checkoutId !== record.checkoutId
+  ) {
+    throw new HttpsError('failed-precondition', 'Payment does not match this order');
+  }
+  return { recordRef, record, paymentIntent };
+}
+
+async function processOrderRefund(
+  stripe: Stripe,
+  orderRef: FirebaseFirestore.DocumentReference,
+  orderData: FirebaseFirestore.DocumentData
+): Promise<{ refundId: string | null; alreadyRefunded?: boolean; completed: boolean }> {
+  if (orderData.escrowStatus === 'released' || orderData.escrowStatus === 'releasing') {
+    throw new HttpsError('failed-precondition', 'Escrow is already released or being released');
+  }
+  if (orderData.escrowStatus === 'refunded') {
+    return { refundId: orderData.stripeRefundId || null, alreadyRefunded: true, completed: true };
+  }
+
+  if (!orderData.paymentIntentId) {
+    await orderRef.update({ status: 'cancelled', updatedAt: FieldValue.serverTimestamp() });
+    return { refundId: null, completed: true };
+  }
+
+  const verifiedPayment = await getVerifiedOrderPayment(stripe, orderRef, orderData);
+  if (!verifiedPayment) {
+    throw new HttpsError('failed-precondition', 'Order has no verified payment');
+  }
+  const { recordRef, paymentIntent } = verifiedPayment;
+
+  const claim = await db.runTransaction(async (transaction) => {
+    const current = await transaction.get(orderRef);
+    if (!current.exists) throw new HttpsError('not-found', 'Order not found');
+    const escrowStatus = current.data()?.escrowStatus;
+    if (escrowStatus === 'released' || escrowStatus === 'releasing') {
+      throw new HttpsError('failed-precondition', 'Escrow is already released or being released');
+    }
+    if (escrowStatus === 'refunded') return true;
+    if (escrowStatus !== 'held' && escrowStatus !== 'refunding') {
+      throw new HttpsError('failed-precondition', 'Order is not eligible for refund');
+    }
+    if (escrowStatus === 'held') {
+      transaction.update(orderRef, { escrowStatus: 'refunding' });
+      transaction.update(recordRef, { status: 'refunding' });
+    }
+    return false;
+  });
+  if (claim) {
+    return { refundId: orderData.stripeRefundId || null, alreadyRefunded: true, completed: true };
+  }
+
+  const refund = await stripe.refunds.create(
+    {
+      payment_intent: paymentIntent.id,
+      metadata: { orderId: orderData.id, shopId: orderData.shopId },
+    },
+    { idempotencyKey: `neighborfood-refund-${orderRef.id}` }
+  );
+  const latestChargeId =
+    typeof paymentIntent.latest_charge === 'string'
+      ? paymentIntent.latest_charge
+      : paymentIntent.latest_charge?.id;
+  const charge = latestChargeId ? await stripe.charges.retrieve(latestChargeId) : null;
+  const fullyRefunded = Boolean(charge?.refunded);
+  const completed = refund.status === 'succeeded' && fullyRefunded;
+
+  await db.runTransaction(async (transaction) => {
+    const current = await transaction.get(orderRef);
+    if (!current.exists) throw new HttpsError('not-found', 'Order not found');
+    const updates: DocumentData = {
+      stripeRefundId: refund.id,
+      refundedAmountCents: charge?.amount_refunded ?? refund.amount,
+      updatedAt: FieldValue.serverTimestamp(),
+    };
+    if (completed) {
+      updates.status = 'cancelled';
+      updates.escrowStatus = 'refunded';
+      updates.escrowRefundedAt = FieldValue.serverTimestamp();
+    } else {
+      updates.escrowStatus = 'refunding';
+    }
+    transaction.update(orderRef, updates);
+    transaction.update(recordRef, { status: completed ? 'refunded' : 'refunding' });
+  });
+
+  return { refundId: refund.id, completed };
+}
+
 export const updateOrderStatus = onCall(
+  { secrets: [stripeSecretKey] },
   async (request: CallableRequest<UpdateOrderStatusRequest>) => {
     verifyAuth(request);
     const { orderId, shopId, status } = request.data;
@@ -1088,6 +1317,22 @@ export const updateOrderStatus = onCall(
           'permission-denied',
           'User can only update orders for their own shops or their own orders'
         );
+      }
+
+      if (
+        !['pending', 'preparing', 'ready', 'in-delivery', 'completed', 'cancelled'].includes(status)
+      ) {
+        throw new HttpsError('invalid-argument', 'Invalid order status');
+      }
+      if (status === 'cancelled') {
+        const stripe = new Stripe(stripeSecretKey.value(), {
+          apiVersion: '2026-01-28.clover',
+        });
+        const result = await processOrderRefund(stripe, orderDoc.ref, orderData);
+        if (!result.completed) {
+          throw new HttpsError('failed-precondition', 'Refund is still processing');
+        }
+        return true;
       }
 
       await orderDoc.ref.update({
@@ -1918,13 +2163,38 @@ interface SetDefaultPaymentMethodRequest {
 /**
  * Helper to get or create a Stripe customer for a user
  */
+async function getVerifiedStripeCustomerId(stripe: Stripe, userId: string): Promise<string | null> {
+  const userDoc = await db.collection('users').doc(userId).get();
+  const customerId = userDoc.data()?.stripeCustomerId;
+  if (!customerId) return null;
+
+  const customer = await stripe.customers.retrieve(customerId);
+  if ('deleted' in customer || customer.metadata?.firebaseUserId !== userId) {
+    throw new HttpsError('permission-denied', 'Stripe customer does not belong to this user');
+  }
+  return customer.id;
+}
+
+async function getVerifiedConnectedAccountId(
+  stripe: Stripe,
+  userId: string
+): Promise<string | null> {
+  const userDoc = await db.collection('users').doc(userId).get();
+  const accountId = userDoc.data()?.stripeConnectedAccountId;
+  if (!accountId) return null;
+
+  const account = await stripe.v2.core.accounts.retrieve(accountId);
+  if ((account as any).metadata?.firebaseUserId !== userId) {
+    throw new HttpsError('permission-denied', 'Connected account does not belong to this user');
+  }
+  return accountId;
+}
+
 async function getOrCreateStripeCustomer(stripe: Stripe, userId: string): Promise<string> {
   const userDoc = await db.collection('users').doc(userId).get();
   const userData = userDoc.data();
-
-  if (userData?.stripeCustomerId) {
-    return userData.stripeCustomerId;
-  }
+  const customerId = await getVerifiedStripeCustomerId(stripe, userId);
+  if (customerId) return customerId;
 
   // Create a new Stripe customer
   const customer = await stripe.customers.create({
@@ -2026,10 +2296,13 @@ export const createPaymentIntent = onCall(
  * the seller via a manual Transfer after delivery is confirmed.
  */
 interface CreatePaymentSheetParamsRequest {
-  amount: number; // in cents
-  shopId: string; // used as metadata for escrow tracking
-  sellerId: string; // seller's Firebase UID — resolved to connectedAccountId on release
-  currency?: string;
+  orderId: string;
+  shopId: string;
+  items: { itemId: string; quantity: number }[];
+  deliveryOption: 'pickup' | 'delivery';
+  deliveryAddress?: string;
+  contactPhone: string;
+  specialInstructions?: string;
 }
 
 export const createPaymentSheetParams = onCall(
@@ -2037,13 +2310,24 @@ export const createPaymentSheetParams = onCall(
   async (request: CallableRequest<CreatePaymentSheetParamsRequest>) => {
     verifyAuth(request);
     const userId = request.auth!.uid;
-    const { amount, shopId, sellerId, currency = 'usd' } = request.data;
+    const {
+      orderId,
+      shopId,
+      items,
+      deliveryOption,
+      deliveryAddress,
+      contactPhone,
+      specialInstructions,
+    } = request.data;
 
-    if (!amount || amount <= 0) {
-      throw new HttpsError('invalid-argument', 'A valid amount is required');
+    if (!orderId || orderId.length > 128 || !shopId || !Array.isArray(items) || !items.length) {
+      throw new HttpsError('invalid-argument', 'Order ID, shop, and items are required');
     }
-    if (!shopId || !sellerId) {
-      throw new HttpsError('invalid-argument', 'shopId and sellerId are required');
+    if (deliveryOption !== 'pickup' && deliveryOption !== 'delivery') {
+      throw new HttpsError('invalid-argument', 'A valid delivery option is required');
+    }
+    if (!contactPhone?.trim() || (deliveryOption === 'delivery' && !deliveryAddress?.trim())) {
+      throw new HttpsError('invalid-argument', 'Contact details are required');
     }
 
     try {
@@ -2052,31 +2336,163 @@ export const createPaymentSheetParams = onCall(
       });
 
       const customerId = await getOrCreateStripeCustomer(stripe, userId);
+      const shopSnapshot = await db.collection('shops').doc(shopId).get();
+      if (!shopSnapshot.exists) throw new HttpsError('not-found', 'Shop not found');
+      const shop = shopSnapshot.data()!;
+      const sellerId = shop.userId;
+      if (typeof sellerId !== 'string' || !sellerId) {
+        throw new HttpsError('failed-precondition', 'Shop has no valid owner');
+      }
+      if (deliveryOption === 'pickup' && !shop.allowPickup) {
+        throw new HttpsError('failed-precondition', 'Pickup is not available for this shop');
+      }
+      if (deliveryOption === 'delivery' && !shop.localDelivery) {
+        throw new HttpsError('failed-precondition', 'Delivery is not available for this shop');
+      }
+
+      const orderItems: DocumentData[] = [];
+      let subtotalCents = 0;
+      for (const item of items) {
+        if (!item.itemId || !Number.isSafeInteger(item.quantity) || item.quantity <= 0) {
+          throw new HttpsError('invalid-argument', 'Each item must have a valid ID and quantity');
+        }
+        const itemSnapshot = await db.collection('items').doc(item.itemId).get();
+        const itemData = itemSnapshot.data();
+        if (!itemSnapshot.exists || itemData?.shopId !== shopId) {
+          throw new HttpsError('invalid-argument', 'An item does not belong to this shop');
+        }
+        const priceCents = Math.round(Number(itemData.price) * 100);
+        if (!Number.isSafeInteger(priceCents) || priceCents < 0) {
+          throw new HttpsError('failed-precondition', 'An item has an invalid price');
+        }
+        if (Number(itemData.quantity) < item.quantity) {
+          throw new HttpsError('failed-precondition', 'An item has insufficient stock');
+        }
+        subtotalCents += priceCents * item.quantity;
+        orderItems.push({
+          itemId: item.itemId,
+          name: itemData.name,
+          photoURL: itemData.imageUrl || '',
+          price: priceCents / 100,
+          quantity: item.quantity,
+        });
+      }
+
+      const taxCents = Math.round(subtotalCents * 0.08);
+      const deliveryFeeCents = deliveryOption === 'delivery' ? 399 : 0;
+      const platformFeeCents = Math.min(Math.round(subtotalCents * 0.1), 100);
+      const amount = subtotalCents + taxCents + deliveryFeeCents + platformFeeCents;
+      if (amount <= 0)
+        throw new HttpsError('invalid-argument', 'Order total must be greater than zero');
+
+      const pendingOrder = {
+        id: orderId,
+        userId,
+        sellerId,
+        shopId,
+        shopName: shop.name || '',
+        shopPhotoURL: shop.backgroundImageUrl || '',
+        items: orderItems,
+        subtotal: subtotalCents / 100,
+        tax: taxCents / 100,
+        deliveryFee: deliveryFeeCents / 100,
+        platformFee: platformFeeCents / 100,
+        total: amount / 100,
+        status: 'pending',
+        estimatedDeliveryTime: new Date(Date.now() + 45 * 60 * 1000),
+        paymentMethod: 'card',
+        deliveryAddress: deliveryOption === 'delivery' ? deliveryAddress!.trim() : 'Pickup',
+        contactPhone: contactPhone.trim(),
+        deliveryOption,
+        specialInstructions: specialInstructions || '',
+      };
+
+      const previousPayments = await db
+        .collection('checkoutPayments')
+        .where('checkoutId', '==', orderId)
+        .where('shopId', '==', shopId)
+        .where('buyerId', '==', userId)
+        .get();
+      const previousPayment = previousPayments.docs.sort(
+        (a, b) => b.createTime.toMillis() - a.createTime.toMillis()
+      )[0];
+      let paymentIntent: Stripe.PaymentIntent | undefined;
+      let alreadyPaid = false;
+      if (previousPayment) {
+        const previousData = previousPayment.data();
+        const previousIntent = await stripe.paymentIntents.retrieve(previousData.paymentIntentId);
+        if (previousIntent.status === 'succeeded') {
+          await finalizePaidOrder(previousIntent, userId);
+          paymentIntent = previousIntent;
+          alreadyPaid = true;
+        } else if (previousIntent.status === 'processing') {
+          throw new HttpsError(
+            'failed-precondition',
+            'A payment for this shop is still processing'
+          );
+        } else {
+          const previousOrder = previousData.pendingOrder;
+          const sameOrder =
+            previousData.amount === amount &&
+            JSON.stringify(previousOrder.items) === JSON.stringify(orderItems) &&
+            previousOrder.deliveryOption === deliveryOption &&
+            previousOrder.deliveryAddress ===
+              (deliveryOption === 'delivery' ? deliveryAddress!.trim() : 'Pickup') &&
+            previousOrder.contactPhone === contactPhone.trim() &&
+            previousOrder.specialInstructions === (specialInstructions || '');
+          if (sameOrder && previousIntent.status !== 'canceled') {
+            paymentIntent = previousIntent;
+          } else {
+            if (previousIntent.status !== 'canceled') {
+              await stripe.paymentIntents.cancel(previousIntent.id);
+            }
+            await previousPayment.ref.update({ status: 'cancelled' });
+          }
+        }
+      }
+
+      if (!paymentIntent) {
+        const paymentRecordRef = db.collection('checkoutPayments').doc();
+        const orderRef = db.collection('orders').doc();
+        paymentIntent = await stripe.paymentIntents.create({
+          amount,
+          currency: 'usd',
+          customer: customerId,
+          automatic_payment_methods: { enabled: true },
+          metadata: { shopId, sellerId, buyerId: userId, checkoutId: orderId },
+        });
+        await paymentRecordRef.set({
+          paymentIntentId: paymentIntent.id,
+          buyerId: userId,
+          sellerId,
+          shopId,
+          checkoutId: orderId,
+          customerId,
+          amount,
+          currency: 'usd',
+          orderDocumentId: orderRef.id,
+          pendingOrder,
+          status: 'pending',
+          createdAt: FieldValue.serverTimestamp(),
+        });
+      }
 
       const ephemeralKey = await stripe.ephemeralKeys.create(
         { customer: customerId },
         { apiVersion: '2026-01-28.clover' }
       );
 
-      // Escrow: capture funds on the PLATFORM account — no stripeAccount header.
-      // The Transfer to the seller's connected account happens in releaseEscrow.
-      const paymentIntent = await stripe.paymentIntents.create({
-        amount: Math.round(amount),
-        currency,
-        customer: customerId,
-        automatic_payment_methods: { enabled: true },
-        metadata: { shopId, sellerId, buyerId: userId },
-      });
-
       return {
         paymentIntent: paymentIntent.client_secret,
         paymentIntentId: paymentIntent.id,
         ephemeralKey: ephemeralKey.secret,
         customer: customerId,
+        alreadyPaid,
         publishableKey:
           process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY || process.env.STRIPE_TEST_KEY || '',
       };
     } catch (error) {
+      if (error instanceof HttpsError) throw error;
       console.error('Error creating payment sheet params:', error);
       throw new HttpsError('internal', 'Failed to create payment sheet params');
     }
@@ -2097,14 +2513,10 @@ export const getPaymentMethods = onCall(
         apiVersion: '2026-01-28.clover',
       });
 
-      const userDoc = await db.collection('users').doc(userId).get();
-      const userData = userDoc.data();
-
-      if (!userData?.stripeCustomerId) {
+      const customerId = await getVerifiedStripeCustomerId(stripe, userId);
+      if (!customerId) {
         return { paymentMethods: [], defaultPaymentMethodId: null };
       }
-
-      const customerId = userData.stripeCustomerId;
 
       const paymentMethods = await stripe.paymentMethods.list({
         customer: customerId,
@@ -2126,6 +2538,7 @@ export const getPaymentMethods = onCall(
         defaultPaymentMethodId: defaultPmId,
       };
     } catch (error) {
+      if (error instanceof HttpsError) throw error;
       console.error('Error getting payment methods:', error);
       throw new HttpsError('internal', 'Failed to retrieve payment methods');
     }
@@ -2152,14 +2565,13 @@ export const deletePaymentMethod = onCall(
       });
 
       // Verify this payment method belongs to the user
-      const userDoc = await db.collection('users').doc(userId).get();
-      const userData = userDoc.data();
-      if (!userData?.stripeCustomerId) {
+      const customerId = await getVerifiedStripeCustomerId(stripe, userId);
+      if (!customerId) {
         throw new HttpsError('not-found', 'No Stripe customer found');
       }
 
       const pm = await stripe.paymentMethods.retrieve(paymentMethodId);
-      if (pm.customer !== userData.stripeCustomerId) {
+      if (pm.customer !== customerId) {
         throw new HttpsError('permission-denied', 'Payment method does not belong to this user');
       }
 
@@ -2192,19 +2604,18 @@ export const setDefaultPaymentMethod = onCall(
         apiVersion: '2026-01-28.clover',
       });
 
-      const userDoc = await db.collection('users').doc(userId).get();
-      const userData = userDoc.data();
-      if (!userData?.stripeCustomerId) {
+      const customerId = await getVerifiedStripeCustomerId(stripe, userId);
+      if (!customerId) {
         throw new HttpsError('not-found', 'No Stripe customer found');
       }
 
       // Verify ownership
       const pm = await stripe.paymentMethods.retrieve(paymentMethodId);
-      if (pm.customer !== userData.stripeCustomerId) {
+      if (pm.customer !== customerId) {
         throw new HttpsError('permission-denied', 'Payment method does not belong to this user');
       }
 
-      await stripe.customers.update(userData.stripeCustomerId, {
+      await stripe.customers.update(customerId, {
         invoice_settings: { default_payment_method: paymentMethodId },
       });
 
@@ -2240,22 +2651,11 @@ export const createConnectedAccount = onCall(
       const stripe = new Stripe(stripeSecretKey.value());
 
       // Check if user already has a connected account
-      const userDoc = await db.collection('users').doc(userId).get();
-      const userData = userDoc.data();
-
-      if (userData?.stripeConnectedAccountId) {
-        // Verify it is a V2 account by retrieving it through the V2 namespace.
-        // V1 Express accounts will throw, so we fall through to re-create as V2.
-        try {
-          await stripe.v2.core.accounts.retrieve(userData.stripeConnectedAccountId);
-          return { accountId: userData.stripeConnectedAccountId, alreadyExists: true };
-        } catch {
-          console.log(
-            'Existing account is a V1 Express account; re-creating as V2 for user:',
-            userId
-          );
-        }
+      const existingAccountId = await getVerifiedConnectedAccountId(stripe, userId);
+      if (existingAccountId) {
+        return { accountId: existingAccountId, alreadyExists: true };
       }
+      const userData = (await db.collection('users').doc(userId).get()).data();
 
       // TODO: REVERT THIS COMMIT — remove test-mode prefill before going live.
       // Running in test mode when the secret key starts with 'sk_test_'.
@@ -2292,6 +2692,7 @@ export const createConnectedAccount = onCall(
         },
         // 'full' gives the connected account access to the standard Stripe dashboard.
         dashboard: 'full',
+        metadata: { firebaseUserId: userId },
         defaults: {
           responsibilities: {
             // Stripe collects fees and absorbs losses on our behalf.
@@ -2356,9 +2757,7 @@ export const createAccountLink = onCall(
       const stripe = new Stripe(stripeSecretKey.value());
 
       // Verify ownership
-      const userDoc = await db.collection('users').doc(userId).get();
-      const userData = userDoc.data();
-      if (userData?.stripeConnectedAccountId !== accountId) {
+      if ((await getVerifiedConnectedAccountId(stripe, userId)) !== accountId) {
         throw new HttpsError('permission-denied', 'Account does not belong to this user');
       }
 
@@ -2409,9 +2808,7 @@ export const getConnectedAccountStatus = onCall(
       const stripe = new Stripe(stripeSecretKey.value());
 
       // Verify ownership
-      const userDoc = await db.collection('users').doc(userId).get();
-      const userData = userDoc.data();
-      if (userData?.stripeConnectedAccountId !== accountId) {
+      if ((await getVerifiedConnectedAccountId(stripe, userId)) !== accountId) {
         throw new HttpsError('permission-denied', 'Account does not belong to this user');
       }
 
@@ -2469,9 +2866,7 @@ export const getConnectedBalance = onCall(
       const stripe = new Stripe(stripeSecretKey.value());
 
       // Verify ownership
-      const userDoc = await db.collection('users').doc(userId).get();
-      const userData = userDoc.data();
-      if (userData?.stripeConnectedAccountId !== accountId) {
+      if ((await getVerifiedConnectedAccountId(stripe, userId)) !== accountId) {
         throw new HttpsError('permission-denied', 'Account does not belong to this user');
       }
 
@@ -2524,9 +2919,7 @@ export const createPayout = onCall(
       const stripe = new Stripe(stripeSecretKey.value());
 
       // Verify ownership
-      const userDoc = await db.collection('users').doc(userId).get();
-      const userData = userDoc.data();
-      if (userData?.stripeConnectedAccountId !== accountId) {
+      if ((await getVerifiedConnectedAccountId(stripe, userId)) !== accountId) {
         throw new HttpsError('permission-denied', 'Account does not belong to this user');
       }
 
@@ -2577,19 +2970,15 @@ export const createLoginLink = onCall(
       const stripe = new Stripe(stripeSecretKey.value());
 
       // Verify ownership
-      const userDoc = await db.collection('users').doc(userId).get();
-      const userData = userDoc.data();
-      if (userData?.stripeConnectedAccountId !== accountId) {
+      if ((await getVerifiedConnectedAccountId(stripe, userId)) !== accountId) {
         throw new HttpsError('permission-denied', 'Account does not belong to this user');
       }
 
-      const loginLink = await stripe.accounts.createLoginLink(accountId);
-
-      return { url: loginLink.url };
+      return { url: 'https://dashboard.stripe.com/' };
     } catch (error) {
       if (error instanceof HttpsError) throw error;
       console.error('Error creating login link:', error);
-      throw new HttpsError('internal', 'Failed to create Express Dashboard link');
+      throw new HttpsError('internal', 'Failed to open Stripe Dashboard');
     }
   }
 );
@@ -2635,72 +3024,121 @@ export const releaseEscrow = onCall(
     const orderDoc = ordersSnapshot.docs[0];
     const orderData = orderDoc.data();
 
-    // Only the buyer or the shop owner may trigger release
-    const shopDoc = await db.collection('shops').doc(shopId).get();
-    const shopOwnerId = shopDoc.data()?.userId;
-    const isBuyer = orderData.userId === userId;
-    const isSeller = shopOwnerId === userId;
-    if (!isBuyer && !isSeller) {
-      throw new HttpsError('permission-denied', 'Not authorised to release this escrow');
-    }
-
-    // Idempotency guard
-    if (orderData.escrowStatus === 'released') {
-      return { alreadyReleased: true };
-    }
-
-    const paymentIntentId: string = orderData.paymentIntentId;
-    if (!paymentIntentId) {
-      throw new HttpsError('failed-precondition', 'No paymentIntentId on order — cannot release');
-    }
-
-    // Look up seller's connected account
-    const sellerDoc = await db.collection('users').doc(shopOwnerId).get();
-    const connectedAccountId: string | undefined = sellerDoc.data()?.stripeConnectedAccountId;
-    if (!connectedAccountId) {
-      throw new HttpsError(
-        'failed-precondition',
-        'Seller has not completed Stripe Connect onboarding'
-      );
-    }
-
     try {
       const stripe = new Stripe(stripeSecretKey.value(), {
         apiVersion: '2026-01-28.clover',
       });
 
-      // Retrieve the PaymentIntent to get the captured amount
-      const pi = await stripe.paymentIntents.retrieve(paymentIntentId);
-      if (pi.status !== 'succeeded') {
+      if (orderData.userId !== userId) {
+        throw new HttpsError('permission-denied', 'Only the buyer may confirm receipt');
+      }
+      if (!['ready', 'in-delivery', 'completed'].includes(orderData.status)) {
         throw new HttpsError(
           'failed-precondition',
-          `Cannot release escrow: payment status is ${pi.status}`
+          'Order is not eligible for receipt confirmation'
         );
       }
 
-      const totalCents = pi.amount_received;
-      // Platform fee: lesser of 10% or $1 (100 cents)
-      const platformFeeCents = Math.min(Math.round(totalCents * 0.1), 100);
-      const sellerAmountCents = totalCents - platformFeeCents;
+      const verifiedPayment = await getVerifiedOrderPayment(stripe, orderDoc.ref, orderData);
+      if (!verifiedPayment) {
+        throw new HttpsError(
+          'failed-precondition',
+          'No verified payment is associated with this order'
+        );
+      }
+      const { recordRef, record, paymentIntent } = verifiedPayment;
+      const sellerId = record.sellerId as string;
+      const connectedAccountId = await getVerifiedConnectedAccountId(stripe, sellerId);
+      if (!connectedAccountId) {
+        throw new HttpsError(
+          'failed-precondition',
+          'Seller has not completed Stripe Connect onboarding'
+        );
+      }
 
-      const transfer = await stripe.transfers.create({
-        amount: sellerAmountCents,
-        currency: pi.currency,
-        destination: connectedAccountId,
-        source_transaction: pi.latest_charge as string,
-        metadata: { orderId, shopId, paymentIntentId },
+      const settlementState = await db.runTransaction(async (transaction) => {
+        const current = await transaction.get(orderDoc.ref);
+        if (!current.exists) throw new HttpsError('not-found', 'Order not found');
+        const currentData = current.data()!;
+        if (currentData.escrowStatus === 'released') {
+          return {
+            alreadyReleased: true,
+            refundedAmountCents: Number(currentData.refundedAmountCents || 0),
+          };
+        }
+        if (!['ready', 'in-delivery', 'completed'].includes(currentData.status)) {
+          throw new HttpsError(
+            'failed-precondition',
+            'Order is not eligible for receipt confirmation'
+          );
+        }
+        if (currentData.escrowStatus === 'refunded' || currentData.escrowStatus === 'refunding') {
+          throw new HttpsError('failed-precondition', 'Order is being refunded or was refunded');
+        }
+        if (currentData.escrowStatus !== 'held' && currentData.escrowStatus !== 'releasing') {
+          throw new HttpsError('failed-precondition', 'Escrow is not held');
+        }
+        if (currentData.escrowStatus === 'held') {
+          transaction.update(orderDoc.ref, { escrowStatus: 'releasing' });
+          transaction.update(recordRef, { status: 'releasing' });
+        }
+        return {
+          alreadyReleased: false,
+          refundedAmountCents: Number(currentData.refundedAmountCents || 0),
+        };
       });
+      if (settlementState.alreadyReleased) return { alreadyReleased: true };
 
-      // Update order document
-      await orderDoc.ref.update({
-        escrowStatus: 'released',
-        escrowReleasedAt: FieldValue.serverTimestamp(),
-        stripeTransferId: transfer.id,
-        updatedAt: FieldValue.serverTimestamp(),
+      const latestChargeId =
+        typeof paymentIntent.latest_charge === 'string'
+          ? paymentIntent.latest_charge
+          : paymentIntent.latest_charge?.id;
+      if (!latestChargeId) {
+        throw new HttpsError('failed-precondition', 'Payment has no captured charge');
+      }
+      const totalCents = paymentIntent.amount_received;
+      const refundedAmountCents = settlementState.refundedAmountCents;
+      const pendingOrder = record.pendingOrder as Record<string, unknown>;
+      const platformFeeCents = Math.round(Number(pendingOrder.platformFee) * 100);
+      const sellerAmountCents = totalCents - refundedAmountCents - platformFeeCents;
+      if (sellerAmountCents <= 0) {
+        throw new HttpsError(
+          'failed-precondition',
+          'No remaining funds are available for settlement'
+        );
+      }
+
+      const transfer = await stripe.transfers.create(
+        {
+          amount: sellerAmountCents,
+          currency: paymentIntent.currency,
+          destination: connectedAccountId,
+          source_transaction: latestChargeId,
+          metadata: { orderId, shopId, paymentIntentId: paymentIntent.id },
+        },
+        { idempotencyKey: `neighborfood-release-${orderDoc.id}` }
+      );
+
+      await db.runTransaction(async (transaction) => {
+        const current = await transaction.get(orderDoc.ref);
+        if (current.data()?.escrowStatus === 'released') return;
+        if (current.data()?.escrowStatus !== 'releasing') {
+          throw new HttpsError(
+            'failed-precondition',
+            'Escrow settlement state changed unexpectedly'
+          );
+        }
+        transaction.update(orderDoc.ref, {
+          escrowStatus: 'released',
+          escrowReleasedAt: FieldValue.serverTimestamp(),
+          stripeTransferId: transfer.id,
+          updatedAt: FieldValue.serverTimestamp(),
+        });
+        transaction.update(recordRef, { status: 'released' });
       });
 
       console.log(`Escrow released for order ${orderId}: transfer ${transfer.id}`);
-      return { transferId: transfer.id, amountReleased: sellerAmountCents };
+      return { transferId: transfer.id, amountReleased: transfer.amount };
     } catch (error) {
       if (error instanceof HttpsError) throw error;
       console.error('Error releasing escrow:', error);
@@ -2744,52 +3182,23 @@ export const refundOrder = onCall(
     const orderDoc = ordersSnapshot.docs[0];
     const orderData = orderDoc.data();
 
-    // Only the buyer or the shop owner may trigger a refund
-    const shopDoc = await db.collection('shops').doc(shopId).get();
-    const shopOwnerId = shopDoc.data()?.userId;
+    // Only the buyer or the seller recorded on the verified order may trigger a refund.
     const isBuyer = orderData.userId === userId;
-    const isSeller = shopOwnerId === userId;
+    const isSeller = orderData.sellerId === userId;
     if (!isBuyer && !isSeller) {
       throw new HttpsError('permission-denied', 'Not authorised to refund this order');
-    }
-
-    if (orderData.escrowStatus === 'released') {
-      throw new HttpsError('failed-precondition', 'Escrow already released — cannot refund');
-    }
-    if (orderData.escrowStatus === 'refunded') {
-      return { alreadyRefunded: true };
-    }
-
-    const paymentIntentId: string = orderData.paymentIntentId;
-    if (!paymentIntentId) {
-      // No real payment was captured (e.g. web fallback) — just cancel the order
-      await orderDoc.ref.update({
-        status: 'cancelled',
-        escrowStatus: 'refunded',
-        updatedAt: FieldValue.serverTimestamp(),
-      });
-      return { refundId: null };
     }
 
     try {
       const stripe = new Stripe(stripeSecretKey.value(), {
         apiVersion: '2026-01-28.clover',
       });
-
-      const refund = await stripe.refunds.create({
-        payment_intent: paymentIntentId,
-        metadata: { orderId, shopId },
-      });
-
-      await orderDoc.ref.update({
-        status: 'cancelled',
-        escrowStatus: 'refunded',
-        stripeRefundId: refund.id,
-        updatedAt: FieldValue.serverTimestamp(),
-      });
-
-      console.log(`Refund created for order ${orderId}: refund ${refund.id}`);
-      return { refundId: refund.id };
+      const result = await processOrderRefund(stripe, orderDoc.ref, orderData);
+      if (!result.completed) {
+        throw new HttpsError('failed-precondition', 'Refund is still processing');
+      }
+      console.log(`Refund processed for order ${orderId}: ${result.refundId}`);
+      return result;
     } catch (error) {
       if (error instanceof HttpsError) throw error;
       console.error('Error refunding order:', error);
@@ -2844,54 +3253,66 @@ export const stripeWebhook = onRequest(
       switch (event.type) {
         case 'payment_intent.succeeded': {
           const pi = event.data.object as Stripe.PaymentIntent;
-          const { shopId, buyerId } = pi.metadata || {};
-          if (shopId && buyerId) {
-            const snapshot = await db
-              .collection('orders')
-              .where('paymentIntentId', '==', pi.id)
-              .limit(1)
-              .get();
-            if (!snapshot.empty) {
-              await snapshot.docs[0].ref.update({
-                escrowStatus: 'held',
-                updatedAt: FieldValue.serverTimestamp(),
-              });
-              console.log(`Escrow marked held for PI ${pi.id}`);
-            }
-          }
+          const { buyerId } = pi.metadata || {};
+          if (!buyerId) throw new Error(`PaymentIntent ${pi.id} has no buyer metadata`);
+          await finalizePaidOrder(pi, buyerId);
+          console.log(`Paid order reconciled for PI ${pi.id}`);
           break;
         }
 
         case 'payment_intent.payment_failed': {
           const pi = event.data.object as Stripe.PaymentIntent;
-          const snapshot = await db
-            .collection('orders')
-            .where('paymentIntentId', '==', pi.id)
-            .limit(1)
-            .get();
-          if (!snapshot.empty) {
-            await snapshot.docs[0].ref.update({
-              status: 'payment_failed',
-              updatedAt: FieldValue.serverTimestamp(),
-            });
-            console.log(`Payment failed for PI ${pi.id}`);
-          }
+          // This event reports a failed attempt, not necessarily the final intent state.
+          // A later successful attempt on the same PaymentIntent is reconciled above.
+          console.log(`Ignoring failed payment attempt event for PI ${pi.id}`);
           break;
         }
 
         case 'charge.refunded': {
           const charge = event.data.object as Stripe.Charge;
-          const piId = charge.payment_intent as string;
+          const piId =
+            typeof charge.payment_intent === 'string'
+              ? charge.payment_intent
+              : charge.payment_intent?.id;
           if (piId) {
             const snapshot = await db
               .collection('orders')
               .where('paymentIntentId', '==', piId)
               .limit(1)
               .get();
-            if (!snapshot.empty && snapshot.docs[0].data().escrowStatus !== 'refunded') {
-              await snapshot.docs[0].ref.update({
-                escrowStatus: 'refunded',
-                updatedAt: FieldValue.serverTimestamp(),
+            if (!snapshot.empty) {
+              const orderRef = snapshot.docs[0].ref;
+              const orderData = snapshot.docs[0].data();
+              const paymentRef =
+                typeof orderData.checkoutPaymentId === 'string'
+                  ? db.collection('checkoutPayments').doc(orderData.checkoutPaymentId)
+                  : null;
+              await db.runTransaction(async (transaction) => {
+                const orderSnapshot = await transaction.get(orderRef);
+                const paymentSnapshot = paymentRef ? await transaction.get(paymentRef) : null;
+                if (!orderSnapshot.exists) return;
+                const current = orderSnapshot.data()!;
+                const fullyRefunded = charge.refunded || charge.amount_refunded >= charge.amount;
+                const updates: DocumentData = {
+                  refundedAmountCents: charge.amount_refunded,
+                  updatedAt: FieldValue.serverTimestamp(),
+                };
+                if (
+                  fullyRefunded &&
+                  current.escrowStatus !== 'released' &&
+                  current.escrowStatus !== 'releasing'
+                ) {
+                  updates.escrowStatus = 'refunded';
+                  updates.status = 'cancelled';
+                  updates.escrowRefundedAt = FieldValue.serverTimestamp();
+                }
+                transaction.update(orderRef, updates);
+                if (paymentRef && paymentSnapshot?.exists) {
+                  transaction.update(paymentRef, {
+                    status: fullyRefunded ? 'refunded' : 'paid',
+                    refundedAmountCents: charge.amount_refunded,
+                  });
+                }
               });
             }
           }
@@ -2900,6 +3321,38 @@ export const stripeWebhook = onRequest(
 
         case 'transfer.created': {
           const transfer = event.data.object as Stripe.Transfer;
+          const orderId = transfer.metadata?.orderId;
+          const shopId = transfer.metadata?.shopId;
+          if (orderId && shopId) {
+            const snapshot = await db
+              .collection('orders')
+              .where('id', '==', orderId)
+              .where('shopId', '==', shopId)
+              .limit(1)
+              .get();
+            if (!snapshot.empty) {
+              const orderRef = snapshot.docs[0].ref;
+              const paymentRef = snapshot.docs[0].data().checkoutPaymentId
+                ? db.collection('checkoutPayments').doc(snapshot.docs[0].data().checkoutPaymentId)
+                : null;
+              await db.runTransaction(async (transaction) => {
+                const orderSnapshot = await transaction.get(orderRef);
+                const paymentSnapshot = paymentRef ? await transaction.get(paymentRef) : null;
+                if (!orderSnapshot.exists || orderSnapshot.data()?.escrowStatus !== 'releasing') {
+                  return;
+                }
+                transaction.update(orderRef, {
+                  escrowStatus: 'released',
+                  escrowReleasedAt: FieldValue.serverTimestamp(),
+                  stripeTransferId: transfer.id,
+                  updatedAt: FieldValue.serverTimestamp(),
+                });
+                if (paymentRef && paymentSnapshot?.exists) {
+                  transaction.update(paymentRef, { status: 'released' });
+                }
+              });
+            }
+          }
           console.log(
             `Transfer created: ${transfer.id} → ${transfer.destination} for ${transfer.amount} ${transfer.currency}`
           );
