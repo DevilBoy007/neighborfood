@@ -406,7 +406,9 @@ export const deleteDocument = onCall(async (request: CallableRequest<DeleteDocum
     throw new HttpsError('invalid-argument', 'Collection path and document ID are required');
   }
 
-  if (['users', 'orders', 'checkoutPayments'].includes(collectionPath.split('/')[0])) {
+  if (
+    ['users', 'shops', 'items', 'orders', 'checkoutPayments'].includes(collectionPath.split('/')[0])
+  ) {
     throw new HttpsError('permission-denied', 'This document must be deleted through its service');
   }
 
@@ -422,7 +424,7 @@ export const deleteDocument = onCall(async (request: CallableRequest<DeleteDocum
 
 function isProtectedGenericWrite(collectionPath: string, data: DocumentData): boolean {
   const collection = collectionPath.split('/')[0];
-  if (collection === 'orders' || collection === 'checkoutPayments') return true;
+  if (['shops', 'items', 'orders', 'checkoutPayments'].includes(collection)) return true;
   if (collection !== 'users') return false;
 
   const protectedFields = [
@@ -462,7 +464,7 @@ export const createShopForUser = onCall(async (request: CallableRequest<CreateSh
     const userDocRef = db.doc(`users/${userId}`);
 
     // Create the shop document
-    const docRef = await shopsCollectionRef.add(shopData);
+    const docRef = await shopsCollectionRef.add({ ...shopData, userId });
     console.log('Shop created with ID:', docRef.id);
 
     const shopDocRef = db.doc(`shops/${docRef.id}`);
@@ -503,8 +505,11 @@ export const updateShopDetails = onCall(async (request: CallableRequest<UpdateSh
       throw new HttpsError('permission-denied', 'User can only update their own shops');
     }
 
+    const sanitizedShopData = { ...shopData };
+    delete sanitizedShopData.userId;
+    delete sanitizedShopData.createdAt;
     const shopDocRef = db.collection('shops').doc(shopId);
-    await shopDocRef.update(shopData);
+    await shopDocRef.update(sanitizedShopData);
     console.log('Shop updated with ID:', shopId);
     return true;
   } catch (error) {
@@ -766,6 +771,7 @@ export const createItemForShop = onCall(async (request: CallableRequest<CreateIt
     const itemsCollectionRef = db.collection('items');
     const dataToSave = {
       ...itemData,
+      userId: request.auth!.uid,
       shopId: shopId,
       createdAt: FieldValue.serverTimestamp(),
     };
@@ -773,7 +779,7 @@ export const createItemForShop = onCall(async (request: CallableRequest<CreateIt
     let finalId: string;
     if (itemId) {
       // Use provided itemId as document ID (for storage path consistency)
-      await itemsCollectionRef.doc(itemId).set(dataToSave);
+      await itemsCollectionRef.doc(itemId).create(dataToSave);
       finalId = itemId;
     } else {
       // Auto-generate ID
@@ -941,15 +947,23 @@ export const updateItemDetails = onCall(
       }
 
       const existingItem = itemDoc.data();
+      if (!existingItem) {
+        throw new HttpsError('not-found', `Item with ID ${itemId} not found`);
+      }
 
       // Verify user owns this item
-      if (existingItem?.userId !== request.auth?.uid) {
+      if (existingItem.userId !== request.auth?.uid) {
         throw new HttpsError('permission-denied', 'User can only update their own items');
+      }
+      const existingShop = await db.collection('shops').doc(existingItem.shopId).get();
+      if (existingShop.data()?.userId !== request.auth?.uid) {
+        throw new HttpsError('permission-denied', 'User can only update items in their own shops');
       }
 
       // Don't allow changing userId
       const sanitizedData = { ...itemData };
       delete sanitizedData.userId;
+      delete sanitizedData.shopId;
       delete sanitizedData.createdAt;
 
       await db
@@ -2320,13 +2334,28 @@ export const createPaymentSheetParams = onCall(
       specialInstructions,
     } = request.data;
 
-    if (!orderId || orderId.length > 128 || !shopId || !Array.isArray(items) || !items.length) {
+    if (
+      typeof orderId !== 'string' ||
+      !orderId ||
+      orderId.length > 128 ||
+      typeof shopId !== 'string' ||
+      !shopId ||
+      shopId.includes('/') ||
+      !Array.isArray(items) ||
+      !items.length ||
+      items.length > 100
+    ) {
       throw new HttpsError('invalid-argument', 'Order ID, shop, and items are required');
     }
     if (deliveryOption !== 'pickup' && deliveryOption !== 'delivery') {
       throw new HttpsError('invalid-argument', 'A valid delivery option is required');
     }
-    if (!contactPhone?.trim() || (deliveryOption === 'delivery' && !deliveryAddress?.trim())) {
+    if (
+      typeof contactPhone !== 'string' ||
+      !contactPhone.trim() ||
+      (deliveryOption === 'delivery' &&
+        (typeof deliveryAddress !== 'string' || !deliveryAddress.trim()))
+    ) {
       throw new HttpsError('invalid-argument', 'Contact details are required');
     }
 
@@ -2358,14 +2387,17 @@ export const createPaymentSheetParams = onCall(
         }
         const itemSnapshot = await db.collection('items').doc(item.itemId).get();
         const itemData = itemSnapshot.data();
-        if (!itemSnapshot.exists || itemData?.shopId !== shopId) {
+        if (!itemSnapshot.exists || itemData?.shopId !== shopId || itemData?.userId !== sellerId) {
           throw new HttpsError('invalid-argument', 'An item does not belong to this shop');
         }
         const priceCents = Math.round(Number(itemData.price) * 100);
         if (!Number.isSafeInteger(priceCents) || priceCents < 0) {
           throw new HttpsError('failed-precondition', 'An item has an invalid price');
         }
-        if (Number(itemData.quantity) < item.quantity) {
+        if (
+          !Number.isSafeInteger(Number(itemData.quantity)) ||
+          Number(itemData.quantity) < item.quantity
+        ) {
           throw new HttpsError('failed-precondition', 'An item has insufficient stock');
         }
         subtotalCents += priceCents * item.quantity;
@@ -3308,10 +3340,15 @@ export const stripeWebhook = onRequest(
                 }
                 transaction.update(orderRef, updates);
                 if (paymentRef && paymentSnapshot?.exists) {
-                  transaction.update(paymentRef, {
-                    status: fullyRefunded ? 'refunded' : 'paid',
+                  const preserveSettlement =
+                    current.escrowStatus === 'released' || current.escrowStatus === 'releasing';
+                  const paymentUpdates: DocumentData = {
                     refundedAmountCents: charge.amount_refunded,
-                  });
+                  };
+                  if (fullyRefunded && !preserveSettlement) {
+                    paymentUpdates.status = 'refunded';
+                  }
+                  transaction.update(paymentRef, paymentUpdates);
                 }
               });
             }

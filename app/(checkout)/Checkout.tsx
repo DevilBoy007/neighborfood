@@ -220,7 +220,8 @@ const Checkout = () => {
 
   useEffect(() => {
     if (shopCarts.length > 0 && total > 0) {
-      initializePaymentSheet();
+      const timeout = setTimeout(initializePaymentSheet, 250);
+      return () => clearTimeout(timeout);
     }
   }, [initializePaymentSheet, shopCarts.length, total]);
 
@@ -246,14 +247,34 @@ const Checkout = () => {
     }
   }, [shopCarts, userData]);
 
+  const invalidatePaymentSheet = () => {
+    initializationVersionRef.current += 1;
+    readyPaymentKeyRef.current = null;
+    setPaymentSheetReady(false);
+  };
+
   const updateShopDeliveryOption = (shopId: string, option: DeliveryOption) => {
     if (shopDeliveryOptions[shopId] === option) return;
-    initializationVersionRef.current += 1;
-    setPaymentSheetReady(false);
+    invalidatePaymentSheet();
     setShopDeliveryOptions((prev) => ({
       ...prev,
       [shopId]: option,
     }));
+  };
+
+  const updateDeliveryAddress = (value: string) => {
+    invalidatePaymentSheet();
+    setDeliveryAddress(value);
+  };
+
+  const updateContactPhone = (value: string) => {
+    invalidatePaymentSheet();
+    setContactPhone(value);
+  };
+
+  const updateSpecialInstructions = (value: string) => {
+    invalidatePaymentSheet();
+    setSpecialInstructions(value);
   };
 
   const hasDeliveryOrders = Object.values(shopDeliveryOptions).some(
@@ -330,8 +351,8 @@ const Checkout = () => {
     }
 
     setIsPlacingOrder(true);
+    const completedPayments: string[] = [];
     try {
-      const completedPayments: string[] = [];
       const getOrderData = (shopCart: (typeof shopCarts)[number]) => {
         const deliveryOption = shopDeliveryOptions[shopCart.shopId];
         const shopPlatformFee = Math.min(shopCart.subtotal * 0.1, 1);
@@ -460,18 +481,17 @@ const Checkout = () => {
 
           const { error } = await presentPaymentSheet();
           if (error) {
-            if (error.code !== 'Canceled') {
+            if (error.code !== 'Canceled' || completedPayments.length) {
               Toast.show({
                 type: 'error',
                 text1: 'Payment Failed',
-                text2:
-                  `${error.message || `Payment failed for ${shopCart.shopName}.`} ` +
-                  (completedPayments.length
-                    ? 'Orders from shops already paid remain placed; you can retry the remaining shops.'
-                    : ''),
+                text2: completedPayments.length
+                  ? 'Orders from shops already paid remain placed; retry checkout to finish the remaining shops.'
+                  : error.message || `Payment failed for ${shopCart.shopName}.`,
                 visibilityTime: 3000,
               });
             }
+            if (completedPayments.length) await refreshOrders(userData.uid);
             return;
           }
 
@@ -564,10 +584,13 @@ const Checkout = () => {
       );
     } catch (error) {
       console.error('Error placing order:', error);
+      if (completedPayments.length) await refreshOrders(userData.uid);
       Toast.show({
         type: 'error',
         text1: 'Error',
-        text2: 'Failed to place order. Please try again.',
+        text2: completedPayments.length
+          ? 'Orders from shops already paid remain placed; retry checkout to finish the remaining shops.'
+          : 'Failed to place order. Please try again.',
         visibilityTime: 3000,
       });
     } finally {
@@ -741,7 +764,7 @@ const Checkout = () => {
                 { backgroundColor: colors.inputBackground, borderColor: colors.divider },
               ]}
               value={deliveryAddress}
-              onChangeText={setDeliveryAddress}
+              onChangeText={updateDeliveryAddress}
               placeholder="Enter your delivery address"
               placeholderTextColor={colors.placeholder}
               multiline
@@ -758,7 +781,7 @@ const Checkout = () => {
               { backgroundColor: colors.inputBackground, borderColor: colors.divider },
             ]}
             value={contactPhone}
-            onChangeText={setContactPhone}
+            onChangeText={updateContactPhone}
             placeholder="Enter your phone number"
             placeholderTextColor={colors.placeholder}
             keyboardType="phone-pad"
@@ -791,7 +814,7 @@ const Checkout = () => {
               { backgroundColor: colors.inputBackground, borderColor: colors.divider },
             ]}
             value={specialInstructions}
-            onChangeText={setSpecialInstructions}
+            onChangeText={updateSpecialInstructions}
             placeholder="Any special requests or instructions..."
             placeholderTextColor={colors.placeholder}
             multiline
