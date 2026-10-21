@@ -837,6 +837,56 @@ export const getAllItemsForUser = onCall(
   }
 );
 
+export const getTradeItemsForOrder = onCall(
+  async (request: CallableRequest<{ orderId: string; shopId: string }>) => {
+    verifyAuth(request);
+    const { orderId, shopId } = request.data;
+    if (!orderId || !shopId) {
+      throw new HttpsError('invalid-argument', 'Order ID and shop ID are required');
+    }
+
+    try {
+      const ordersSnapshot = await db
+        .collection('orders')
+        .where('id', '==', orderId)
+        .where('shopId', '==', shopId)
+        .limit(1)
+        .get();
+      if (ordersSnapshot.empty) {
+        throw new HttpsError('not-found', 'Trade order not found');
+      }
+      const orderData = ordersSnapshot.docs[0].data();
+      if (orderData.status !== 'trade') {
+        throw new HttpsError('failed-precondition', 'Only open trades can be edited');
+      }
+
+      const shopSnapshot = await db.collection('shops').doc(shopId).get();
+      const isShopOwner = shopSnapshot.data()?.userId === request.auth!.uid;
+      const isCustomer = orderData.userId === request.auth!.uid;
+      if (!isShopOwner && !isCustomer) {
+        throw new HttpsError('permission-denied', 'You cannot access this trade inventory');
+      }
+
+      const itemsSnapshot = await db
+        .collection('items')
+        .where('userId', '==', orderData.userId)
+        .get();
+      return itemsSnapshot.docs
+        .filter(
+          (doc) =>
+            doc.data().shopId !== shopId &&
+            Number.isInteger(doc.data().quantity) &&
+            doc.data().quantity > 0
+        )
+        .map((doc) => ({ id: doc.id, ...sanitizeFirestoreData(doc.data()) }));
+    } catch (error) {
+      if (error instanceof HttpsError) throw error;
+      console.error('Error fetching trade inventory:', error);
+      throw new HttpsError('internal', 'Error fetching trade inventory');
+    }
+  }
+);
+
 /**
  * Update item quantity
  */
@@ -951,6 +1001,69 @@ export const createOrder = onCall(async (request: CallableRequest<CreateOrderReq
   }
 
   try {
+    if (orderData.status === 'trade') {
+      const shopId = orderData.shopId;
+      const tradeItems = orderData.tradeItems;
+      if (
+        typeof shopId !== 'string' ||
+        !shopId ||
+        orderData.userId !== request.auth!.uid ||
+        orderData.deliveryOption !== 'pickup' ||
+        !Array.isArray(orderData.items) ||
+        orderData.items.length === 0 ||
+        !Array.isArray(tradeItems) ||
+        tradeItems.length === 0 ||
+        tradeItems.length > 100 ||
+        tradeItems.some(
+          (item) => !item || typeof item.itemId !== 'string' || item.itemId.trim().length === 0
+        ) ||
+        new Set(tradeItems.map((item) => item.itemId)).size !== tradeItems.length
+      ) {
+        throw new HttpsError('invalid-argument', 'Trade order and offered items are invalid');
+      }
+
+      const orderRef = db.collection('orders').doc();
+      const itemRefs = tradeItems.map((item) => db.collection('items').doc(item.itemId));
+      await db.runTransaction(async (transaction) => {
+        const shopSnapshot = await transaction.get(db.collection('shops').doc(shopId));
+        if (!shopSnapshot.exists || shopSnapshot.data()?.allowPickup !== true) {
+          throw new HttpsError(
+            'failed-precondition',
+            'Trade offers are only available for pickup-enabled shops'
+          );
+        }
+        const itemSnapshots = await Promise.all(
+          itemRefs.map((itemRef) => transaction.get(itemRef))
+        );
+        const verifiedTradeItems = itemSnapshots.map((itemSnapshot) => {
+          const itemData = itemSnapshot.data();
+          if (
+            !itemSnapshot.exists ||
+            !itemData ||
+            itemData.userId !== request.auth!.uid ||
+            !Number.isInteger(itemData.quantity) ||
+            itemData.quantity <= 0
+          ) {
+            throw new HttpsError(
+              'invalid-argument',
+              'Each offered item must be available in your inventory'
+            );
+          }
+          return {
+            itemId: itemSnapshot.id,
+            name: itemData.name,
+            imageUrl: itemData.imageUrl || '',
+          };
+        });
+        transaction.create(orderRef, {
+          ...orderData,
+          tradeItems: verifiedTradeItems,
+          createdAt: FieldValue.serverTimestamp(),
+        });
+      });
+      return orderRef.id;
+    }
+
     const ordersCollectionRef = db.collection('orders');
     const docRef = await ordersCollectionRef.add({
       ...orderData,
@@ -960,6 +1073,7 @@ export const createOrder = onCall(async (request: CallableRequest<CreateOrderReq
     console.log('Order created with ID:', docRef.id);
     return docRef.id;
   } catch (error) {
+    if (error instanceof HttpsError) throw error;
     console.error('Error creating order:', error);
     throw new HttpsError('internal', 'Error creating order');
   }
@@ -1089,6 +1203,96 @@ export const updateOrderStatus = onCall(
         );
       }
 
+      if (orderData.status === 'trade' && status === 'preparing') {
+        if (!isShopOwner) {
+          throw new HttpsError('permission-denied', 'Only the shop owner can accept a trade');
+        }
+
+        await db.runTransaction(async (transaction) => {
+          const currentOrderSnapshot = await transaction.get(orderDoc.ref);
+          const currentOrder = currentOrderSnapshot.data();
+          const currentShopSnapshot = await transaction.get(shopDoc.ref);
+          if (!currentOrderSnapshot.exists || currentOrder?.status !== 'trade') {
+            throw new HttpsError('failed-precondition', 'This trade is no longer open');
+          }
+          if (currentShopSnapshot.data()?.userId !== request.auth?.uid) {
+            throw new HttpsError('permission-denied', 'Only the shop owner can accept a trade');
+          }
+          if (
+            !Array.isArray(currentOrder.items) ||
+            currentOrder.items.length === 0 ||
+            !Array.isArray(currentOrder.tradeItems) ||
+            currentOrder.tradeItems.length === 0
+          ) {
+            throw new HttpsError('failed-precondition', 'The trade does not contain both offers');
+          }
+          const currentShopOwnerId = currentShopSnapshot.data()?.userId;
+
+          const stockChanges = new Map<string, number>();
+          const shopItemIds = new Set<string>();
+          const offeredItemIds = new Set<string>();
+          for (const item of currentOrder.items ?? []) {
+            if (
+              typeof item.itemId !== 'string' ||
+              !Number.isInteger(item.quantity) ||
+              item.quantity <= 0
+            ) {
+              throw new HttpsError('failed-precondition', 'The trade contains invalid shop items');
+            }
+            stockChanges.set(item.itemId, (stockChanges.get(item.itemId) ?? 0) + item.quantity);
+            shopItemIds.add(item.itemId);
+          }
+          for (const item of currentOrder.tradeItems ?? []) {
+            if (typeof item.itemId !== 'string') {
+              throw new HttpsError(
+                'failed-precondition',
+                'The trade contains invalid offered items'
+              );
+            }
+            stockChanges.set(item.itemId, (stockChanges.get(item.itemId) ?? 0) + 1);
+            offeredItemIds.add(item.itemId);
+          }
+          if (stockChanges.size === 0) {
+            throw new HttpsError('failed-precondition', 'The trade contains no items');
+          }
+
+          const stockEntries = Array.from(stockChanges.entries());
+          const itemSnapshots = await Promise.all(
+            stockEntries.map(([itemId]) => transaction.get(db.collection('items').doc(itemId)))
+          );
+          for (let index = 0; index < stockEntries.length; index += 1) {
+            const [itemId, quantityChange] = stockEntries[index];
+            const itemSnapshot = itemSnapshots[index];
+            const itemData = itemSnapshot.data();
+            const isShopItem =
+              shopItemIds.has(itemId) &&
+              itemData?.shopId === shopId &&
+              itemData?.userId === currentShopOwnerId;
+            const isOfferedItem =
+              offeredItemIds.has(itemId) && itemData?.userId === currentOrder.userId;
+            const currentQuantity = itemData?.quantity;
+            if (
+              !itemSnapshot.exists ||
+              (!isShopItem && !isOfferedItem) ||
+              !Number.isInteger(currentQuantity) ||
+              currentQuantity < quantityChange
+            ) {
+              throw new HttpsError(
+                'failed-precondition',
+                `Item ${itemId} is no longer available in the required quantity`
+              );
+            }
+            transaction.update(itemSnapshot.ref, { quantity: currentQuantity - quantityChange });
+          }
+
+          transaction.update(orderDoc.ref, {
+            status,
+            updatedAt: FieldValue.serverTimestamp(),
+          });
+        });
+        return true;
+      }
+
       await orderDoc.ref.update({
         status,
         updatedAt: FieldValue.serverTimestamp(),
@@ -1118,7 +1322,17 @@ export const updateOrderTradeItems = onCall(
     verifyAuth(request);
     const { orderId, shopId, tradeItems } = request.data;
 
-    if (!orderId || !shopId || !tradeItems) {
+    if (
+      !orderId ||
+      !shopId ||
+      !Array.isArray(tradeItems) ||
+      tradeItems.length === 0 ||
+      tradeItems.length > 100 ||
+      tradeItems.some(
+        (item) => !item || typeof item.itemId !== 'string' || item.itemId.trim().length === 0
+      ) ||
+      new Set(tradeItems.map((item) => item.itemId)).size !== tradeItems.length
+    ) {
       throw new HttpsError('invalid-argument', 'Order ID, shop ID, and trade items are required');
     }
 
@@ -1134,24 +1348,52 @@ export const updateOrderTradeItems = onCall(
       }
 
       const orderDoc = ordersSnapshot.docs[0];
-      const orderData = orderDoc.data();
+      const itemRefs = tradeItems.map((item) => db.collection('items').doc(item.itemId));
+      await db.runTransaction(async (transaction) => {
+        const orderSnapshot = await transaction.get(orderDoc.ref);
+        const orderData = orderSnapshot.data();
+        const shopSnapshot = await transaction.get(db.collection('shops').doc(shopId));
+        if (!orderSnapshot.exists || orderData?.status !== 'trade') {
+          throw new HttpsError('failed-precondition', 'Only open trades can be edited');
+        }
 
-      // Verify user has permission (either shop owner or the customer)
-      const shopDoc = await db.collection('shops').doc(shopId).get();
-      const shopOwner = shopDoc.data()?.userId;
-      const isShopOwner = shopOwner === request.auth?.uid;
-      const isCustomer = orderData.userId === request.auth?.uid;
+        const isShopOwner = shopSnapshot.data()?.userId === request.auth?.uid;
+        const isCustomer = orderData.userId === request.auth?.uid;
+        if (!isShopOwner && !isCustomer) {
+          throw new HttpsError(
+            'permission-denied',
+            'Only the shop owner or the customer can update trade items'
+          );
+        }
 
-      if (!isShopOwner && !isCustomer) {
-        throw new HttpsError(
-          'permission-denied',
-          'Only the shop owner or the customer can update trade items'
+        const itemSnapshots = await Promise.all(
+          itemRefs.map((itemRef) => transaction.get(itemRef))
         );
-      }
+        const verifiedTradeItems = itemSnapshots.map((itemSnapshot, index) => {
+          const itemData = itemSnapshot.data();
+          if (
+            !itemSnapshot.exists ||
+            !itemData ||
+            itemData.userId !== orderData.userId ||
+            !Number.isInteger(itemData.quantity) ||
+            itemData.quantity <= 0
+          ) {
+            throw new HttpsError(
+              'invalid-argument',
+              'Each offered item must be available in the customer inventory'
+            );
+          }
+          return {
+            itemId: itemSnapshot.id,
+            name: itemData.name,
+            imageUrl: itemData.imageUrl || '',
+          };
+        });
 
-      await orderDoc.ref.update({
-        tradeItems,
-        updatedAt: FieldValue.serverTimestamp(),
+        transaction.update(orderDoc.ref, {
+          tradeItems: verifiedTradeItems,
+          updatedAt: FieldValue.serverTimestamp(),
+        });
       });
 
       console.log('Trade items updated for order:', orderId);
@@ -2085,6 +2327,7 @@ interface CreatePaymentSheetParamsRequest {
   amount: number; // in cents
   platformFee?: number; // in cents — application fee for platform
   connectedAccountId?: string; // merchant's Stripe connected account
+  orderId?: string;
   currency?: string;
 }
 
@@ -2093,7 +2336,7 @@ export const createPaymentSheetParams = onCall(
   async (request: CallableRequest<CreatePaymentSheetParamsRequest>) => {
     verifyAuth(request);
     const userId = request.auth!.uid;
-    const { amount, platformFee, connectedAccountId, currency = 'usd' } = request.data;
+    const { amount, platformFee, connectedAccountId, orderId, currency = 'usd' } = request.data;
 
     if (!amount || amount <= 0) {
       throw new HttpsError('invalid-argument', 'A valid amount is required');
@@ -2116,6 +2359,7 @@ export const createPaymentSheetParams = onCall(
         currency,
         customer: customerId,
         automatic_payment_methods: { enabled: true },
+        ...(orderId ? { metadata: { orderId, userId } } : {}),
       };
 
       // For direct charges: set application fee so the platform collects its cut
@@ -2141,6 +2385,138 @@ export const createPaymentSheetParams = onCall(
     } catch (error) {
       console.error('Error creating payment sheet params:', error);
       throw new HttpsError('internal', 'Failed to create payment sheet params');
+    }
+  }
+);
+
+export const completeTradePurchase = onCall(
+  { secrets: [stripeSecretKey] },
+  async (
+    request: CallableRequest<{
+      orderId: string;
+      shopId: string;
+      paymentIntentId: string;
+      contactPhone: string;
+      specialInstructions: string;
+    }>
+  ) => {
+    verifyAuth(request);
+    const { orderId, shopId, paymentIntentId, contactPhone, specialInstructions } = request.data;
+    if (!orderId || !shopId || !paymentIntentId) {
+      throw new HttpsError('invalid-argument', 'Order, shop, and payment IDs are required');
+    }
+
+    try {
+      const orderSnapshot = await db
+        .collection('orders')
+        .where('id', '==', orderId)
+        .where('shopId', '==', shopId)
+        .limit(1)
+        .get();
+      if (orderSnapshot.empty) {
+        throw new HttpsError('not-found', 'Trade order not found');
+      }
+      const orderRef = orderSnapshot.docs[0].ref;
+      const orderData = orderSnapshot.docs[0].data();
+      if (orderData.userId !== request.auth!.uid || orderData.status !== 'trade') {
+        throw new HttpsError(
+          'failed-precondition',
+          'This trade is no longer available to purchase'
+        );
+      }
+
+      const orderItems = orderData.items;
+      if (
+        !Array.isArray(orderItems) ||
+        orderItems.length === 0 ||
+        orderItems.some(
+          (item: any) =>
+            !Number.isFinite(item.price) ||
+            item.price < 0 ||
+            !Number.isInteger(item.quantity) ||
+            item.quantity <= 0
+        )
+      ) {
+        throw new HttpsError('failed-precondition', 'The trade contains invalid shop items');
+      }
+      const subtotal = orderItems.reduce(
+        (sum: number, item: any) => sum + item.price * item.quantity,
+        0
+      );
+      const tax = subtotal * 0.08;
+      const platformFee = Math.min(subtotal * 0.1, 1);
+      const total = subtotal + tax + platformFee;
+
+      const shopDoc = await db.collection('shops').doc(shopId).get();
+      const shop = shopDoc.data();
+      if (!shopDoc.exists || shop?.allowPickup !== true) {
+        throw new HttpsError('failed-precondition', 'This shop does not support pickup trades');
+      }
+      const shopOwner = shop?.userId;
+      const ownerDoc = shopOwner ? await db.collection('users').doc(shopOwner).get() : null;
+      const connectedAccountId = ownerDoc?.data()?.stripeConnectedAccountId;
+      const stripe = new Stripe(stripeSecretKey.value(), {
+        apiVersion: '2026-01-28.clover',
+      });
+      const paymentIntent = await stripe.paymentIntents.retrieve(
+        paymentIntentId,
+        connectedAccountId ? { stripeAccount: connectedAccountId } : undefined
+      );
+      if (
+        paymentIntent.status !== 'succeeded' ||
+        paymentIntent.amount !== Math.round(total * 100) ||
+        paymentIntent.currency !== 'usd' ||
+        paymentIntent.metadata.orderId !== orderId ||
+        paymentIntent.metadata.userId !== request.auth!.uid
+      ) {
+        throw new HttpsError('failed-precondition', 'Payment does not match this trade order');
+      }
+
+      await db.runTransaction(async (transaction) => {
+        const currentOrderSnapshot = await transaction.get(orderRef);
+        const currentOrder = currentOrderSnapshot.data();
+        if (
+          !currentOrderSnapshot.exists ||
+          currentOrder?.userId !== request.auth!.uid ||
+          currentOrder?.status !== 'trade'
+        ) {
+          throw new HttpsError('failed-precondition', 'This trade has already been updated');
+        }
+        const currentSubtotal = currentOrder.items.reduce(
+          (sum: number, item: any) => sum + item.price * item.quantity,
+          0
+        );
+        if (
+          Math.round(
+            (currentSubtotal + currentSubtotal * 0.08 + Math.min(currentSubtotal * 0.1, 1)) * 100
+          ) !== paymentIntent.amount
+        ) {
+          throw new HttpsError(
+            'failed-precondition',
+            'Trade items changed after payment was started'
+          );
+        }
+        transaction.update(orderRef, {
+          status: 'pending',
+          subtotal,
+          tax,
+          deliveryFee: 0,
+          platformFee,
+          total,
+          paymentMethod: 'card',
+          paymentIntentId,
+          deliveryOption: 'pickup',
+          deliveryAddress: 'Pickup',
+          contactPhone: contactPhone || '',
+          specialInstructions: specialInstructions || '',
+          updatedAt: FieldValue.serverTimestamp(),
+        });
+      });
+      return true;
+    } catch (error) {
+      if (error instanceof HttpsError) throw error;
+      console.error('Error completing trade purchase:', error);
+      throw new HttpsError('internal', 'Failed to complete trade purchase');
     }
   }
 );

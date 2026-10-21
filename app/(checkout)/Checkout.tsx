@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -10,7 +10,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import Toast from 'react-native-toast-message';
 import { v4 as uuidv4 } from 'uuid';
 import { useCart, useUser, useOrder, useMessage } from '@/store/reduxHooks';
@@ -34,9 +34,10 @@ type DeliveryOption = 'pickup' | 'delivery';
 
 const Checkout = () => {
   const router = useRouter();
-  const { shopCarts, clearCart, calculateTotalSubtotal } = useCart();
+  const params = useLocalSearchParams<{ orderId?: string }>();
+  const { shopCarts: cartShopCarts, clearCart, calculateTotalSubtotal } = useCart();
   const { userData } = useUser();
-  const { refreshOrders } = useOrder();
+  const { refreshOrders, selectedOrder, placedOrders } = useOrder();
   const { createOrGetThread } = useMessage();
   const colors = useAppColors();
   const { initPaymentSheet, presentPaymentSheet } = useStripeHook();
@@ -49,13 +50,40 @@ const Checkout = () => {
   const [specialInstructions, setSpecialInstructions] = useState('');
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
   const [paymentSheetReady, setPaymentSheetReady] = useState(false);
+  const [paymentIntentId, setPaymentIntentId] = useState<string | null>(null);
   const [initializingSheet, setInitializingSheet] = useState(false);
   // Track connected account IDs for each shop owner
   const [shopConnectedAccounts, setShopConnectedAccounts] = useState<Record<string, string | null>>(
     {}
   );
 
-  const subtotal = calculateTotalSubtotal();
+  const tradeOrderId = typeof params.orderId === 'string' ? params.orderId : undefined;
+  const existingTradeOrder = tradeOrderId
+    ? [selectedOrder, ...placedOrders].find(
+        (order) =>
+          order?.id === tradeOrderId && order.status === 'trade' && order.userId === userData?.uid
+      )
+    : undefined;
+  const shopCarts = useMemo(
+    () =>
+      tradeOrderId
+        ? existingTradeOrder
+          ? [
+              {
+                shopId: existingTradeOrder.shopId,
+                shopName: existingTradeOrder.shopName,
+                shopPhotoURL: existingTradeOrder.shopPhotoURL,
+                allowPickup: true,
+                localDelivery: false,
+                items: existingTradeOrder.items,
+                subtotal: existingTradeOrder.subtotal,
+              },
+            ]
+          : []
+        : cartShopCarts,
+    [tradeOrderId, existingTradeOrder, cartShopCarts]
+  );
+  const subtotal = existingTradeOrder ? existingTradeOrder.subtotal : calculateTotalSubtotal();
   const deliveryFee =
     Object.values(shopDeliveryOptions).filter((option) => option === 'delivery').length * 3.99;
   const tax = subtotal * 0.08; // 8% tax
@@ -72,7 +100,10 @@ const Checkout = () => {
             const shop = await firebaseService.getDocument('shops', shopCart.shopId);
             if (shop?.userId) {
               const owner = await firebaseService.getDocument('users', shop.userId as string);
-              accounts[shopCart.shopId] = owner?.stripeConnectedAccountId || null;
+              accounts[shopCart.shopId] =
+                typeof owner?.stripeConnectedAccountId === 'string'
+                  ? owner.stripeConnectedAccountId
+                  : null;
             }
           } catch {
             accounts[shopCart.shopId] = null;
@@ -88,8 +119,8 @@ const Checkout = () => {
 
   // Initialize PaymentSheet — only for single-shop orders with a connected account (direct charge)
   // Multi-shop orders initialize per-shop during handlePlaceOrder
-  const initializePaymentSheet = useCallback(async () => {
-    if (!userData?.uid || Platform.OS === 'web' || total <= 0) return;
+  const initializePaymentSheet = useCallback(async (): Promise<string | null> => {
+    if (!userData?.uid || Platform.OS === 'web' || total <= 0) return null;
 
     // For single-shop orders, pre-initialize PaymentSheet
     if (shopCarts.length === 1) {
@@ -107,12 +138,17 @@ const Checkout = () => {
         const platformFeeInCents = Math.round(shopPlatformFee * 100);
         const connectedAccountId = shopConnectedAccounts[shopCart.shopId] || undefined;
 
-        const { paymentIntent, ephemeralKey, customer } =
-          await firebaseService.createPaymentSheetParams(
-            amountInCents,
-            connectedAccountId ? platformFeeInCents : undefined,
-            connectedAccountId
-          );
+        const {
+          paymentIntent,
+          paymentIntentId: intentId,
+          ephemeralKey,
+          customer,
+        } = await firebaseService.createPaymentSheetParams(
+          amountInCents,
+          connectedAccountId ? platformFeeInCents : undefined,
+          connectedAccountId,
+          tradeOrderId
+        );
 
         const { error } = await initPaymentSheet({
           merchantDisplayName: 'Neighborfood',
@@ -138,6 +174,8 @@ const Checkout = () => {
 
         if (!error) {
           setPaymentSheetReady(true);
+          setPaymentIntentId(intentId);
+          return intentId;
         } else {
           console.error('PaymentSheet init error:', error);
         }
@@ -149,8 +187,18 @@ const Checkout = () => {
     } else {
       // Multi-shop: mark as ready, PaymentSheet will be initialized per-shop during checkout
       setPaymentSheetReady(true);
+      return null;
     }
-  }, [userData, total, initPaymentSheet, shopCarts, shopDeliveryOptions, shopConnectedAccounts]);
+    return null;
+  }, [
+    userData,
+    total,
+    initPaymentSheet,
+    shopCarts,
+    shopDeliveryOptions,
+    shopConnectedAccounts,
+    tradeOrderId,
+  ]);
 
   useEffect(() => {
     if (shopCarts.length > 0 && total > 0) {
@@ -192,6 +240,16 @@ const Checkout = () => {
   );
 
   const handlePlaceOrder = async () => {
+    if (existingTradeOrder && Platform.OS === 'web') {
+      Toast.show({
+        type: 'error',
+        text1: 'Payment Unavailable',
+        text2: 'Trade purchases can only be completed in the mobile app.',
+        visibilityTime: 3000,
+      });
+      return;
+    }
+
     if (!userData) {
       Toast.show({
         type: 'error',
@@ -235,14 +293,17 @@ const Checkout = () => {
     }
 
     setIsPlacingOrder(true);
-    const orderId = uuidv4();
     try {
+      let paidPaymentIntentId = paymentIntentId;
       // For native platforms, process payment per shop (direct charges)
       if (Platform.OS !== 'web') {
         if (shopCarts.length === 1) {
           // Single shop — use the pre-initialized PaymentSheet
           if (!paymentSheetReady) {
-            await initializePaymentSheet();
+            paidPaymentIntentId = await initializePaymentSheet();
+          }
+          if (existingTradeOrder && !paidPaymentIntentId) {
+            throw new Error('Payment is not ready. Please try again.');
           }
 
           const { error } = await presentPaymentSheet();
@@ -330,7 +391,41 @@ const Checkout = () => {
         }
       }
 
+      if (existingTradeOrder) {
+        if (!paidPaymentIntentId || !tradeOrderId) {
+          throw new Error('Payment confirmation is missing. Please try again.');
+        }
+        await firebaseService.completeTradePurchase(
+          existingTradeOrder.id,
+          existingTradeOrder.shopId,
+          paidPaymentIntentId,
+          contactPhone,
+          specialInstructions
+        );
+        if (userData.uid) {
+          await refreshOrders(userData.uid);
+        }
+        Toast.show({
+          type: 'success',
+          text1: 'Order Placed!',
+          text2: 'Your trade offer was converted to a paid order.',
+          visibilityTime: 3000,
+        });
+        router.navigate('/success');
+        setTimeout(
+          () => {
+            router.navigate('/(home)/Menu');
+            setTimeout(() => {
+              router.navigate('/(home)/(orders)');
+            }, 100);
+          },
+          Platform.OS === 'web' ? 2100 : 2000
+        );
+        return;
+      }
+
       // Payment successful (or non-Stripe payment method) — create orders
+      const newOrderId = uuidv4();
       // First, get shop owner information for each shop to create message threads
       const shopOwnerMap = new Map<string, string>(); // shopId -> ownerId
 
@@ -348,7 +443,7 @@ const Checkout = () => {
         const deliveryOption = shopDeliveryOptions[shopCart.shopId];
         const shopPlatformFee = Math.min(shopCart.subtotal * 0.1, 1);
         const orderData = {
-          id: orderId,
+          id: newOrderId,
           userId: userData.uid,
           shopId: shopCart.shopId,
           shopName: shopCart.shopName,
@@ -474,10 +569,16 @@ const Checkout = () => {
           >
             <Ionicons name="chevron-back" size={24} color={colors.text} />
           </SoundTouchableOpacity>
-          <Text style={[styles.headerTitle, { color: colors.textOnPrimary }]}>checkout</Text>
+          <Text style={[styles.headerTitle, { color: colors.textOnPrimary }]}>
+            {tradeOrderId && !existingTradeOrder ? 'trade unavailable' : 'checkout'}
+          </Text>
         </View>
         <View style={styles.emptyContainer}>
-          <Text style={[styles.emptyText, { color: colors.textMuted }]}>Your cart is empty</Text>
+          <Text style={[styles.emptyText, { color: colors.textMuted }]}>
+            {tradeOrderId && !existingTradeOrder
+              ? 'This trade order is no longer available.'
+              : 'Your cart is empty'}
+          </Text>
           <SoundTouchableOpacity
             style={[styles.continueShoppingButton, { backgroundColor: colors.buttonPrimary }]}
             onPress={() => router.navigate('/Market')}

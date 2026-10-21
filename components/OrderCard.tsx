@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Platform, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
@@ -120,10 +120,8 @@ const OrderCard = ({ order, onPress }) => {
     }
 
     if (targetStatus === 'buy_instead') {
-      // Buyer wants to pay instead — update to pending and go to checkout
-      updateOrderStatus(selectedOrder.id, selectedOrder.shopId, 'pending' as OrderStatus);
       setIsPressed(false);
-      router.push('/Checkout');
+      router.push({ pathname: '/Checkout', params: { orderId: selectedOrder.id } });
       return;
     }
 
@@ -164,6 +162,21 @@ const OrderCard = ({ order, onPress }) => {
           </View>
 
           <Text style={styles.itemsText}>items: {items}</Text>
+          {isTrade && order.tradeItems?.length > 0 && (
+            <View style={styles.tradeItems}>
+              <Text style={styles.tradeItemsLabel}>offered:</Text>
+              {order.tradeItems.map(
+                (tradeItem: { itemId: string; name: string; imageUrl?: string }) => (
+                  <View key={tradeItem.itemId} style={styles.tradeItem}>
+                    {tradeItem.imageUrl ? (
+                      <Image source={{ uri: tradeItem.imageUrl }} style={styles.tradeItemImage} />
+                    ) : null}
+                    <Text style={styles.itemsText}>{tradeItem.name}</Text>
+                  </View>
+                )
+              )}
+            </View>
+          )}
         </View>
       </TouchableOpacity>
       <View style={styles.statusMetaContainer}>
@@ -264,6 +277,24 @@ const styles = StyleSheet.create({
     color: '#999',
     marginTop: 8,
     fontFamily: 'TextMeOne',
+  },
+  tradeItems: {
+    marginTop: 8,
+  },
+  tradeItemsLabel: {
+    fontSize: Platform.OS === 'web' ? 18 : 12,
+    color: '#999',
+    fontFamily: 'TextMeOne',
+  },
+  tradeItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  tradeItemImage: {
+    width: 32,
+    height: 32,
+    borderRadius: 6,
   },
   statusMetaContainer: {
     zIndex: -2,

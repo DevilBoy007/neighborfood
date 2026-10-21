@@ -701,6 +701,13 @@ class FirebaseService {
     }
   }
 
+  async getTradeItemsForOrder(orderId: string, shopId: string): Promise<ItemData[]> {
+    return await this.callFunction<{ orderId: string; shopId: string }, ItemData[]>(
+      'getTradeItemsForOrder',
+      { orderId, shopId }
+    );
+  }
+
   async updateItemQuantity(itemId: string, quantityChange: number): Promise<void> {
     try {
       await this.callFunction<
@@ -1246,7 +1253,8 @@ class FirebaseService {
   async createPaymentSheetParams(
     amount: number,
     platformFee?: number,
-    connectedAccountId?: string
+    connectedAccountId?: string,
+    orderId?: string
   ): Promise<{
     paymentIntent: string;
     paymentIntentId: string;
@@ -1255,7 +1263,13 @@ class FirebaseService {
     publishableKey: string;
   }> {
     return await this.callFunction<
-      { amount: number; currency: string; platformFee?: number; connectedAccountId?: string },
+      {
+        amount: number;
+        currency: string;
+        platformFee?: number;
+        connectedAccountId?: string;
+        orderId?: string;
+      },
       {
         paymentIntent: string;
         paymentIntentId: string;
@@ -1268,6 +1282,32 @@ class FirebaseService {
       currency: 'usd',
       platformFee,
       connectedAccountId,
+      orderId,
+    });
+  }
+
+  async completeTradePurchase(
+    orderId: string,
+    shopId: string,
+    paymentIntentId: string,
+    contactPhone: string,
+    specialInstructions: string
+  ): Promise<void> {
+    await this.callFunction<
+      {
+        orderId: string;
+        shopId: string;
+        paymentIntentId: string;
+        contactPhone: string;
+        specialInstructions: string;
+      },
+      boolean
+    >('completeTradePurchase', {
+      orderId,
+      shopId,
+      paymentIntentId,
+      contactPhone,
+      specialInstructions,
     });
   }
 

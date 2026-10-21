@@ -52,11 +52,18 @@ const Trade = () => {
 
   useEffect(() => {
     const loadUserItems = async () => {
-      if (!userData?.uid) return;
+      const inventoryUserId = isUpdate ? selectedOrder?.userId : userData?.uid;
+      if (!inventoryUserId) {
+        setIsLoading(false);
+        return;
+      }
       try {
-        const items = await firebaseService.getAllItemsForUser(userData.uid);
+        const items =
+          isUpdate && inventoryUserId !== userData?.uid && orderId
+            ? await firebaseService.getTradeItemsForOrder(orderId, shopId)
+            : await firebaseService.getAllItemsForUser(inventoryUserId);
         // Filter out items from the same shop being traded with
-        setUserItems(items.filter((item: ItemData) => item.shopId !== shopId));
+        setUserItems(items.filter((item: ItemData) => item.shopId !== shopId && item.quantity > 0));
       } catch (error) {
         console.error('Error loading user items:', error);
         Toast.show({
@@ -71,7 +78,7 @@ const Trade = () => {
     };
 
     loadUserItems();
-  }, [userData?.uid, shopId]);
+  }, [userData?.uid, selectedOrder?.userId, isUpdate, orderId, shopId]);
 
   // Pre-select items if provided (for update/counteroffer)
   useEffect(() => {
@@ -121,6 +128,13 @@ const Trade = () => {
     setIsSubmitting(true);
 
     try {
+      if (!isUpdate) {
+        const shop = await firebaseService.getDocument('shops', shopId);
+        if (!shop?.allowPickup) {
+          throw new Error('Trade offers are only available for pickup-enabled shops.');
+        }
+      }
+
       const tradeItemsArray: TradeItem[] = Array.from(selectedUserItems).map((itemId) => {
         const item = userItems.find((i) => i.id === itemId);
         return {
@@ -233,7 +247,10 @@ const Trade = () => {
       Toast.show({
         type: 'error',
         text1: 'Error',
-        text2: 'Failed to submit trade. Please try again.',
+        text2:
+          error instanceof Error && error.message.includes('pickup-enabled')
+            ? error.message
+            : 'Failed to submit trade. Please try again.',
         visibilityTime: 3000,
       });
     } finally {

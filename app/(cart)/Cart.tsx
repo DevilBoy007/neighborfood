@@ -95,7 +95,7 @@ const CartScreen = () => {
       <View style={styles.shopHeader}>
         <Text style={[styles.shopName, { color: sectionColors.primary }]}>{shopCart.shopName}</Text>
         <View style={styles.shopHeaderActions}>
-          {hasItems && (
+          {hasItems && shopCart.allowPickup && (
             <SoundTouchableOpacity
               style={styles.tradeButton}
               onPress={() => onTrade(shopCart.shopId)}
