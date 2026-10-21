@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -7,6 +7,7 @@ import {
   ScrollView,
   TextInput,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -16,9 +17,21 @@ import { useCart, useUser, useOrder, useMessage } from '@/store/reduxHooks';
 import firebaseService from '@/handlers/firebaseService';
 import { SoundTouchableOpacity } from '@/components/SoundTouchableOpacity';
 import { useAppColors } from '@/hooks/useAppColors';
+const IS_WEB = Platform.OS === 'web';
+
+// Conditionally import Stripe PaymentSheet hooks (native only)
+let useStripeHook: () => {
+  initPaymentSheet: any;
+  presentPaymentSheet: any;
+} = () => ({ initPaymentSheet: null, presentPaymentSheet: null });
+if (!IS_WEB) {
+  /* eslint-disable @typescript-eslint/no-require-imports */
+  const StripeModule = require('@stripe/stripe-react-native');
+  useStripeHook = StripeModule.useStripe;
+  /* eslint-enable @typescript-eslint/no-require-imports */
+}
 
 type DeliveryOption = 'pickup' | 'delivery';
-type PaymentMethod = 'apple_pay' | 'card' | 'venmo' | 'paypal';
 
 const Checkout = () => {
   const router = useRouter();
@@ -27,21 +40,190 @@ const Checkout = () => {
   const { refreshOrders } = useOrder();
   const { createOrGetThread } = useMessage();
   const colors = useAppColors();
+  const { initPaymentSheet, presentPaymentSheet } = useStripeHook();
 
   const [shopDeliveryOptions, setShopDeliveryOptions] = useState<Record<string, DeliveryOption>>(
     {}
   );
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('card');
   const [deliveryAddress, setDeliveryAddress] = useState('');
   const [contactPhone, setContactPhone] = useState('');
   const [specialInstructions, setSpecialInstructions] = useState('');
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
+  const [paymentSheetReady, setPaymentSheetReady] = useState(false);
+  const [initializingSheet, setInitializingSheet] = useState(false);
+  const [checkoutOrderId] = useState(() => uuidv4());
+  const paymentIntentIdsRef = useRef<Record<string, string>>({});
+  const paidPaymentIntentIdsRef = useRef<Record<string, boolean>>({});
+  const initializationRef = useRef<Promise<void> | null>(null);
+  const initializationKeyRef = useRef<string | null>(null);
+  const readyPaymentKeyRef = useRef<string | null>(null);
+  const initializationVersionRef = useRef(0);
+  // Track shop owner UIDs for escrow metadata
+  const [shopOwnerIds, setShopOwnerIds] = useState<Record<string, string>>({});
 
   const subtotal = calculateTotalSubtotal();
   const deliveryFee =
     Object.values(shopDeliveryOptions).filter((option) => option === 'delivery').length * 3.99;
-  const tax = subtotal * 0.08; // 8% tax
-  const total = subtotal + deliveryFee + tax;
+  const tax = shopCarts.reduce(
+    (sum, shopCart) => sum + Math.round(shopCart.subtotal * 0.08 * 100) / 100,
+    0
+  );
+  const platformFee = shopCarts.reduce(
+    (sum, shopCart) => sum + Math.min(Math.round(shopCart.subtotal * 0.1 * 100) / 100, 1),
+    0
+  );
+  const total = subtotal + deliveryFee + tax + platformFee;
+
+  // Look up shop owner UIDs for escrow metadata (sellerId passed to createPaymentSheetParams)
+  useEffect(() => {
+    const loadShopOwners = async () => {
+      const owners: Record<string, string> = {};
+      await Promise.all(
+        shopCarts.map(async (shopCart) => {
+          try {
+            const shop = await firebaseService.getDocument('shops', shopCart.shopId);
+            if (shop?.userId) {
+              owners[shopCart.shopId] = shop.userId as string;
+            }
+          } catch {
+            // owner lookup failure is non-fatal; escrow release will fall back gracefully
+          }
+        })
+      );
+      setShopOwnerIds(owners);
+    };
+    if (shopCarts.length > 0) {
+      loadShopOwners();
+    }
+  }, [shopCarts]);
+
+  // Initialize PaymentSheet (escrow model — platform charge, no stripeAccount header)
+  // Pre-initializes for single-shop orders; multi-shop orders init per-shop during checkout.
+  const initializePaymentSheet = useCallback(async () => {
+    if (!userData?.uid || IS_WEB || total <= 0) return;
+    if (shopCarts.length !== 1) {
+      setPaymentSheetReady(shopCarts.length > 1);
+      return;
+    }
+
+    const shopCart = shopCarts[0];
+    const deliveryOption = shopDeliveryOptions[shopCart.shopId];
+    if (
+      !deliveryOption ||
+      !contactPhone.trim() ||
+      (deliveryOption === 'delivery' && !deliveryAddress.trim())
+    ) {
+      setPaymentSheetReady(false);
+      return;
+    }
+
+    const paymentKey = JSON.stringify([
+      shopCart.shopId,
+      shopCart.items.map(({ itemId, quantity }) => [itemId, quantity]),
+      deliveryOption,
+      deliveryAddress,
+      contactPhone,
+      specialInstructions,
+    ]);
+    if (readyPaymentKeyRef.current === paymentKey && paymentIntentIdsRef.current[shopCart.shopId]) {
+      setPaymentSheetReady(true);
+      return;
+    }
+    if (initializationRef.current && initializationKeyRef.current === paymentKey) {
+      await initializationRef.current;
+      return;
+    }
+
+    const version = ++initializationVersionRef.current;
+    setPaymentSheetReady(false);
+    setInitializingSheet(true);
+    const previousInitialization = initializationRef.current;
+    const initialization = (async () => {
+      if (previousInitialization) await previousInitialization;
+      if (version !== initializationVersionRef.current) return;
+
+      const { paymentIntent, paymentIntentId, ephemeralKey, customer, alreadyPaid } =
+        await firebaseService.createPaymentSheetParams(
+          checkoutOrderId,
+          shopCart.shopId,
+          shopCart.items.map(({ itemId, quantity }) => ({ itemId, quantity })),
+          deliveryOption,
+          deliveryAddress,
+          contactPhone,
+          specialInstructions
+        );
+      if (version !== initializationVersionRef.current) return;
+
+      if (!alreadyPaid) {
+        const { error } = await initPaymentSheet({
+          merchantDisplayName: 'Neighborfood',
+          customerId: customer,
+          customerEphemeralKeySecret: ephemeralKey,
+          paymentIntentClientSecret: paymentIntent,
+          allowsDelayedPaymentMethods: false,
+          returnURL: 'neighborfood://stripe-redirect',
+          applePay: { merchantCountryCode: 'US' },
+          googlePay: {
+            merchantCountryCode: 'US',
+            testEnv: (
+              process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY ||
+              process.env.STRIPE_TEST_KEY ||
+              ''
+            ).startsWith('pk_test_'),
+          },
+          defaultBillingDetails: {
+            name:
+              userData?.first && userData?.last ? `${userData.first} ${userData.last}` : undefined,
+            email: userData?.email || undefined,
+            phone: userData?.phone || undefined,
+          },
+        });
+        if (version !== initializationVersionRef.current) return;
+        if (error) {
+          console.error('PaymentSheet init error:', error);
+          return;
+        }
+      }
+
+      paymentIntentIdsRef.current = {
+        ...paymentIntentIdsRef.current,
+        [shopCart.shopId]: paymentIntentId,
+      };
+      paidPaymentIntentIdsRef.current[shopCart.shopId] = alreadyPaid;
+      readyPaymentKeyRef.current = paymentKey;
+      setPaymentSheetReady(true);
+    })();
+    initializationRef.current = initialization;
+    initializationKeyRef.current = paymentKey;
+    try {
+      await initialization;
+    } catch (error) {
+      console.error('Error initializing payment sheet:', error);
+    } finally {
+      if (initializationRef.current === initialization) {
+        initializationRef.current = null;
+        initializationKeyRef.current = null;
+        setInitializingSheet(false);
+      }
+    }
+  }, [
+    userData,
+    total,
+    initPaymentSheet,
+    shopCarts,
+    shopDeliveryOptions,
+    checkoutOrderId,
+    deliveryAddress,
+    contactPhone,
+    specialInstructions,
+  ]);
+
+  useEffect(() => {
+    if (shopCarts.length > 0 && total > 0) {
+      const timeout = setTimeout(initializePaymentSheet, 250);
+      return () => clearTimeout(timeout);
+    }
+  }, [initializePaymentSheet, shopCarts.length, total]);
 
   useEffect(() => {
     // Initialize delivery options for each shop
@@ -65,18 +247,67 @@ const Checkout = () => {
     }
   }, [shopCarts, userData]);
 
+  const invalidatePaymentSheet = () => {
+    initializationVersionRef.current += 1;
+    readyPaymentKeyRef.current = null;
+    setPaymentSheetReady(false);
+  };
+
   const updateShopDeliveryOption = (shopId: string, option: DeliveryOption) => {
+    if (shopDeliveryOptions[shopId] === option) return;
+    invalidatePaymentSheet();
     setShopDeliveryOptions((prev) => ({
       ...prev,
       [shopId]: option,
     }));
   };
 
+  const updateDeliveryAddress = (value: string) => {
+    invalidatePaymentSheet();
+    setDeliveryAddress(value);
+  };
+
+  const updateContactPhone = (value: string) => {
+    invalidatePaymentSheet();
+    setContactPhone(value);
+  };
+
+  const updateSpecialInstructions = (value: string) => {
+    invalidatePaymentSheet();
+    setSpecialInstructions(value);
+  };
+
   const hasDeliveryOrders = Object.values(shopDeliveryOptions).some(
     (option) => option === 'delivery'
   );
+  const singleShopPaymentKey =
+    shopCarts.length === 1 && shopDeliveryOptions[shopCarts[0].shopId]
+      ? JSON.stringify([
+          shopCarts[0].shopId,
+          shopCarts[0].items.map(({ itemId, quantity }) => [itemId, quantity]),
+          shopDeliveryOptions[shopCarts[0].shopId],
+          deliveryAddress,
+          contactPhone,
+          specialInstructions,
+        ])
+      : null;
+  const paymentSheetIsCurrent =
+    paymentSheetReady &&
+    singleShopPaymentKey !== null &&
+    readyPaymentKeyRef.current === singleShopPaymentKey &&
+    Boolean(paymentIntentIdsRef.current[shopCarts[0]?.shopId]);
 
   const handlePlaceOrder = async () => {
+    if (IS_WEB) {
+      Toast.show({
+        type: 'error',
+        text1: 'Payments unavailable',
+        text2: 'Checkout is not available on web yet. Please use the mobile app.',
+        visibilityTime: 3000,
+      });
+      return;
+    }
+
     if (!userData) {
       Toast.show({
         type: 'error',
@@ -120,55 +351,168 @@ const Checkout = () => {
     }
 
     setIsPlacingOrder(true);
-    const orderId = uuidv4();
+    const completedPayments: string[] = [];
     try {
-      // First, get shop owner information for each shop to create message threads
-      const shopOwnerMap = new Map<string, string>(); // shopId -> ownerId
-
-      await Promise.all(
-        shopCarts.map(async (shopCart) => {
-          const shop = await firebaseService.getDocument('shops', shopCart.shopId);
-          if (shop?.userId) {
-            shopOwnerMap.set(shopCart.shopId, shop.userId as string);
-          }
-        })
-      );
-
-      // Create orders for each shop using the dedicated createOrder function
-      const orderPromises = shopCarts.map(async (shopCart) => {
+      const getOrderData = (shopCart: (typeof shopCarts)[number]) => {
         const deliveryOption = shopDeliveryOptions[shopCart.shopId];
-        const orderData = {
-          id: orderId,
+        const shopPlatformFee = Math.min(shopCart.subtotal * 0.1, 1);
+        return {
+          id: checkoutOrderId,
           userId: userData.uid,
           shopId: shopCart.shopId,
           shopName: shopCart.shopName,
           shopPhotoURL: shopCart.shopPhotoURL || '',
-          items: shopCart.items.map((item) => ({
-            ...item,
-          })),
+          items: shopCart.items.map((item) => ({ ...item })),
           subtotal: shopCart.subtotal,
           tax: shopCart.subtotal * 0.08,
           deliveryFee: deliveryOption === 'delivery' ? 3.99 : 0,
-          tip: 0, // TODO: implement later
+          platformFee: shopPlatformFee,
+          tip: 0,
           total:
             shopCart.subtotal +
             shopCart.subtotal * 0.08 +
-            (deliveryOption === 'delivery' ? 3.99 : 0),
+            (deliveryOption === 'delivery' ? 3.99 : 0) +
+            shopPlatformFee,
           status: 'pending' as const,
-          estimatedDeliveryTime: new Date(Date.now() + 45 * 60 * 1000), // 45 minutes from now
-          paymentMethod,
+          estimatedDeliveryTime: new Date(Date.now() + 45 * 60 * 1000),
+          paymentMethod: 'card',
+          paymentIntentId: '',
+          escrowStatus: 'held',
           deliveryAddress: deliveryOption === 'delivery' ? deliveryAddress : 'Pickup',
           contactPhone,
           deliveryOption,
           specialInstructions,
         };
+      };
+      const createdOrders: ReturnType<typeof getOrderData>[] = [];
 
-        await firebaseService.createOrder(orderData);
+      const createPaidOrder = async (
+        shopCart: (typeof shopCarts)[number],
+        paymentIntentId: string
+      ) => {
+        try {
+          await firebaseService.createOrder({ paymentIntentId });
+        } catch (error) {
+          if (shopCarts.length === 1) {
+            readyPaymentKeyRef.current = null;
+            setPaymentSheetReady(false);
+            void initializePaymentSheet();
+          }
+          throw error;
+        }
+        completedPayments.push(shopCart.shopId);
+        createdOrders.push({ ...getOrderData(shopCart), paymentIntentId });
+      };
 
-        return orderData;
-      });
+      if (shopCarts.length === 1) {
+        const shopCart = shopCarts[0];
+        if (!paymentSheetIsCurrent) await initializePaymentSheet();
+        const paymentIntentId = paymentIntentIdsRef.current[shopCart.shopId];
+        if (!paymentIntentId) {
+          throw new Error('Payment is still being prepared. Please try again.');
+        }
+        const { error } = paidPaymentIntentIdsRef.current[shopCart.shopId]
+          ? { error: undefined }
+          : await presentPaymentSheet();
+        if (error) {
+          if (error.code !== 'Canceled') {
+            Toast.show({
+              type: 'error',
+              text1: 'Payment Failed',
+              text2: error.message || 'Your payment could not be processed.',
+              visibilityTime: 3000,
+            });
+          }
+          setPaymentSheetReady(false);
+          readyPaymentKeyRef.current = null;
+          delete paymentIntentIdsRef.current[shopCart.shopId];
+          delete paidPaymentIntentIdsRef.current[shopCart.shopId];
+          void initializePaymentSheet();
+          return;
+        }
+        await createPaidOrder(shopCart, paymentIntentId);
+      } else {
+        for (const shopCart of shopCarts) {
+          const deliveryOption = shopDeliveryOptions[shopCart.shopId];
+          const { paymentIntent, paymentIntentId, ephemeralKey, customer, alreadyPaid } =
+            await firebaseService.createPaymentSheetParams(
+              checkoutOrderId,
+              shopCart.shopId,
+              shopCart.items.map(({ itemId, quantity }) => ({ itemId, quantity })),
+              deliveryOption,
+              deliveryAddress,
+              contactPhone,
+              specialInstructions
+            );
 
-      const createdOrders = await Promise.all(orderPromises);
+          if (alreadyPaid) {
+            await createPaidOrder(shopCart, paymentIntentId);
+            continue;
+          }
+
+          const { error: initError } = await initPaymentSheet({
+            merchantDisplayName: 'Neighborfood',
+            customerId: customer,
+            customerEphemeralKeySecret: ephemeralKey,
+            paymentIntentClientSecret: paymentIntent,
+            allowsDelayedPaymentMethods: false,
+            returnURL: 'neighborfood://stripe-redirect',
+            applePay: { merchantCountryCode: 'US' },
+            googlePay: {
+              merchantCountryCode: 'US',
+              testEnv: (
+                process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY ||
+                process.env.STRIPE_TEST_KEY ||
+                ''
+              ).startsWith('pk_test_'),
+            },
+            defaultBillingDetails: {
+              name:
+                userData?.first && userData?.last
+                  ? `${userData.first} ${userData.last}`
+                  : undefined,
+              email: userData?.email || undefined,
+              phone: userData?.phone || undefined,
+            },
+          });
+          if (initError) {
+            throw new Error(`Failed to prepare payment for ${shopCart.shopName}.`);
+          }
+
+          const { error } = await presentPaymentSheet();
+          if (error) {
+            if (error.code !== 'Canceled' || completedPayments.length) {
+              Toast.show({
+                type: 'error',
+                text1: 'Payment Failed',
+                text2: completedPayments.length
+                  ? 'Orders from shops already paid remain placed; retry checkout to finish the remaining shops.'
+                  : error.message || `Payment failed for ${shopCart.shopName}.`,
+                visibilityTime: 3000,
+              });
+            }
+            if (completedPayments.length) await refreshOrders(userData.uid);
+            return;
+          }
+
+          await createPaidOrder(shopCart, paymentIntentId);
+        }
+      }
+
+      // shopOwnerMap is already populated via shopOwnerIds state; use it for threads too.
+      const shopOwnerMap = new Map<string, string>(Object.entries(shopOwnerIds));
+
+      // Also fetch any owners not yet loaded (e.g. if owner lookup was still in-flight)
+      await Promise.all(
+        shopCarts
+          .filter((shopCart) => !shopOwnerMap.has(shopCart.shopId))
+          .map(async (shopCart) => {
+            const shop = await firebaseService.getDocument('shops', shopCart.shopId);
+            if (shop?.userId) {
+              shopOwnerMap.set(shopCart.shopId, shop.userId as string);
+            }
+          })
+      );
 
       // Create message threads with shop owners (one per unique owner)
       // Group orders by owner to avoid creating duplicate threads
@@ -236,14 +580,17 @@ const Checkout = () => {
             router.navigate('/(home)/(orders)');
           }, 100);
         },
-        Platform.OS === 'web' ? 2100 : 2000
+        IS_WEB ? 2100 : 2000
       );
     } catch (error) {
       console.error('Error placing order:', error);
+      if (completedPayments.length) await refreshOrders(userData.uid);
       Toast.show({
         type: 'error',
         text1: 'Error',
-        text2: 'Failed to place order. Please try again.',
+        text2: completedPayments.length
+          ? 'Orders from shops already paid remain placed; retry checkout to finish the remaining shops.'
+          : 'Failed to place order. Please try again.',
         visibilityTime: 3000,
       });
     } finally {
@@ -417,7 +764,7 @@ const Checkout = () => {
                 { backgroundColor: colors.inputBackground, borderColor: colors.divider },
               ]}
               value={deliveryAddress}
-              onChangeText={setDeliveryAddress}
+              onChangeText={updateDeliveryAddress}
               placeholder="Enter your delivery address"
               placeholderTextColor={colors.placeholder}
               multiline
@@ -434,54 +781,28 @@ const Checkout = () => {
               { backgroundColor: colors.inputBackground, borderColor: colors.divider },
             ]}
             value={contactPhone}
-            onChangeText={setContactPhone}
+            onChangeText={updateContactPhone}
             placeholder="Enter your phone number"
             placeholderTextColor={colors.placeholder}
             keyboardType="phone-pad"
           />
         </View>
 
-        {/* Payment Method */}
-        <View style={[styles.section, { backgroundColor: colors.surface }]}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>Payment Method</Text>
-          <View style={styles.paymentOptions}>
-            {[
-              { key: 'apple_pay', icon: 'logo-apple', label: 'Apple Pay' },
-              { key: 'card', icon: 'card', label: 'Card' },
-              { key: 'venmo', icon: 'logo-venmo', label: 'Venmo' },
-              { key: 'paypal', icon: 'logo-paypal', label: 'PayPal' },
-            ].map((payment) => (
-              <SoundTouchableOpacity
-                key={payment.key}
-                style={[
-                  styles.paymentOption,
-                  { borderColor: colors.divider, backgroundColor: colors.inputBackground },
-                  paymentMethod === payment.key && {
-                    borderColor: colors.primary,
-                    backgroundColor: colors.surface,
-                  },
-                ]}
-                onPress={() => setPaymentMethod(payment.key as PaymentMethod)}
-                soundType="tap"
-              >
-                <Ionicons
-                  name={payment.icon as any}
-                  size={24}
-                  color={paymentMethod === payment.key ? colors.primary : colors.textMuted}
-                />
-                <Text
-                  style={[
-                    styles.paymentLabel,
-                    { color: colors.text },
-                    paymentMethod === payment.key && { color: colors.primary },
-                  ]}
-                >
-                  {payment.label}
-                </Text>
-              </SoundTouchableOpacity>
-            ))}
+        {/* Payment — handled by PaymentSheet */}
+        {!IS_WEB && (
+          <View style={[styles.section, { backgroundColor: colors.surface }]}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>Payment</Text>
+            <View style={styles.paymentSheetInfo}>
+              <Ionicons name="shield-checkmark-outline" size={20} color={colors.primary} />
+              <Text style={[styles.paymentSheetText, { color: colors.textMuted }]}>
+                Powered by Stripe — Card, Apple Pay, Google Pay, Cash App, PayPal, and more
+              </Text>
+            </View>
+            {initializingSheet && (
+              <ActivityIndicator size="small" color={colors.primary} style={{ marginTop: 8 }} />
+            )}
           </View>
-        </View>
+        )}
 
         {/* Special Instructions */}
         <View style={[styles.section, { backgroundColor: colors.surface }]}>
@@ -493,7 +814,7 @@ const Checkout = () => {
               { backgroundColor: colors.inputBackground, borderColor: colors.divider },
             ]}
             value={specialInstructions}
-            onChangeText={setSpecialInstructions}
+            onChangeText={updateSpecialInstructions}
             placeholder="Any special requests or instructions..."
             placeholderTextColor={colors.placeholder}
             multiline
@@ -523,6 +844,12 @@ const Checkout = () => {
                 ${deliveryFee.toFixed(2)}
               </Text>
             </View>
+            <View style={styles.totalRow}>
+              <Text style={[styles.totalLabel, { color: colors.text }]}>Service Fee:</Text>
+              <Text style={[styles.totalValue, { color: colors.textMuted }]}>
+                ${platformFee.toFixed(2)}
+              </Text>
+            </View>
             <View
               style={[styles.totalRow, styles.finalTotalRow, { borderTopColor: colors.primary }]}
             >
@@ -536,37 +863,37 @@ const Checkout = () => {
       </ScrollView>
       {/* Place Order Button */}
       <View style={styles.buttonContainer}>
-        {paymentMethod === 'apple_pay' ? (
-          <SoundTouchableOpacity
-            style={[styles.applePayButton, isPlacingOrder && { opacity: 0.7 }]}
-            onPress={handlePlaceOrder}
-            disabled={isPlacingOrder}
-            soundType="click"
-          >
-            <Ionicons name="logo-apple" size={24} color="white" style={styles.applePayIcon} />
-            <Text style={styles.applePayText}>
-              {isPlacingOrder ? 'Processing...' : 'Pay with Apple Pay'}
-            </Text>
-          </SoundTouchableOpacity>
-        ) : (
-          <SoundTouchableOpacity
-            style={[
-              styles.placeOrderButton,
-              { backgroundColor: colors.buttonPrimary },
-              isPlacingOrder && {
-                opacity: 0.7,
-                backgroundColor: colors.buttonDisabled,
-              },
-            ]}
-            onPress={handlePlaceOrder}
-            disabled={isPlacingOrder}
-            soundType="click"
-          >
-            <Text style={[styles.placeOrderText, { color: colors.buttonText }]}>
-              {isPlacingOrder ? 'Placing Order...' : 'Place Order'}
-            </Text>
-          </SoundTouchableOpacity>
-        )}
+        <SoundTouchableOpacity
+          style={[
+            styles.placeOrderButton,
+            { backgroundColor: colors.buttonPrimary },
+            (isPlacingOrder ||
+              initializingSheet ||
+              IS_WEB ||
+              (shopCarts.length === 1 && !paymentSheetIsCurrent)) && {
+              opacity: 0.7,
+              backgroundColor: colors.buttonDisabled,
+            },
+          ]}
+          onPress={handlePlaceOrder}
+          disabled={
+            isPlacingOrder ||
+            initializingSheet ||
+            IS_WEB ||
+            (shopCarts.length === 1 && !paymentSheetIsCurrent)
+          }
+          soundType="click"
+        >
+          <Text style={[styles.placeOrderText, { color: colors.buttonText }]}>
+            {isPlacingOrder
+              ? 'Processing Payment...'
+              : IS_WEB
+                ? 'Mobile checkout required'
+                : initializingSheet
+                  ? 'Preparing Checkout...'
+                  : `Pay $${total.toFixed(2)}`}
+          </Text>
+        </SoundTouchableOpacity>
       </View>
     </View>
   );
@@ -658,26 +985,6 @@ const styles = StyleSheet.create({
   optionGroup: {
     gap: 12,
   },
-  option: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 12,
-    borderRadius: 8,
-    borderWidth: 2,
-  },
-  optionContent: {
-    marginLeft: 12,
-    flex: 1,
-  },
-  optionTitle: {
-    fontSize: 16,
-    fontFamily: 'TextMeOne',
-    fontWeight: 'bold',
-  },
-  optionSubtitle: {
-    fontSize: 14,
-    fontFamily: 'TextMeOne',
-  },
   textInput: {
     borderWidth: 1,
     borderRadius: 8,
@@ -689,26 +996,16 @@ const styles = StyleSheet.create({
     height: 80,
     textAlignVertical: 'top',
   },
-  paymentOptions: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-  },
-  paymentOption: {
+  paymentSheetInfo: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 12,
-    borderRadius: 8,
-    borderWidth: 2,
-    minWidth: '45%',
+    gap: 8,
+    paddingVertical: 4,
   },
-  paymentLabel: {
-    marginLeft: 8,
-    fontSize: 14,
+  paymentSheetText: {
+    flex: 1,
+    fontSize: 13,
     fontFamily: 'TextMeOne',
-  },
-  selectedPaymentText: {
-    fontWeight: 'bold',
   },
   totalBreakdown: {
     gap: 8,
@@ -743,12 +1040,6 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    // uncomment if adding checkout to (home) route
-    // ...Platform.select({
-    //     ios: {
-    //         paddingBottom: 30,
-    //     }
-    // }),
   },
   placeOrderButton: {
     width: '100%',
@@ -760,24 +1051,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontSize: 30,
     fontFamily: 'TextMeOne',
-  },
-  applePayButton: {
-    width: '100%',
-    marginBottom: 0,
-    padding: 10,
-    paddingBottom: 33,
-    backgroundColor: '#000',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  applePayIcon: {
-    marginRight: 8,
-  },
-  applePayText: {
-    color: 'white',
-    textAlign: 'center',
-    fontSize: 30,
   },
   emptyContainer: {
     flex: 1,
@@ -824,9 +1097,6 @@ const styles = StyleSheet.create({
     marginLeft: 6,
     fontSize: 12,
     fontFamily: 'TextMeOne',
-  },
-  selectedShopOptionText: {
-    fontWeight: 'bold',
   },
 });
 

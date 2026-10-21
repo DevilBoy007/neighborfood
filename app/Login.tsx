@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -8,7 +8,6 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
-import { EventRegister } from 'react-native-event-listeners';
 import { KeyboardToolbar } from 'react-native-keyboard-controller';
 import { useRouter } from 'expo-router';
 import { useUser } from '@/store/reduxHooks';
@@ -27,23 +26,18 @@ const LoginScreen = () => {
 
   // Use the user context
   const { userData, setUserData } = useUser();
-  const userLoggedInListener = EventRegister.addEventListener('userLoggedIn', () => {
-    router.replace('/success');
-    setTimeout(() => {
-      router.replace('/(home)/Market');
-    }, 2000);
-  });
+  const hasNavigated = useRef(false);
 
   useEffect(() => {
     // If user data already exists in context, navigate to the appropriate screen
-    if (userData && userData.uid) {
+    if (userData && userData.uid && !hasNavigated.current) {
       console.log('User already authenticated:', userData.uid);
-      EventRegister.emit('userLoggedIn');
+      hasNavigated.current = true;
+      router.replace('/success');
+      setTimeout(() => {
+        router.replace('/(home)/Market');
+      }, 2000);
     }
-    // Clean up the event listener on component unmount
-    return () => {
-      EventRegister.removeEventListener(userLoggedInListener);
-    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userData]);
 
@@ -94,7 +88,13 @@ const LoginScreen = () => {
         // Use context's setUserData method which will handle storage
         setUserData(userDataObj);
         console.log('Stored user:', userDataObj.uid);
-        EventRegister.emit('userLoggedIn');
+        if (!hasNavigated.current) {
+          hasNavigated.current = true;
+          router.replace('/success');
+          setTimeout(() => {
+            router.replace('/(home)/Market');
+          }, 2000);
+        }
       }
     } catch (error: any) {
       console.error('Error logging in:', error);

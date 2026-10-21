@@ -12,6 +12,8 @@ export type UserData = {
   last: string;
   dob: string;
   phone: string;
+  stripeCustomerId?: string;
+  stripeConnectedAccountId?: string;
   location: {
     address: string;
     city: string;

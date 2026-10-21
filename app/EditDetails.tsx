@@ -619,6 +619,19 @@ const EditDetails = () => {
             Must be at least 6 characters with no special characters.
           </Text>
         )}
+
+        <Text style={[styles.subtitle, { color: colors.text }]}>Payments</Text>
+        <TouchableOpacity
+          style={[
+            styles.paymentMethodsButton,
+            { backgroundColor: colors.surface, borderColor: colors.border },
+          ]}
+          onPress={() => router.push('/PaymentMethods')}
+        >
+          <Ionicons name="card-outline" size={22} color={colors.primary} />
+          <Text style={[styles.paymentMethodsText, { color: colors.text }]}>Payment Methods</Text>
+          <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+        </TouchableOpacity>
       </ScrollView>
 
       {/* Email Info Modal */}
@@ -874,6 +887,20 @@ const styles = StyleSheet.create({
     marginTop: -10,
     marginBottom: 15,
     paddingHorizontal: 5,
+  },
+  paymentMethodsButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginBottom: 15,
+    gap: 12,
+  },
+  paymentMethodsText: {
+    flex: 1,
+    fontSize: 16,
+    fontFamily: 'TextMeOne',
   },
   modalOverlay: {
     flex: 1,

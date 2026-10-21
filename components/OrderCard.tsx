@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import Toast from 'react-native-toast-message';
 
 import { useOrder, useUser, OrderStatus } from '@/store/reduxHooks';
 import firebaseService from '@/handlers/firebaseService';
@@ -115,11 +116,28 @@ const OrderCard = ({ order, onPress }) => {
       <View style={styles.statusMetaContainer}>
         {isPressed && (
           <View>
-            {buildStatusButtons(order.status, order.shopOwnerView || false, (newStatus) => {
-              updateOrderStatus(selectedOrder.id, selectedOrder.shopId, newStatus as OrderStatus);
-              setIsPressed(false);
-              if (newStatus === 'preparing') {
-                router.push('/success');
+            {buildStatusButtons(order.status, order.shopOwnerView || false, async (newStatus) => {
+              if (!selectedOrder) return;
+              const orderToUpdate = selectedOrder;
+              try {
+                await updateOrderStatus(
+                  orderToUpdate.id,
+                  orderToUpdate.shopId,
+                  newStatus as OrderStatus
+                );
+                setIsPressed(false);
+                if (newStatus === 'preparing') {
+                  router.push('/success');
+                }
+              } catch (error) {
+                Toast.show({
+                  type: 'error',
+                  text1: 'Order update failed',
+                  text2:
+                    error instanceof Error
+                      ? error.message
+                      : 'The cancellation or refund could not be completed.',
+                });
               }
             }).map((button) => (
               <TouchableOpacity key={button.key} onPress={button.onPress}>

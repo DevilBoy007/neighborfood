@@ -11,6 +11,8 @@ export const useOrderStatus = () => {
         return 'orchid';
       case 'delivered':
         return '#4CAF50';
+      case 'payment_failed':
+        return '#f44336';
       default:
         return '#4f6549ff';
     }
@@ -30,6 +32,8 @@ export const useOrderStatus = () => {
         return 'Delivered';
       case 'cancelled':
         return 'Order Cancelled';
+      case 'payment_failed':
+        return 'Payment Failed';
       default:
         return status;
     }

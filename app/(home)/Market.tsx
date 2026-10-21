@@ -68,8 +68,7 @@ const MarketScreen = () => {
       if (
         !forceRefresh &&
         lastFetchRef.current.zipPrefix === zipPrefix &&
-        lastFetchRef.current.userId === userId &&
-        shops.length > 0
+        lastFetchRef.current.userId === userId
       ) {
         return;
       }
