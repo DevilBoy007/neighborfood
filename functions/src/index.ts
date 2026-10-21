@@ -54,6 +54,36 @@ function sanitizeFirestoreData(
   return result;
 }
 
+const protectedStripeUserFields = [
+  'stripeCustomerId',
+  'stripeConnectedAccountId',
+  'stripeConnectedCustomerIds',
+];
+const serverOnlyCollections = new Set(['checkoutSessions']);
+
+function rejectServerOnlyCollection(collectionPath: string): void {
+  if (serverOnlyCollections.has(collectionPath)) {
+    throw new HttpsError('permission-denied', 'This collection is server-managed');
+  }
+}
+
+function sanitizePublicUserData(
+  data: FirebaseFirestore.DocumentData | undefined | null
+): Record<string, unknown> {
+  const result = sanitizeFirestoreData(data);
+  protectedStripeUserFields.forEach((field) => delete result[field]);
+  return result;
+}
+
+function rejectProtectedStripeUserFields(collectionPath: string, data: DocumentData): void {
+  if (
+    collectionPath === 'users' &&
+    Object.keys(data).some((field) => protectedStripeUserFields.includes(field.split('.')[0]))
+  ) {
+    throw new HttpsError('permission-denied', 'Stripe account bindings are server-managed');
+  }
+}
+
 function sanitizeValue(value: unknown, visited: WeakSet<object>): unknown {
   if (value === null || value === undefined) {
     return value;
@@ -202,6 +232,7 @@ interface DeleteItemRequest {
 
 interface CreateOrderRequest {
   orderData: DocumentData;
+  checkoutRef: string;
 }
 
 interface GetOrdersFromUserRequest {
@@ -267,13 +298,18 @@ export const getDocument = onCall(async (request: CallableRequest<GetDocumentReq
   if (!collectionPath || !docId) {
     throw new HttpsError('invalid-argument', 'Collection path and document ID are required');
   }
+  rejectServerOnlyCollection(collectionPath);
 
   try {
     const docRef = db.collection(collectionPath).doc(docId);
     const snapshot = await docRef.get();
 
     if (snapshot.exists) {
-      return { id: snapshot.id, ...sanitizeFirestoreData(snapshot.data()) };
+      const data =
+        collectionPath === 'users'
+          ? sanitizePublicUserData(snapshot.data())
+          : sanitizeFirestoreData(snapshot.data());
+      return { id: snapshot.id, ...data };
     } else {
       return null;
     }
@@ -293,11 +329,17 @@ export const getAllDocuments = onCall(async (request: CallableRequest<GetAllDocu
   if (!collectionPath) {
     throw new HttpsError('invalid-argument', 'Collection path is required');
   }
+  rejectServerOnlyCollection(collectionPath);
 
   try {
     const collectionRef = db.collection(collectionPath);
     const snapshot = await collectionRef.get();
-    return snapshot.docs.map((doc) => ({ id: doc.id, ...sanitizeFirestoreData(doc.data()) }));
+    return snapshot.docs.map((doc) => ({
+      id: doc.id,
+      ...(collectionPath === 'users'
+        ? sanitizePublicUserData(doc.data())
+        : sanitizeFirestoreData(doc.data())),
+    }));
   } catch (error) {
     console.error('Error getting all documents:', error);
     throw new HttpsError('internal', 'Error getting documents');
@@ -315,12 +357,18 @@ export const getDocumentsWhere = onCall(
     if (!collectionPath || !field || !operator) {
       throw new HttpsError('invalid-argument', 'Collection path, field, and operator are required');
     }
+    rejectServerOnlyCollection(collectionPath);
 
     try {
       const collectionRef = db.collection(collectionPath);
       const q = collectionRef.where(field, operator, value);
       const snapshot = await q.get();
-      return snapshot.docs.map((doc) => ({ id: doc.id, ...sanitizeFirestoreData(doc.data()) }));
+      return snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...(collectionPath === 'users'
+          ? sanitizePublicUserData(doc.data())
+          : sanitizeFirestoreData(doc.data())),
+      }));
     } catch (error) {
       console.error('Error getting documents with condition:', error);
       throw new HttpsError('internal', 'Error getting documents');
@@ -338,11 +386,23 @@ export const addDocument = onCall(async (request: CallableRequest<AddDocumentReq
   if (!collectionPath || !data) {
     throw new HttpsError('invalid-argument', 'Collection path and data are required');
   }
+  rejectServerOnlyCollection(collectionPath);
+  rejectProtectedStripeUserFields(collectionPath, data);
+  if (collectionPath === 'users' && !id) {
+    throw new HttpsError('invalid-argument', 'User documents must use the authenticated user ID');
+  }
+  if (collectionPath === 'users' && id !== request.auth!.uid) {
+    throw new HttpsError('permission-denied', 'Users can only create their own profile');
+  }
 
   try {
     if (id) {
       const docRef = db.collection(collectionPath).doc(id);
-      await docRef.set(data);
+      if (collectionPath === 'users') {
+        await docRef.create(data);
+      } else {
+        await docRef.set(data);
+      }
       return id;
     } else {
       const collectionRef = db.collection(collectionPath);
@@ -365,6 +425,11 @@ export const updateDocument = onCall(async (request: CallableRequest<UpdateDocum
   if (!collectionPath || !docId || !data) {
     throw new HttpsError('invalid-argument', 'Collection path, document ID, and data are required');
   }
+  rejectServerOnlyCollection(collectionPath);
+  rejectProtectedStripeUserFields(collectionPath, data);
+  if (collectionPath === 'users' && docId !== request.auth!.uid) {
+    throw new HttpsError('permission-denied', 'Users can only update their own profile');
+  }
 
   try {
     const docRef = db.collection(collectionPath).doc(docId);
@@ -385,6 +450,10 @@ export const deleteDocument = onCall(async (request: CallableRequest<DeleteDocum
 
   if (!collectionPath || !docId) {
     throw new HttpsError('invalid-argument', 'Collection path and document ID are required');
+  }
+  rejectServerOnlyCollection(collectionPath);
+  if (collectionPath === 'users') {
+    throw new HttpsError('permission-denied', 'User documents cannot be deleted through this API');
   }
 
   try {
@@ -937,33 +1006,112 @@ export const updateItemDetails = onCall(
 /**
  * Create an order
  */
-export const createOrder = onCall(async (request: CallableRequest<CreateOrderRequest>) => {
-  verifyAuth(request);
-  const { orderData } = request.data;
+export const createOrder = onCall(
+  { secrets: [stripeSecretKey] },
+  async (request: CallableRequest<CreateOrderRequest>) => {
+    verifyAuth(request);
+    const { orderData, checkoutRef } = request.data;
+    const userId = request.auth!.uid;
 
-  if (!orderData) {
-    throw new HttpsError('invalid-argument', 'Order data is required');
+    if (!orderData || !checkoutRef) {
+      throw new HttpsError('invalid-argument', 'Order data and checkout reference are required');
+    }
+    if (orderData.userId && orderData.userId !== userId) {
+      throw new HttpsError('permission-denied', 'User can only create orders for themselves');
+    }
+
+    try {
+      const checkoutDoc = db.collection('checkoutSessions').doc(checkoutRef);
+      const checkoutSnapshot = await checkoutDoc.get();
+      const checkout = checkoutSnapshot.data();
+      if (!checkoutSnapshot.exists || checkout?.userId !== userId) {
+        throw new HttpsError('permission-denied', 'Checkout does not belong to this user');
+      }
+
+      if (!checkout.orderId) {
+        if (checkout.status !== 'pending') {
+          throw new HttpsError('failed-precondition', 'Checkout is no longer payable');
+        }
+        const stripe = new Stripe(stripeSecretKey.value(), {
+          apiVersion: '2026-01-28.clover',
+        });
+        const stripeOptions: Stripe.RequestOptions | undefined = checkout.connectedAccountId
+          ? { stripeAccount: checkout.connectedAccountId }
+          : undefined;
+        const paymentIntent = await stripe.paymentIntents.retrieve(
+          checkout.paymentIntentId,
+          stripeOptions
+        );
+        if (
+          paymentIntent.status !== 'succeeded' ||
+          paymentIntent.amount !== checkout.amountInCents ||
+          paymentIntent.currency !== checkout.currency ||
+          paymentIntent.metadata.checkoutRef !== checkoutRef ||
+          paymentIntent.metadata.firebaseUserId !== userId ||
+          paymentIntent.metadata.shopId !== checkout.shopId ||
+          paymentIntent.metadata.recipientAccountId !==
+            (checkout.connectedAccountId || 'platform') ||
+          (paymentIntent.application_fee_amount || 0) !==
+            (checkout.connectedAccountId ? Math.round(checkout.platformFee * 100) : 0)
+        ) {
+          throw new HttpsError('failed-precondition', 'Checkout payment could not be verified');
+        }
+
+        const orderRef = db.collection('orders').doc(checkoutRef);
+        await db.runTransaction(async (transaction) => {
+          const [freshCheckoutSnapshot, existingOrder] = await Promise.all([
+            transaction.get(checkoutDoc),
+            transaction.get(orderRef),
+          ]);
+          const freshCheckout = freshCheckoutSnapshot.data();
+          if (!freshCheckout || freshCheckout.userId !== userId) {
+            throw new HttpsError('permission-denied', 'Checkout does not belong to this user');
+          }
+          if (freshCheckout.orderId || existingOrder.exists) return;
+          if (freshCheckout.status !== 'pending') {
+            throw new HttpsError('failed-precondition', 'Checkout is no longer payable');
+          }
+
+          const deliveryOption = freshCheckout.deliveryOption;
+          transaction.create(orderRef, {
+            id: orderData.id || checkoutRef,
+            userId,
+            shopId: freshCheckout.shopId,
+            shopName: freshCheckout.shopName,
+            shopPhotoURL: freshCheckout.shopPhotoURL,
+            items: freshCheckout.items,
+            subtotal: freshCheckout.subtotal,
+            tax: freshCheckout.tax,
+            deliveryFee: freshCheckout.deliveryFee,
+            platformFee: freshCheckout.platformFee,
+            tip: 0,
+            total: freshCheckout.total,
+            status: 'pending',
+            estimatedDeliveryTime: new Date(Date.now() + 45 * 60 * 1000),
+            paymentMethod: 'card',
+            paymentIntentId: freshCheckout.paymentIntentId,
+            stripeAccountId: freshCheckout.connectedAccountId || null,
+            deliveryAddress:
+              deliveryOption === 'delivery'
+                ? String(orderData.deliveryAddress || '').slice(0, 1000)
+                : 'Pickup',
+            contactPhone: String(orderData.contactPhone || '').slice(0, 100),
+            deliveryOption,
+            specialInstructions: String(orderData.specialInstructions || '').slice(0, 2000),
+            createdAt: FieldValue.serverTimestamp(),
+          });
+          transaction.update(checkoutDoc, { orderId: orderRef.id, status: 'completed' });
+        });
+      }
+
+      return checkoutRef;
+    } catch (error) {
+      if (error instanceof HttpsError) throw error;
+      console.error('Error creating order:', error);
+      throw new HttpsError('internal', 'Error creating order');
+    }
   }
-
-  // Verify the authenticated user matches the userId in the order
-  if (orderData.userId && orderData.userId !== request.auth?.uid) {
-    throw new HttpsError('permission-denied', 'User can only create orders for themselves');
-  }
-
-  try {
-    const ordersCollectionRef = db.collection('orders');
-    const docRef = await ordersCollectionRef.add({
-      ...orderData,
-      createdAt: FieldValue.serverTimestamp(),
-    });
-
-    console.log('Order created with ID:', docRef.id);
-    return docRef.id;
-  } catch (error) {
-    console.error('Error creating order:', error);
-    throw new HttpsError('internal', 'Error creating order');
-  }
-});
+);
 
 /**
  * Get orders from a user (orders placed by user)
@@ -1261,7 +1409,7 @@ export const getUserById = onCall(async (request: CallableRequest<GetUserByIdReq
     const userDoc = await db.collection('users').doc(userId).get();
 
     if (userDoc.exists) {
-      return { id: userDoc.id, ...sanitizeFirestoreData(userDoc.data()) };
+      return { id: userDoc.id, ...sanitizePublicUserData(userDoc.data()) };
     } else {
       return null;
     }
@@ -1917,27 +2065,57 @@ interface SetDefaultPaymentMethodRequest {
 /**
  * Helper to get or create a Stripe customer for a user
  */
-async function getOrCreateStripeCustomer(stripe: Stripe, userId: string): Promise<string> {
-  const userDoc = await db.collection('users').doc(userId).get();
-  const userData = userDoc.data();
+async function getOrCreateStripeCustomer(
+  stripe: Stripe,
+  userId: string,
+  connectedAccountId?: string
+): Promise<string> {
+  const userRef = db.collection('users').doc(userId);
+  const userSnapshot = await userRef.get();
+  const userData = userSnapshot.data();
+  const connectedCustomers =
+    (userData?.stripeConnectedCustomerIds as Record<string, string> | undefined) || {};
+  const boundCustomerId = connectedAccountId
+    ? connectedCustomers[connectedAccountId]
+    : (userData?.stripeCustomerId as string | undefined);
+  if (boundCustomerId) return boundCustomerId;
 
-  if (userData?.stripeCustomerId) {
-    return userData.stripeCustomerId;
-  }
+  const customer = await stripe.customers.create(
+    {
+      metadata: { firebaseUserId: userId },
+      email: userData?.email || undefined,
+      name: userData?.first && userData?.last ? `${userData.first} ${userData.last}` : undefined,
+    },
+    {
+      idempotencyKey: `neighborfood_customer_${userId}_${connectedAccountId || 'platform'}`,
+      ...(connectedAccountId ? { stripeAccount: connectedAccountId } : {}),
+    }
+  );
 
-  // Create a new Stripe customer
-  const customer = await stripe.customers.create({
-    metadata: { firebaseUserId: userId },
-    email: userData?.email || undefined,
-    name: userData?.first && userData?.last ? `${userData.first} ${userData.last}` : undefined,
+  let resolvedCustomerId = customer.id;
+  await db.runTransaction(async (transaction) => {
+    const currentSnapshot = await transaction.get(userRef);
+    const currentData = currentSnapshot.data();
+    const currentConnectedCustomers =
+      (currentData?.stripeConnectedCustomerIds as Record<string, string> | undefined) || {};
+    const currentCustomerId = connectedAccountId
+      ? currentConnectedCustomers[connectedAccountId]
+      : (currentData?.stripeCustomerId as string | undefined);
+    if (currentCustomerId) {
+      resolvedCustomerId = currentCustomerId;
+      return;
+    }
+
+    transaction.update(
+      userRef,
+      connectedAccountId
+        ? {
+            [`stripeConnectedCustomerIds.${connectedAccountId}`]: customer.id,
+          }
+        : { stripeCustomerId: customer.id }
+    );
   });
-
-  // Save the Stripe customer ID to the user's profile
-  await db.collection('users').doc(userId).update({
-    stripeCustomerId: customer.id,
-  });
-
-  return customer.id;
+  return resolvedCustomerId;
 }
 
 /**
@@ -2022,10 +2200,10 @@ export const createPaymentIntent = onCall(
  * Uses direct charges when a connected account is specified.
  */
 interface CreatePaymentSheetParamsRequest {
-  amount: number; // in cents
-  platformFee?: number; // in cents — application fee for platform
-  connectedAccountId?: string; // merchant's Stripe connected account
-  currency?: string;
+  checkoutId: string;
+  shopId: string;
+  items: { itemId: string; quantity: number }[];
+  deliveryOption: 'pickup' | 'delivery';
 }
 
 export const createPaymentSheetParams = onCall(
@@ -2033,54 +2211,279 @@ export const createPaymentSheetParams = onCall(
   async (request: CallableRequest<CreatePaymentSheetParamsRequest>) => {
     verifyAuth(request);
     const userId = request.auth!.uid;
-    const { amount, platformFee, connectedAccountId, currency = 'usd' } = request.data;
-
-    if (!amount || amount <= 0) {
-      throw new HttpsError('invalid-argument', 'A valid amount is required');
+    const { checkoutId, shopId, items, deliveryOption } = request.data;
+    if (
+      !checkoutId ||
+      !/^[A-Za-z0-9_-]{8,128}$/.test(checkoutId) ||
+      !shopId ||
+      !Array.isArray(items) ||
+      items.length === 0 ||
+      !['pickup', 'delivery'].includes(deliveryOption)
+    ) {
+      throw new HttpsError('invalid-argument', 'Valid checkout details are required');
     }
 
     try {
       const stripe = new Stripe(stripeSecretKey.value(), {
         apiVersion: '2026-01-28.clover',
       });
-
-      const customerId = await getOrCreateStripeCustomer(stripe, userId);
-
-      const ephemeralKey = await stripe.ephemeralKeys.create(
-        { customer: customerId },
-        { apiVersion: '2026-01-28.clover' }
-      );
-
-      const intentParams: Stripe.PaymentIntentCreateParams = {
-        amount: Math.round(amount),
-        currency,
-        customer: customerId,
-        automatic_payment_methods: { enabled: true },
-      };
-
-      // For direct charges: set application fee so the platform collects its cut
-      if (connectedAccountId && platformFee && platformFee > 0) {
-        intentParams.application_fee_amount = Math.round(platformFee);
+      const shopSnapshot = await db.collection('shops').doc(shopId).get();
+      if (!shopSnapshot.exists) throw new HttpsError('not-found', 'Shop not found');
+      const shop = shopSnapshot.data()!;
+      if (deliveryOption === 'pickup' ? shop.allowPickup !== true : shop.localDelivery !== true) {
+        throw new HttpsError('invalid-argument', 'Delivery option is not available for this shop');
       }
 
-      // Create PaymentIntent on the connected account (direct charge) or platform
+      let subtotalInCents = 0;
+      const orderItems: DocumentData[] = [];
+      const uniqueItemIds = new Set<string>();
+      for (const line of items) {
+        if (
+          !line?.itemId ||
+          !Number.isInteger(line.quantity) ||
+          line.quantity < 1 ||
+          line.quantity > 99 ||
+          uniqueItemIds.has(line.itemId)
+        ) {
+          throw new HttpsError('invalid-argument', 'Invalid checkout item');
+        }
+        uniqueItemIds.add(line.itemId);
+        const itemSnapshot = await db.collection('items').doc(line.itemId).get();
+        const item = itemSnapshot.data();
+        if (!itemSnapshot.exists || item?.shopId !== shopId) {
+          throw new HttpsError('failed-precondition', 'A cart item is no longer available');
+        }
+        const unitPriceInCents = Math.round(Number(item.price) * 100);
+        if (!Number.isFinite(unitPriceInCents) || unitPriceInCents < 0) {
+          throw new HttpsError('failed-precondition', 'A cart item has an invalid price');
+        }
+        subtotalInCents += unitPriceInCents * line.quantity;
+        orderItems.push({
+          itemId: line.itemId,
+          name: String(item.name || ''),
+          photoURL: String(item.imageUrl || ''),
+          price: unitPriceInCents / 100,
+          quantity: line.quantity,
+        });
+      }
+      const taxInCents = Math.round(subtotalInCents * 0.08);
+      const deliveryFeeInCents = deliveryOption === 'delivery' ? 399 : 0;
+      const platformFeeInCents = Math.min(Math.round(subtotalInCents * 0.1), 100);
+      const amountInCents = subtotalInCents + taxInCents + deliveryFeeInCents + platformFeeInCents;
+      if (amountInCents <= 0) throw new HttpsError('failed-precondition', 'Cart total is invalid');
+
+      const requestedLines = items
+        .map(({ itemId, quantity }) => `${itemId}:${quantity}`)
+        .sort()
+        .join(',');
+      const priorSessions = await db
+        .collection('checkoutSessions')
+        .where('userId', '==', userId)
+        .where('shopId', '==', shopId)
+        .where('requestedLines', '==', requestedLines)
+        .where('deliveryOption', '==', deliveryOption)
+        .limit(10)
+        .get();
+      let resumableSession: FirebaseFirestore.QueryDocumentSnapshot | undefined;
+      for (const sessionDoc of priorSessions.docs) {
+        const session = sessionDoc.data();
+        if (session.status !== 'pending' || session.amountInCents !== amountInCents) continue;
+        const stripeOptions: Stripe.RequestOptions | undefined = session.connectedAccountId
+          ? { stripeAccount: session.connectedAccountId }
+          : undefined;
+        const intent = await stripe.paymentIntents.retrieve(session.paymentIntentId, stripeOptions);
+        if (intent.status === 'succeeded') {
+          resumableSession = sessionDoc;
+          break;
+        }
+        if (
+          !resumableSession &&
+          ['requires_payment_method', 'requires_confirmation', 'requires_action'].includes(
+            intent.status
+          )
+        ) {
+          resumableSession = sessionDoc;
+        }
+      }
+      const checkoutRef =
+        resumableSession?.ref || db.collection('checkoutSessions').doc(`${userId}_${checkoutId}`);
+      const existingSession = resumableSession?.data() || (await checkoutRef.get()).data();
+      if (existingSession) {
+        if (
+          existingSession.userId !== userId ||
+          existingSession.shopId !== shopId ||
+          existingSession.requestedLines !== requestedLines ||
+          existingSession.deliveryOption !== deliveryOption ||
+          existingSession.amountInCents !== amountInCents
+        ) {
+          throw new HttpsError('failed-precondition', 'Checkout details changed; restart checkout');
+        }
+      }
+
+      let connectedAccountId = existingSession?.connectedAccountId as string | undefined;
+      if (!existingSession && shop.userId) {
+        const ownerSnapshot = await db.collection('users').doc(String(shop.userId)).get();
+        const savedAccountId = ownerSnapshot.data()?.stripeConnectedAccountId as string | undefined;
+        if (savedAccountId) {
+          const account = await stripe.v2.core.accounts.retrieve(savedAccountId, {
+            include: ['configuration.merchant'],
+          });
+          const chargesEnabled =
+            (account as any).configuration?.merchant?.capabilities?.card_payments?.status ===
+            'active';
+          if (chargesEnabled) connectedAccountId = savedAccountId;
+        }
+      }
+
+      const customerId = await getOrCreateStripeCustomer(stripe, userId, connectedAccountId);
       const stripeAccountOpts: Stripe.RequestOptions | undefined = connectedAccountId
         ? { stripeAccount: connectedAccountId }
         : undefined;
+      const ephemeralKey = await stripe.ephemeralKeys.create(
+        { customer: customerId },
+        { apiVersion: '2026-01-28.clover', ...stripeAccountOpts }
+      );
+      const paymentIntent = existingSession
+        ? await stripe.paymentIntents.retrieve(existingSession.paymentIntentId, stripeAccountOpts)
+        : await stripe.paymentIntents.create(
+            {
+              amount: amountInCents,
+              currency: 'usd',
+              customer: customerId,
+              automatic_payment_methods: { enabled: true },
+              metadata: {
+                checkoutRef: checkoutRef.id,
+                firebaseUserId: userId,
+                shopId,
+                recipientAccountId: connectedAccountId || 'platform',
+              },
+              ...(connectedAccountId && platformFeeInCents > 0
+                ? { application_fee_amount: platformFeeInCents }
+                : {}),
+            },
+            {
+              ...stripeAccountOpts,
+              idempotencyKey: `neighborfood_checkout_${checkoutRef.id}`,
+            }
+          );
 
-      const paymentIntent = await stripe.paymentIntents.create(intentParams, stripeAccountOpts);
+      if (!existingSession) {
+        await checkoutRef.set({
+          userId,
+          shopId,
+          shopName: String(shop.name || ''),
+          shopPhotoURL: String(shop.backgroundImageUrl || ''),
+          items: orderItems,
+          subtotal: subtotalInCents / 100,
+          tax: taxInCents / 100,
+          deliveryFee: deliveryFeeInCents / 100,
+          platformFee: platformFeeInCents / 100,
+          total: amountInCents / 100,
+          amountInCents,
+          currency: 'usd',
+          deliveryOption,
+          connectedAccountId: connectedAccountId || null,
+          paymentIntentId: paymentIntent.id,
+          requestedLines,
+          status: 'pending',
+          createdAt: FieldValue.serverTimestamp(),
+        });
+      }
 
       return {
         paymentIntent: paymentIntent.client_secret,
         paymentIntentId: paymentIntent.id,
         ephemeralKey: ephemeralKey.secret,
         customer: customerId,
+        checkoutRef: checkoutRef.id,
+        connectedAccountId: connectedAccountId || null,
+        paymentIntentStatus: paymentIntent.status,
+        total: amountInCents / 100,
         publishableKey:
           process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY || process.env.STRIPE_TEST_KEY || '',
       };
     } catch (error) {
+      if (error instanceof HttpsError) throw error;
       console.error('Error creating payment sheet params:', error);
       throw new HttpsError('internal', 'Failed to create payment sheet params');
+    }
+  }
+);
+
+interface RefundCheckoutPaymentRequest {
+  checkoutRef: string;
+}
+
+export const refundCheckoutPayment = onCall(
+  { secrets: [stripeSecretKey] },
+  async (request: CallableRequest<RefundCheckoutPaymentRequest>) => {
+    verifyAuth(request);
+    const userId = request.auth!.uid;
+    const { checkoutRef } = request.data;
+    if (!checkoutRef) throw new HttpsError('invalid-argument', 'Checkout reference is required');
+
+    try {
+      const checkoutDoc = db.collection('checkoutSessions').doc(checkoutRef);
+      const checkout = await db.runTransaction(async (transaction) => {
+        const checkoutSnapshot = await transaction.get(checkoutDoc);
+        const session = checkoutSnapshot.data();
+        if (!session || session.userId !== userId) {
+          throw new HttpsError('permission-denied', 'Checkout does not belong to this user');
+        }
+        if (session.orderId || session.status === 'completed') {
+          throw new HttpsError('failed-precondition', 'An ordered payment cannot be refunded here');
+        }
+        if (session.status === 'refunded') return null;
+        if (session.status !== 'pending' && session.status !== 'refunding') {
+          throw new HttpsError('failed-precondition', 'Checkout cannot be refunded');
+        }
+        if (session.status === 'pending') {
+          transaction.update(checkoutDoc, { status: 'refunding' });
+        }
+        return session;
+      });
+      if (!checkout) return true;
+
+      try {
+        const stripe = new Stripe(stripeSecretKey.value(), {
+          apiVersion: '2026-01-28.clover',
+        });
+        const stripeOptions: Stripe.RequestOptions | undefined = checkout.connectedAccountId
+          ? { stripeAccount: checkout.connectedAccountId }
+          : undefined;
+        const paymentIntent = await stripe.paymentIntents.retrieve(
+          checkout.paymentIntentId,
+          stripeOptions
+        );
+        if (
+          paymentIntent.metadata.checkoutRef !== checkoutRef ||
+          paymentIntent.amount !== checkout.amountInCents ||
+          paymentIntent.metadata.firebaseUserId !== userId ||
+          paymentIntent.metadata.recipientAccountId !== (checkout.connectedAccountId || 'platform')
+        ) {
+          throw new HttpsError('failed-precondition', 'Checkout payment could not be verified');
+        }
+        if (paymentIntent.status === 'succeeded') {
+          await stripe.refunds.create(
+            { payment_intent: paymentIntent.id },
+            {
+              ...stripeOptions,
+              idempotencyKey: `neighborfood_refund_${checkoutRef}`,
+            }
+          );
+        } else if (paymentIntent.status !== 'canceled') {
+          await stripe.paymentIntents.cancel(paymentIntent.id, stripeOptions);
+        }
+        await checkoutDoc.update({ status: 'refunded' });
+        return true;
+      } catch (error) {
+        await checkoutDoc.update({ status: 'pending' }).catch(() => undefined);
+        throw error;
+      }
+    } catch (error) {
+      if (error instanceof HttpsError) throw error;
+      console.error('Error refunding checkout payment:', error);
+      throw new HttpsError('internal', 'Failed to refund checkout payment');
     }
   }
 );
@@ -2220,11 +2623,11 @@ export const setDefaultPaymentMethod = onCall(
 );
 
 // =============================================================================
-// Stripe Connect — Express Accounts (Platform / SaaS model)
+// Stripe Connect accounts (Platform / SaaS model)
 // =============================================================================
 
 /**
- * Create a Stripe Express connected account for a merchant.
+ * Create a Stripe connected account for a merchant.
  * Prefills available info from the user's Firebase profile.
  */
 interface CreateConnectedAccountRequest {
@@ -2246,17 +2649,8 @@ export const createConnectedAccount = onCall(
       const userData = userDoc.data();
 
       if (userData?.stripeConnectedAccountId) {
-        // Verify it is a V2 account by retrieving it through the V2 namespace.
-        // V1 Express accounts will throw, so we fall through to re-create as V2.
-        try {
-          await stripe.v2.core.accounts.retrieve(userData.stripeConnectedAccountId);
-          return { accountId: userData.stripeConnectedAccountId, alreadyExists: true };
-        } catch {
-          console.log(
-            'Existing account is a V1 Express account; re-creating as V2 for user:',
-            userId
-          );
-        }
+        await stripe.v2.core.accounts.retrieve(userData.stripeConnectedAccountId);
+        return { accountId: userData.stripeConnectedAccountId, alreadyExists: true };
       }
 
       // TODO: REVERT THIS COMMIT — remove test-mode prefill before going live.
@@ -2308,6 +2702,13 @@ export const createConnectedAccount = onCall(
               card_payments: { requested: true },
             },
           },
+          recipient: {
+            capabilities: {
+              stripe_balance: {
+                stripe_transfers: { requested: true },
+              },
+            },
+          },
         },
       });
 
@@ -2330,7 +2731,7 @@ export const createConnectedAccount = onCall(
  * Returns a URL to redirect the merchant to complete KYC/onboarding.
  */
 interface CreateAccountLinkRequest {
-  accountId: string;
+  accountId?: string;
   refreshUrl?: string;
   returnUrl?: string;
 }
@@ -2340,19 +2741,8 @@ export const createAccountLink = onCall(
   async (request: CallableRequest<CreateAccountLinkRequest>) => {
     verifyAuth(request);
     const userId = request.auth!.uid;
-    const { accountId, refreshUrl, returnUrl } = request.data;
-
-    if (!accountId) {
-      throw new HttpsError('invalid-argument', 'Account ID is required');
-    }
-    console.log(
-      'Creating account link for account:',
-      accountId,
-      '. Refresh URL:',
-      refreshUrl,
-      'Return URL:',
-      returnUrl
-    );
+    const { accountId: requestedAccountId, refreshUrl, returnUrl } = request.data;
+    console.log('Creating account link. Refresh URL:', refreshUrl, 'Return URL:', returnUrl);
     try {
       // V2 API: no apiVersion needed — SDK uses the latest automatically
       const stripe = new Stripe(stripeSecretKey.value());
@@ -2360,7 +2750,9 @@ export const createAccountLink = onCall(
       // Verify ownership
       const userDoc = await db.collection('users').doc(userId).get();
       const userData = userDoc.data();
-      if (userData?.stripeConnectedAccountId !== accountId) {
+      const accountId = userData?.stripeConnectedAccountId as string | undefined;
+      if (!accountId) throw new HttpsError('not-found', 'No connected account found');
+      if (requestedAccountId && requestedAccountId !== accountId) {
         throw new HttpsError('permission-denied', 'Account does not belong to this user');
       }
 
@@ -2392,7 +2784,7 @@ export const createAccountLink = onCall(
  * Get the status of a Stripe connected account (onboarding, charges, payouts).
  */
 interface GetConnectedAccountStatusRequest {
-  accountId: string;
+  accountId?: string;
 }
 
 export const getConnectedAccountStatus = onCall(
@@ -2400,20 +2792,25 @@ export const getConnectedAccountStatus = onCall(
   async (request: CallableRequest<GetConnectedAccountStatusRequest>) => {
     verifyAuth(request);
     const userId = request.auth!.uid;
-    const { accountId } = request.data;
-
-    if (!accountId) {
-      throw new HttpsError('invalid-argument', 'Account ID is required');
-    }
+    const { accountId: requestedAccountId } = request.data;
 
     try {
       // V2 API: no apiVersion needed — SDK uses the latest automatically
       const stripe = new Stripe(stripeSecretKey.value());
 
-      // Verify ownership
       const userDoc = await db.collection('users').doc(userId).get();
       const userData = userDoc.data();
-      if (userData?.stripeConnectedAccountId !== accountId) {
+      const accountId = userData?.stripeConnectedAccountId as string | undefined;
+      if (!accountId) {
+        return {
+          accountId: null,
+          chargesEnabled: false,
+          payoutsEnabled: false,
+          detailsSubmitted: false,
+          requirements: [],
+        };
+      }
+      if (requestedAccountId && requestedAccountId !== accountId) {
         throw new HttpsError('permission-denied', 'Account does not belong to this user');
       }
 
@@ -2421,7 +2818,7 @@ export const getConnectedAccountStatus = onCall(
       // V2 accounts report status via capability status + requirements summary,
       // not the V1 `charges_enabled` / `details_submitted` boolean fields.
       const account = await stripe.v2.core.accounts.retrieve(accountId, {
-        include: ['configuration.merchant', 'requirements'],
+        include: ['configuration.merchant', 'configuration.recipient', 'requirements'],
       });
 
       const chargesEnabled =
@@ -2432,15 +2829,16 @@ export const getConnectedAccountStatus = onCall(
       const detailsSubmitted =
         requirementsStatus !== 'currently_due' && requirementsStatus !== 'past_due';
 
-      // For V2 marketplace accounts, payouts become available once charges are enabled.
-      const payoutsEnabled = chargesEnabled;
+      const payoutsEnabled =
+        (account as any).configuration?.recipient?.capabilities?.stripe_balance?.payouts?.status ===
+        'active';
 
       const requirements: string[] =
         requirementsStatus === 'currently_due' || requirementsStatus === 'past_due'
           ? [requirementsStatus]
           : [];
 
-      return { chargesEnabled, payoutsEnabled, detailsSubmitted, requirements };
+      return { accountId, chargesEnabled, payoutsEnabled, detailsSubmitted, requirements };
     } catch (error) {
       if (error instanceof HttpsError) throw error;
       console.error('Error getting connected account status:', error);
@@ -2532,6 +2930,16 @@ export const createPayout = onCall(
         throw new HttpsError('permission-denied', 'Account does not belong to this user');
       }
 
+      const account = await stripe.v2.core.accounts.retrieve(accountId, {
+        include: ['configuration.recipient'],
+      });
+      if (
+        (account as any).configuration?.recipient?.capabilities?.stripe_balance?.payouts?.status !==
+        'active'
+      ) {
+        throw new HttpsError('failed-precondition', 'Payouts are not enabled for this account');
+      }
+
       const payout = await stripe.payouts.create(
         {
           amount: Math.round(amount),
@@ -2555,7 +2963,7 @@ export const createPayout = onCall(
 );
 
 /**
- * Create a Stripe Express login link so merchants can access their Express Dashboard.
+ * Return the Stripe sign-in URL for merchants with full-dashboard access.
  */
 interface CreateLoginLinkRequest {
   accountId: string;
@@ -2573,9 +2981,6 @@ export const createLoginLink = onCall(
     }
 
     try {
-      // NOTE: V2 accounts with dashboard: 'full' access the Stripe dashboard directly
-      // at stripe.com. Login links are a V1 Express account concept; this call may
-      // fail for V2 accounts once they complete onboarding.
       const stripe = new Stripe(stripeSecretKey.value());
 
       // Verify ownership
@@ -2585,13 +2990,12 @@ export const createLoginLink = onCall(
         throw new HttpsError('permission-denied', 'Account does not belong to this user');
       }
 
-      const loginLink = await stripe.accounts.createLoginLink(accountId);
-
-      return { url: loginLink.url };
+      await stripe.v2.core.accounts.retrieve(accountId);
+      return { url: 'https://dashboard.stripe.com/login' };
     } catch (error) {
       if (error instanceof HttpsError) throw error;
       console.error('Error creating login link:', error);
-      throw new HttpsError('internal', 'Failed to create Express Dashboard link');
+      throw new HttpsError('internal', 'Failed to open Stripe Dashboard');
     }
   }
 );

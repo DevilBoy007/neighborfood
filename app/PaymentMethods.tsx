@@ -8,9 +8,11 @@ import {
   Platform,
   TouchableOpacity,
   Linking,
+  AppState,
 } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
 import { router } from 'expo-router';
+import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import Toast from 'react-native-toast-message';
 
@@ -20,11 +22,16 @@ import { useAppColors } from '@/hooks/useAppColors';
 
 // Conditionally import Stripe components (native only)
 let useStripe: () => { confirmSetupIntent: any } = () => ({ confirmSetupIntent: null });
+let initStripeForPlatform: (params: {
+  publishableKey: string;
+  merchantIdentifier: string;
+}) => Promise<void> = async () => {};
 let CardField: React.ComponentType<any> | null = null;
 if (Platform.OS !== 'web') {
   /* eslint-disable @typescript-eslint/no-require-imports */
   const StripeModule = require('@stripe/stripe-react-native');
   useStripe = StripeModule.useStripe;
+  initStripeForPlatform = StripeModule.initStripe;
   CardField = StripeModule.CardField;
   /* eslint-enable @typescript-eslint/no-require-imports */
 }
@@ -38,6 +45,7 @@ type PaymentMethodCard = {
 };
 
 type ConnectedAccountStatus = {
+  accountId: string | null;
   chargesEnabled: boolean;
   payoutsEnabled: boolean;
   detailsSubmitted: boolean;
@@ -118,6 +126,11 @@ const PaymentMethods = () => {
       const { clientSecret, customerId } = await firebaseService.createSetupIntent();
 
       // Confirm the SetupIntent with the card details from CardField
+      await initStripeForPlatform({
+        publishableKey:
+          process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY || process.env.STRIPE_TEST_KEY || '',
+        merchantIdentifier: 'merchant.com.anonymous.neighborfood',
+      });
       const { error, setupIntent } = await confirmSetupIntent(clientSecret, {
         paymentMethodType: 'Card',
       });
@@ -226,19 +239,21 @@ const PaymentMethods = () => {
   // =========================================================================
 
   const loadAccountStatus = useCallback(async () => {
-    if (!userData?.stripeConnectedAccountId) return;
     try {
       setIsLoadingStatus(true);
       const status = await firebaseService.getConnectedAccountStatus(
-        userData.stripeConnectedAccountId
+        userData?.stripeConnectedAccountId
       );
       setAccountStatus(status);
+      if (userData && status.accountId && userData.stripeConnectedAccountId !== status.accountId) {
+        await setUserData({ ...userData, stripeConnectedAccountId: status.accountId });
+      }
     } catch (error) {
       console.error('Error loading account status:', error);
     } finally {
       setIsLoadingStatus(false);
     }
-  }, [userData?.stripeConnectedAccountId]);
+  }, [userData, setUserData]);
 
   const loadBalance = useCallback(async () => {
     if (!userData?.stripeConnectedAccountId || !accountStatus?.payoutsEnabled) return;
@@ -255,6 +270,19 @@ const PaymentMethods = () => {
 
   useEffect(() => {
     loadAccountStatus();
+  }, [loadAccountStatus]);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadAccountStatus();
+    }, [loadAccountStatus])
+  );
+
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (state) => {
+      if (state === 'active') loadAccountStatus();
+    });
+    return () => subscription.remove();
   }, [loadAccountStatus]);
 
   useEffect(() => {
@@ -280,9 +308,6 @@ const PaymentMethods = () => {
         text1: 'Account Created',
         text2: 'Complete the onboarding in the opened page.',
       });
-
-      // Reload status after user returns from onboarding browser page
-      setTimeout(() => loadAccountStatus(), 3000);
     } catch (error) {
       console.error('Error creating connected account:', error);
       const stripeDetail = (error as any)?.details;
@@ -303,8 +328,6 @@ const PaymentMethods = () => {
     try {
       const { url } = await firebaseService.createAccountLink(userData.stripeConnectedAccountId);
       await Linking.openURL(url);
-      // Reload status after user returns from onboarding browser page
-      setTimeout(() => loadAccountStatus(), 3000);
     } catch (error) {
       console.error('Error opening onboarding:', error);
       const stripeDetail = (error as any)?.details;

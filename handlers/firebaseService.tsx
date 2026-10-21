@@ -731,11 +731,12 @@ class FirebaseService {
   // Order Operations (via Cloud Functions)
   // =========================================================================
 
-  async createOrder(orderData: object): Promise<string> {
+  async createOrder(orderData: object, checkoutRef: string): Promise<string> {
     try {
-      const result = await this.callFunction<{ orderData: object }, string>('createOrder', {
-        orderData,
-      });
+      const result = await this.callFunction<{ orderData: object; checkoutRef: string }, string>(
+        'createOrder',
+        { orderData, checkoutRef }
+      );
       console.log('Order created with ID:', result);
       return result;
     } catch (error) {
@@ -1219,35 +1220,55 @@ class FirebaseService {
   // =========================================================================
 
   async createPaymentSheetParams(
-    amount: number,
-    platformFee?: number,
-    connectedAccountId?: string
+    checkoutId: string,
+    shopId: string,
+    items: { itemId: string; quantity: number }[],
+    deliveryOption: 'pickup' | 'delivery'
   ): Promise<{
     paymentIntent: string;
     paymentIntentId: string;
     ephemeralKey: string;
     customer: string;
+    checkoutRef: string;
+    connectedAccountId: string | null;
+    paymentIntentStatus: string;
+    total: number;
     publishableKey: string;
   }> {
     return await this.callFunction<
-      { amount: number; currency: string; platformFee?: number; connectedAccountId?: string },
+      {
+        checkoutId: string;
+        shopId: string;
+        items: { itemId: string; quantity: number }[];
+        deliveryOption: 'pickup' | 'delivery';
+      },
       {
         paymentIntent: string;
         paymentIntentId: string;
         ephemeralKey: string;
         customer: string;
+        checkoutRef: string;
+        connectedAccountId: string | null;
+        paymentIntentStatus: string;
+        total: number;
         publishableKey: string;
       }
     >('createPaymentSheetParams', {
-      amount,
-      currency: 'usd',
-      platformFee,
-      connectedAccountId,
+      checkoutId,
+      shopId,
+      items,
+      deliveryOption,
+    });
+  }
+
+  async refundCheckoutPayment(checkoutRef: string): Promise<boolean> {
+    return await this.callFunction<{ checkoutRef: string }, boolean>('refundCheckoutPayment', {
+      checkoutRef,
     });
   }
 
   // =========================================================================
-  // Stripe Connect — Express Accounts
+  // Stripe Connect accounts
   // =========================================================================
 
   async createConnectedAccount(): Promise<{ accountId: string; alreadyExists: boolean }> {
@@ -1258,25 +1279,27 @@ class FirebaseService {
   }
 
   async createAccountLink(
-    accountId: string,
+    accountId?: string,
     refreshUrl?: string,
     returnUrl?: string
   ): Promise<{ url: string }> {
     return await this.callFunction<
-      { accountId: string; refreshUrl?: string; returnUrl?: string },
+      { accountId?: string; refreshUrl?: string; returnUrl?: string },
       { url: string }
     >('createAccountLink', { accountId, refreshUrl, returnUrl });
   }
 
-  async getConnectedAccountStatus(accountId: string): Promise<{
+  async getConnectedAccountStatus(accountId?: string): Promise<{
+    accountId: string | null;
     chargesEnabled: boolean;
     payoutsEnabled: boolean;
     detailsSubmitted: boolean;
     requirements: string[];
   }> {
     return await this.callFunction<
-      { accountId: string },
+      { accountId?: string },
       {
+        accountId: string | null;
         chargesEnabled: boolean;
         payoutsEnabled: boolean;
         detailsSubmitted: boolean;

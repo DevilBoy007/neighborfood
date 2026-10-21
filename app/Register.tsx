@@ -15,6 +15,7 @@ import { EventRegister } from 'react-native-event-listeners';
 import firebaseService from '@/handlers/firebaseService';
 import { useUser, useLocation } from '@/store/reduxHooks';
 import { GeoPoint } from 'firebase/firestore';
+import type { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { SoundTouchableOpacity } from '@/components/SoundTouchableOpacity';
 import { useAppColors } from '@/hooks/useAppColors';
 
@@ -420,10 +421,10 @@ const RegisterScreen = () => {
               value={formData.dob ? new Date(formData.dob) : new Date()}
               mode="date"
               display="default"
-              onChange={(event, selectedDate) => {
+              onChange={(event: DateTimePickerEvent, selectedDate?: Date) => {
                 // Android dismisses automatically; iOS inline picker stays visible
                 setShowDatePicker(Platform.OS === 'ios');
-                if (selectedDate) {
+                if (selectedDate && event.type === 'set') {
                   handleDateChange(selectedDate);
                 }
               }}
