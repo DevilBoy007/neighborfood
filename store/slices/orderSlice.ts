@@ -43,6 +43,11 @@ export type OrderData = {
   deliveredAt?: { seconds: number; nanoseconds: number };
   paymentMethod: string;
   paymentIntentId?: string;
+  escrowStatus?: 'held' | 'releasing' | 'refunding' | 'released' | 'refunded';
+  refundedAmountCents?: number;
+  escrowReleasedAt?: { seconds: number; nanoseconds: number };
+  stripeTransferId?: string;
+  stripeRefundId?: string;
   deliveryAddress: string;
   contactPhone: string;
   deliveryOption: 'pickup' | 'delivery';

@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Platform, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import Toast from 'react-native-toast-message';
 
 import { useOrder, useUser, OrderStatus } from '@/store/reduxHooks';
 import firebaseService from '@/handlers/firebaseService';
@@ -86,62 +87,13 @@ const OrderCard = ({ order, onPress }) => {
     console.log('selected order:', orderToSet);
   };
 
-  const handleTradeAction = (targetStatus: string) => {
-    if (!selectedOrder) return;
-
-    if (targetStatus === 'counteroffer') {
-      // Shop owner counteroffers — navigate to Trade screen with buyer's items preselected
-      const preselectedItems = selectedOrder.tradeItems?.map((t) => t.itemId) ?? [];
-      router.push({
-        pathname: '/Trade',
-        params: {
-          shopId: selectedOrder.shopId,
-          orderId: selectedOrder.id,
-          preselectedItems: JSON.stringify(preselectedItems),
-        },
-      });
-      setIsPressed(false);
-      return;
-    }
-
-    if (targetStatus === 'update_trade') {
-      // Buyer updates their trade offer
-      const preselectedItems = selectedOrder.tradeItems?.map((t) => t.itemId) ?? [];
-      router.push({
-        pathname: '/Trade',
-        params: {
-          shopId: selectedOrder.shopId,
-          orderId: selectedOrder.id,
-          preselectedItems: JSON.stringify(preselectedItems),
-        },
-      });
-      setIsPressed(false);
-      return;
-    }
-
-    if (targetStatus === 'buy_instead') {
-      setIsPressed(false);
-      router.push({ pathname: '/Checkout', params: { orderId: selectedOrder.id } });
-      return;
-    }
-
-    // Default: standard status update
-    updateOrderStatus(selectedOrder.id, selectedOrder.shopId, targetStatus as OrderStatus);
-    setIsPressed(false);
-    if (targetStatus === 'preparing') {
-      router.push('/success');
-    }
-  };
-
-  const isTrade = order.status === 'trade';
-
   return (
     <>
       <TouchableOpacity style={styles.orderCard} onPress={onPress}>
         <View style={styles.orderHeader}>
           <Text style={styles.dateText}>{date}</Text>
           <View style={styles.headerRight}>
-            {isTrade && <Text style={styles.tradeBadge}>✨ Trade</Text>}
+            {order.status === 'trade' && <Text style={styles.tradeBadge}>✨ Trade</Text>}
             <Ionicons name="chevron-forward" size={24} color="black" />
           </View>
         </View>
@@ -153,7 +105,7 @@ const OrderCard = ({ order, onPress }) => {
           </View>
           <View style={styles.detailRow}>
             <Text style={styles.detailLabel}>total:</Text>
-            <Text style={styles.detailValue}>{isTrade ? 'Trade' : `$${total}`}</Text>
+            <Text style={styles.detailValue}>${total}</Text>
           </View>
 
           <View style={styles.detailRow}>
@@ -162,7 +114,7 @@ const OrderCard = ({ order, onPress }) => {
           </View>
 
           <Text style={styles.itemsText}>items: {items}</Text>
-          {isTrade && order.tradeItems?.length > 0 && (
+          {order.status === 'trade' && order.tradeItems?.length > 0 && (
             <View style={styles.tradeItems}>
               <Text style={styles.tradeItemsLabel}>offered:</Text>
               {order.tradeItems.map(
@@ -182,8 +134,50 @@ const OrderCard = ({ order, onPress }) => {
       <View style={styles.statusMetaContainer}>
         {isPressed && (
           <View>
-            {buildStatusButtons(order.status, order.shopOwnerView || false, (newStatus) => {
-              handleTradeAction(newStatus);
+            {buildStatusButtons(order.status, order.shopOwnerView || false, async (newStatus) => {
+              if (!selectedOrder) return;
+              if (newStatus === 'counteroffer' || newStatus === 'update_trade') {
+                const preselectedItems = selectedOrder.tradeItems?.map((item) => item.itemId) ?? [];
+                router.push({
+                  pathname: '/Trade',
+                  params: {
+                    shopId: selectedOrder.shopId,
+                    orderId: selectedOrder.id,
+                    preselectedItems: JSON.stringify(preselectedItems),
+                  },
+                });
+                setIsPressed(false);
+                return;
+              }
+              if (newStatus === 'buy_instead') {
+                router.push({
+                  pathname: '/Checkout',
+                  params: { orderId: selectedOrder.id },
+                });
+                setIsPressed(false);
+                return;
+              }
+              const orderToUpdate = selectedOrder;
+              try {
+                await updateOrderStatus(
+                  orderToUpdate.id,
+                  orderToUpdate.shopId,
+                  newStatus as OrderStatus
+                );
+                setIsPressed(false);
+                if (newStatus === 'preparing') {
+                  router.push('/success');
+                }
+              } catch (error) {
+                Toast.show({
+                  type: 'error',
+                  text1: 'Order update failed',
+                  text2:
+                    error instanceof Error
+                      ? error.message
+                      : 'The cancellation or refund could not be completed.',
+                });
+              }
             }).map((button) => (
               <TouchableOpacity key={button.key} onPress={button.onPress}>
                 <View style={{ backgroundColor: button.color }}>

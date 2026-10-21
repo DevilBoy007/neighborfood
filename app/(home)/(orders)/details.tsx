@@ -1,5 +1,5 @@
 // OrderDetailScreen.js
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'expo-router';
 import {
   View,
@@ -10,11 +10,14 @@ import {
   Animated,
   Dimensions,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useOrder } from '@/store/reduxHooks';
+import Toast from 'react-native-toast-message';
+import { useOrder, useUser } from '@/store/reduxHooks';
 import { useOrderStatus } from '@/hooks/useOrderStatus';
 import { useAppColors } from '@/hooks/useAppColors';
+import firebaseService from '@/handlers/firebaseService';
 
 const { height } = Dimensions.get('window');
 
@@ -41,11 +44,13 @@ const ShopSection = ({ shop, items, colors }: { shop: string; items: any[]; colo
 
 const OrderDetailScreen = () => {
   const router = useRouter();
-  const { selectedOrder, setSelectedOrder } = useOrder();
+  const { selectedOrder, setSelectedOrder, refreshOrders } = useOrder();
+  const { userData } = useUser();
   const { getStatusColor, getStatusText } = useOrderStatus();
   const colors = useAppColors();
   const slideAnim = useRef(new Animated.Value(height)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
+  const [isReleasingEscrow, setIsReleasingEscrow] = useState(false);
 
   useEffect(() => {
     Animated.parallel([
@@ -89,6 +94,41 @@ const OrderDetailScreen = () => {
   };
 
   const formattedOrder = formatOrderData(selectedOrder);
+
+  // Buyer can confirm receipt when order is ready, in-delivery, or completed
+  // and escrow has not yet been released
+  const canConfirmReceipt =
+    selectedOrder &&
+    userData?.uid === selectedOrder.userId &&
+    ['ready', 'in-delivery', 'completed'].includes(selectedOrder.status) &&
+    selectedOrder.escrowStatus === 'held';
+
+  const handleConfirmReceipt = async () => {
+    if (!selectedOrder?.id || !selectedOrder?.shopId) return;
+    setIsReleasingEscrow(true);
+    try {
+      await firebaseService.releaseEscrow(selectedOrder.id, selectedOrder.shopId);
+      if (userData?.uid) {
+        await refreshOrders(userData.uid);
+      }
+      Toast.show({
+        type: 'success',
+        text1: 'Receipt Confirmed',
+        text2: 'Payment has been released to the seller.',
+        visibilityTime: 3000,
+      });
+    } catch (error) {
+      console.error('Error confirming receipt:', error);
+      Toast.show({
+        type: 'error',
+        text1: 'Error',
+        text2: 'Could not confirm receipt. Please try again.',
+        visibilityTime: 3000,
+      });
+    } finally {
+      setIsReleasingEscrow(false);
+    }
+  };
 
   if (!formattedOrder) {
     return (
@@ -183,6 +223,33 @@ const OrderDetailScreen = () => {
               <Text style={styles.statusText}>{getStatusText(formattedOrder.status)}</Text>
             </View>
           </View>
+
+          {/* Confirm Receipt — releases escrow funds to seller */}
+          {canConfirmReceipt && (
+            <TouchableOpacity
+              style={[
+                styles.confirmReceiptButton,
+                { backgroundColor: colors.buttonPrimary },
+                isReleasingEscrow && { opacity: 0.7 },
+              ]}
+              onPress={handleConfirmReceipt}
+              disabled={isReleasingEscrow}
+            >
+              {isReleasingEscrow ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <>
+                  <Ionicons
+                    name="checkmark-circle-outline"
+                    size={20}
+                    color="#fff"
+                    style={styles.confirmIcon}
+                  />
+                  <Text style={styles.confirmReceiptText}>Confirm Receipt</Text>
+                </>
+              )}
+            </TouchableOpacity>
+          )}
         </View>
       </Animated.ScrollView>
     </SafeAreaView>
@@ -343,6 +410,25 @@ const styles = StyleSheet.create({
     fontFamily: 'TextMeOne',
   },
   statusValue: {
+    fontSize: 16,
+    fontFamily: 'TextMeOne',
+    fontWeight: '600',
+  },
+  confirmReceiptButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 16,
+    paddingVertical: 14,
+    paddingHorizontal: 24,
+    borderRadius: 10,
+    gap: 8,
+  },
+  confirmIcon: {
+    marginRight: 4,
+  },
+  confirmReceiptText: {
+    color: '#fff',
     fontSize: 16,
     fontFamily: 'TextMeOne',
     fontWeight: '600',

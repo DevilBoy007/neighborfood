@@ -701,13 +701,6 @@ class FirebaseService {
     }
   }
 
-  async getTradeItemsForOrder(orderId: string, shopId: string): Promise<ItemData[]> {
-    return await this.callFunction<{ orderId: string; shopId: string }, ItemData[]>(
-      'getTradeItemsForOrder',
-      { orderId, shopId }
-    );
-  }
-
   async updateItemQuantity(itemId: string, quantityChange: number): Promise<void> {
     try {
       await this.callFunction<
@@ -740,6 +733,11 @@ class FirebaseService {
 
   async createOrder(orderData: object): Promise<string> {
     try {
+      if ((orderData as { status?: string }).status === 'trade') {
+        return await this.callFunction<{ orderData: object }, string>('createTradeOrder', {
+          orderData,
+        });
+      }
       const result = await this.callFunction<{ orderData: object }, string>('createOrder', {
         orderData,
       });
@@ -787,29 +785,33 @@ class FirebaseService {
     }
   }
 
-  /**
-   * Update trade items on an existing trade order
-   */
+  async getTradeItemsForOrder(orderId: string, shopId: string): Promise<ItemData[]> {
+    return await this.callFunction<{ orderId: string; shopId: string }, ItemData[]>(
+      'getTradeItemsForOrder',
+      { orderId, shopId }
+    );
+  }
+
   async updateOrderTradeItems(
     orderId: string,
     shopId: string,
-    tradeItems: { itemId: string; name: string; imageUrl?: string }[]
+    tradeItems: { itemId: string; name?: string; imageUrl?: string }[]
   ): Promise<void> {
-    console.log('Updating trade items for order:', orderId);
-    try {
-      await this.callFunction<
-        {
-          orderId: string;
-          shopId: string;
-          tradeItems: { itemId: string; name: string; imageUrl?: string }[];
-        },
-        boolean
-      >('updateOrderTradeItems', { orderId, shopId, tradeItems });
-      console.log('Trade items updated:', orderId);
-    } catch (error) {
-      console.error('Error updating trade items:', error);
-      throw error;
-    }
+    await this.callFunction<
+      { orderId: string; shopId: string; tradeItems: { itemId: string }[] },
+      boolean
+    >('updateOrderTradeItems', { orderId, shopId, tradeItems });
+  }
+
+  async completeTradePurchase(
+    orderId: string,
+    shopId: string,
+    paymentIntentId: string
+  ): Promise<void> {
+    await this.callFunction<{ orderId: string; shopId: string; paymentIntentId: string }, boolean>(
+      'completeTradePurchase',
+      { orderId, shopId, paymentIntentId }
+    );
   }
 
   /**
@@ -1251,24 +1253,30 @@ class FirebaseService {
   // =========================================================================
 
   async createPaymentSheetParams(
-    amount: number,
-    platformFee?: number,
-    connectedAccountId?: string,
-    orderId?: string
+    orderId: string,
+    shopId: string,
+    items: { itemId: string; quantity: number }[],
+    deliveryOption: 'pickup' | 'delivery',
+    deliveryAddress: string,
+    contactPhone: string,
+    specialInstructions: string
   ): Promise<{
     paymentIntent: string;
     paymentIntentId: string;
     ephemeralKey: string;
     customer: string;
     publishableKey: string;
+    alreadyPaid: boolean;
   }> {
     return await this.callFunction<
       {
-        amount: number;
-        currency: string;
-        platformFee?: number;
-        connectedAccountId?: string;
-        orderId?: string;
+        orderId: string;
+        shopId: string;
+        items: { itemId: string; quantity: number }[];
+        deliveryOption: 'pickup' | 'delivery';
+        deliveryAddress: string;
+        contactPhone: string;
+        specialInstructions: string;
       },
       {
         paymentIntent: string;
@@ -1276,36 +1284,14 @@ class FirebaseService {
         ephemeralKey: string;
         customer: string;
         publishableKey: string;
+        alreadyPaid: boolean;
       }
     >('createPaymentSheetParams', {
-      amount,
-      currency: 'usd',
-      platformFee,
-      connectedAccountId,
-      orderId,
-    });
-  }
-
-  async completeTradePurchase(
-    orderId: string,
-    shopId: string,
-    paymentIntentId: string,
-    contactPhone: string,
-    specialInstructions: string
-  ): Promise<void> {
-    await this.callFunction<
-      {
-        orderId: string;
-        shopId: string;
-        paymentIntentId: string;
-        contactPhone: string;
-        specialInstructions: string;
-      },
-      boolean
-    >('completeTradePurchase', {
       orderId,
       shopId,
-      paymentIntentId,
+      items,
+      deliveryOption,
+      deliveryAddress,
       contactPhone,
       specialInstructions,
     });
@@ -1382,6 +1368,30 @@ class FirebaseService {
     return await this.callFunction<{ accountId: string }, { url: string }>('createLoginLink', {
       accountId,
     });
+  }
+
+  // =========================================================================
+  // Escrow — Release & Refund
+  // =========================================================================
+
+  async releaseEscrow(
+    orderId: string,
+    shopId: string
+  ): Promise<{ transferId: string; amountReleased: number; alreadyReleased?: boolean }> {
+    return await this.callFunction<
+      { orderId: string; shopId: string },
+      { transferId: string; amountReleased: number; alreadyReleased?: boolean }
+    >('releaseEscrow', { orderId, shopId });
+  }
+
+  async refundOrder(
+    orderId: string,
+    shopId: string
+  ): Promise<{ refundId: string | null; alreadyRefunded?: boolean }> {
+    return await this.callFunction<
+      { orderId: string; shopId: string },
+      { refundId: string | null; alreadyRefunded?: boolean }
+    >('refundOrder', { orderId, shopId });
   }
 }
 
