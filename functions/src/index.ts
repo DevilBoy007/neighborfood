@@ -127,17 +127,6 @@ interface GetDocumentRequest {
   docId: string;
 }
 
-interface GetAllDocumentsRequest {
-  collectionPath: string;
-}
-
-interface GetDocumentsWhereRequest {
-  collectionPath: string;
-  field: string;
-  operator: FirebaseFirestore.WhereFilterOp;
-  value: unknown;
-}
-
 interface AddDocumentRequest {
   collectionPath: string;
   data: DocumentData;
@@ -148,11 +137,6 @@ interface UpdateDocumentRequest {
   collectionPath: string;
   docId: string;
   data: DocumentData;
-}
-
-interface DeleteDocumentRequest {
-  collectionPath: string;
-  docId: string;
 }
 
 interface CreateShopRequest {
@@ -264,6 +248,46 @@ function verifyAuth(request: CallableRequest): void {
 // Generic Document Operations
 // =============================================================================
 
+// Collections any signed-in user may read by ID. Everything else must go through
+// a purpose-built function that enforces ownership.
+const PUBLIC_READ_COLLECTIONS = new Set(['shops', 'items']);
+
+const USER_PROFILE_FIELDS = new Set([
+  'createdAt',
+  'dob',
+  'first',
+  'last',
+  'location',
+  'phone',
+  'username',
+  'photoURL',
+  'pushTokens',
+]);
+
+const USERNAME_PATTERN = /^[a-zA-Z0-9]{6,30}$/;
+
+function assertUserProfileWrite(data: DocumentData): void {
+  if (!data || typeof data !== 'object' || Array.isArray(data)) {
+    throw new HttpsError('invalid-argument', 'Profile data must be an object');
+  }
+  for (const key of Object.keys(data)) {
+    if (!USER_PROFILE_FIELDS.has(key.split('.')[0])) {
+      throw new HttpsError('permission-denied', `Field "${key}" cannot be written`);
+    }
+  }
+  if (
+    data.username !== undefined &&
+    (typeof data.username !== 'string' || !USERNAME_PATTERN.test(data.username))
+  ) {
+    throw new HttpsError('invalid-argument', 'Username must be 6-30 letters or numbers');
+  }
+}
+
+async function isUsernameTaken(username: string, exceptUserId?: string): Promise<boolean> {
+  const snapshot = await db.collection('users').where('username', '==', username).limit(2).get();
+  return snapshot.docs.some((doc) => doc.id !== exceptUserId);
+}
+
 /**
  * Get a single document by collection path and document ID
  */
@@ -271,8 +295,12 @@ export const getDocument = onCall(async (request: CallableRequest<GetDocumentReq
   verifyAuth(request);
   const { collectionPath, docId } = request.data;
 
-  if (!collectionPath || !docId) {
+  if (typeof collectionPath !== 'string' || typeof docId !== 'string' || !docId) {
     throw new HttpsError('invalid-argument', 'Collection path and document ID are required');
+  }
+  const isOwnProfile = collectionPath === 'users' && docId === request.auth!.uid;
+  if (!isOwnProfile && !PUBLIC_READ_COLLECTIONS.has(collectionPath)) {
+    throw new HttpsError('permission-denied', 'This document cannot be read directly');
   }
 
   try {
@@ -291,82 +319,39 @@ export const getDocument = onCall(async (request: CallableRequest<GetDocumentReq
 });
 
 /**
- * Get all documents from a collection
+ * Check whether a username is free to claim
  */
-export const getAllDocuments = onCall(async (request: CallableRequest<GetAllDocumentsRequest>) => {
-  verifyAuth(request);
-  const { collectionPath } = request.data;
-
-  if (!collectionPath) {
-    throw new HttpsError('invalid-argument', 'Collection path is required');
-  }
-
-  try {
-    const collectionRef = db.collection(collectionPath);
-    const snapshot = await collectionRef.get();
-    return snapshot.docs.map((doc) => ({ id: doc.id, ...sanitizeFirestoreData(doc.data()) }));
-  } catch (error) {
-    console.error('Error getting all documents:', error);
-    throw new HttpsError('internal', 'Error getting documents');
-  }
-});
-
-/**
- * Get documents with a where clause
- */
-export const getDocumentsWhere = onCall(
-  async (request: CallableRequest<GetDocumentsWhereRequest>) => {
-    verifyAuth(request);
-    const { collectionPath, field, operator, value } = request.data;
-
-    if (!collectionPath || !field || !operator) {
-      throw new HttpsError('invalid-argument', 'Collection path, field, and operator are required');
+export const isUsernameAvailable = onCall(
+  async (request: CallableRequest<{ username: string }>) => {
+    const { username } = request.data || {};
+    if (typeof username !== 'string' || !USERNAME_PATTERN.test(username)) {
+      throw new HttpsError('invalid-argument', 'Username must be 6-30 letters or numbers');
     }
-
-    try {
-      const collectionRef = db.collection(collectionPath);
-      const q = collectionRef.where(field, operator, value);
-      const snapshot = await q.get();
-      return snapshot.docs.map((doc) => ({ id: doc.id, ...sanitizeFirestoreData(doc.data()) }));
-    } catch (error) {
-      console.error('Error getting documents with condition:', error);
-      throw new HttpsError('internal', 'Error getting documents');
-    }
+    return !(await isUsernameTaken(username, request.auth?.uid));
   }
 );
 
 /**
- * Add a document to a collection
+ * Create the signed-in user's profile document
  */
 export const addDocument = onCall(async (request: CallableRequest<AddDocumentRequest>) => {
   verifyAuth(request);
   const { collectionPath, data, id } = request.data;
 
-  if (!collectionPath || !data) {
-    throw new HttpsError('invalid-argument', 'Collection path and data are required');
+  if (collectionPath !== 'users' || id !== request.auth!.uid) {
+    throw new HttpsError('permission-denied', 'Users can only create their own profile');
   }
-
-  if (isProtectedGenericWrite(collectionPath, data)) {
-    throw new HttpsError('permission-denied', 'This document must be written through its service');
+  assertUserProfileWrite(data);
+  if (typeof data.username === 'string' && (await isUsernameTaken(data.username, id))) {
+    throw new HttpsError('already-exists', 'Username taken');
   }
 
   try {
-    if (id) {
-      const docRef = db.collection(collectionPath).doc(id);
-      if (collectionPath === 'users') {
-        if (id !== request.auth!.uid) {
-          throw new HttpsError('permission-denied', 'Users can only create their own profile');
-        }
-        await docRef.create(data);
-        return id;
-      }
-      await docRef.set(data);
-      return id;
-    } else {
-      const collectionRef = db.collection(collectionPath);
-      const docRef = await collectionRef.add(data);
-      return docRef.id;
-    }
+    await db
+      .collection('users')
+      .doc(id)
+      .create({ ...data, email: request.auth!.token.email ?? null });
+    return id;
   } catch (error) {
     console.error('Error adding document:', error);
     throw new HttpsError('internal', 'Error adding document');
@@ -374,76 +359,28 @@ export const addDocument = onCall(async (request: CallableRequest<AddDocumentReq
 });
 
 /**
- * Update a document
+ * Update the signed-in user's profile document
  */
 export const updateDocument = onCall(async (request: CallableRequest<UpdateDocumentRequest>) => {
   verifyAuth(request);
   const { collectionPath, docId, data } = request.data;
 
-  if (!collectionPath || !docId || !data) {
-    throw new HttpsError('invalid-argument', 'Collection path, document ID, and data are required');
-  }
-  if (collectionPath === 'users' && docId !== request.auth!.uid) {
+  if (collectionPath !== 'users' || docId !== request.auth!.uid) {
     throw new HttpsError('permission-denied', 'Users can only update their own profile');
   }
-
-  if (isProtectedGenericWrite(collectionPath, data)) {
-    throw new HttpsError('permission-denied', 'This document must be written through its service');
+  assertUserProfileWrite(data);
+  if (typeof data.username === 'string' && (await isUsernameTaken(data.username, docId))) {
+    throw new HttpsError('already-exists', 'Username taken');
   }
 
   try {
-    const docRef = db.collection(collectionPath).doc(docId);
-    await docRef.update(data);
+    await db.collection('users').doc(docId).update(data);
     return true;
   } catch (error) {
     console.error('Error updating document:', error);
     throw new HttpsError('internal', 'Error updating document');
   }
 });
-
-/**
- * Delete a document
- */
-export const deleteDocument = onCall(async (request: CallableRequest<DeleteDocumentRequest>) => {
-  verifyAuth(request);
-  const { collectionPath, docId } = request.data;
-
-  if (!collectionPath || !docId) {
-    throw new HttpsError('invalid-argument', 'Collection path and document ID are required');
-  }
-
-  if (
-    ['users', 'shops', 'items', 'orders', 'checkoutPayments'].includes(collectionPath.split('/')[0])
-  ) {
-    throw new HttpsError('permission-denied', 'This document must be deleted through its service');
-  }
-
-  try {
-    const docRef = db.collection(collectionPath).doc(docId);
-    await docRef.delete();
-    return true;
-  } catch (error) {
-    console.error('Error deleting document:', error);
-    throw new HttpsError('internal', 'Error deleting document');
-  }
-});
-
-function isProtectedGenericWrite(collectionPath: string, data: DocumentData): boolean {
-  const collection = collectionPath.split('/')[0];
-  if (['shops', 'items', 'orders', 'checkoutPayments'].includes(collection)) return true;
-  if (collection !== 'users') return false;
-
-  const protectedFields = [
-    'stripeCustomerId',
-    'stripeConnectedAccountId',
-    'stripePaymentIntentId',
-    'paymentIntentId',
-    'escrowStatus',
-    'stripeTransferId',
-    'stripeRefundId',
-  ];
-  return Object.keys(data).some((key) => protectedFields.includes(key.split('.')[0]));
-}
 
 // =============================================================================
 // Shop Operations
@@ -1923,7 +1860,7 @@ export const getOrder = onCall(async (request: CallableRequest<GetOrderRequest>)
 // =============================================================================
 
 /**
- * Get user by ID
+ * Get the public profile of a user (no contact or location details)
  */
 export const getUserById = onCall(async (request: CallableRequest<GetUserByIdRequest>) => {
   verifyAuth(request);
@@ -1937,7 +1874,13 @@ export const getUserById = onCall(async (request: CallableRequest<GetUserByIdReq
     const userDoc = await db.collection('users').doc(userId).get();
 
     if (userDoc.exists) {
-      return { id: userDoc.id, ...sanitizeFirestoreData(userDoc.data()) };
+      const user = userDoc.data()!;
+      return {
+        id: userDoc.id,
+        username: user.username ?? null,
+        first: user.first ?? null,
+        photoURL: user.photoURL ?? null,
+      };
     } else {
       return null;
     }

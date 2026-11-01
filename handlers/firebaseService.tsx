@@ -273,8 +273,7 @@ class FirebaseService {
         }
       }
       // Check if username is taken using Cloud Function
-      const users = await this.getDocumentsWhere('users', 'username', '==', username);
-      if (users.length > 0) {
+      if (!(await this.isUsernameAvailable(username))) {
         throw new Error('Username taken');
       }
       const userCredential = await createUserWithEmailAndPassword(this.auth, email, password);
@@ -327,28 +326,10 @@ class FirebaseService {
     }
   }
 
-  async getAllDocuments(collectionPath: string) {
-    try {
-      return await this.callFunction<
-        { collectionPath: string },
-        { id: string; [key: string]: unknown }[]
-      >('getAllDocuments', { collectionPath });
-    } catch (error) {
-      console.error('Error getting all documents:', error);
-      throw error;
-    }
-  }
-
-  async getDocumentsWhere(collectionPath: string, field: string, operator: string, value: unknown) {
-    try {
-      return await this.callFunction<
-        { collectionPath: string; field: string; operator: string; value: unknown },
-        { id: string; [key: string]: unknown }[]
-      >('getDocumentsWhere', { collectionPath, field, operator, value });
-    } catch (error) {
-      console.error('Error getting documents with condition:', error);
-      throw error;
-    }
+  async isUsernameAvailable(username: string): Promise<boolean> {
+    return await this.callFunction<{ username: string }, boolean>('isUsernameAvailable', {
+      username,
+    });
   }
 
   async addDocument(collectionPath: string, data: object, id: string | null) {
@@ -371,18 +352,6 @@ class FirebaseService {
       >('updateDocument', { collectionPath, docId, data });
     } catch (error) {
       console.error('Error updating document:', error);
-      throw error;
-    }
-  }
-
-  async deleteDocument(collectionPath: string, docId: string) {
-    try {
-      return await this.callFunction<{ collectionPath: string; docId: string }, boolean>(
-        'deleteDocument',
-        { collectionPath, docId }
-      );
-    } catch (error) {
-      console.error('Error deleting document:', error);
       throw error;
     }
   }

@@ -316,13 +316,7 @@ const EditDetails = () => {
 
       // Check if username changed and if so, verify it's not taken
       if (username !== userData.displayName) {
-        const existingUsers = await firebaseService.getDocumentsWhere(
-          'users',
-          'username',
-          '==',
-          username
-        );
-        if (existingUsers.length > 0) {
+        if (!(await firebaseService.isUsernameAvailable(username))) {
           setUsernameError('Username is already taken.');
           setIsLoading(false);
           return;
