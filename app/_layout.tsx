@@ -7,11 +7,11 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import Toast, { BaseToast } from 'react-native-toast-message';
 import { Provider } from 'react-redux';
 import { PersistGate } from 'redux-persist/integration/react';
-import { StripeProvider } from '@stripe/stripe-react-native';
+import StripePaymentProvider from '@/components/StripePaymentProvider';
 import { store, persistor } from '@/store';
 import { GoogleMapsLoader } from '@/components/GoogleMapsLoader';
 import { NotificationProvider } from '@/components/NotificationProvider';
-import { View, Text, LogBox, Platform } from 'react-native';
+import { View, Text, LogBox } from 'react-native';
 
 // Ignore specific warnings about text nodes
 LogBox.ignoreLogs(['Unexpected text node', 'A text node cannot be a child of a <View>']);
@@ -130,15 +130,14 @@ export default function RootLayout() {
     </Provider>
   );
 
-  // StripeProvider is only available on native platforms
-  if (Platform.OS !== 'web' && stripePublishableKey) {
+  if (stripePublishableKey) {
     return (
-      <StripeProvider
+      <StripePaymentProvider
         publishableKey={stripePublishableKey}
         merchantIdentifier="merchant.com.anonymous.neighborfood"
       >
         {appContent}
-      </StripeProvider>
+      </StripePaymentProvider>
     );
   }
 

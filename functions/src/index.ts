@@ -14,6 +14,7 @@ import * as admin from 'firebase-admin';
 import { onCall, HttpsError, CallableRequest } from 'firebase-functions/v2/https';
 import { defineSecret } from 'firebase-functions/params';
 import { FieldValue } from 'firebase-admin/firestore';
+import { createHash } from 'node:crypto';
 import Stripe from 'stripe';
 
 // Initialize Firebase Admin SDK
@@ -52,6 +53,42 @@ function sanitizeFirestoreData(
   }
 
   return result;
+}
+
+function sanitizeGenericDocument(
+  collectionPath: string,
+  data: FirebaseFirestore.DocumentData | undefined | null
+): Record<string, unknown> {
+  const result = sanitizeFirestoreData(data);
+  if (collectionPath.split('/')[0] === 'users') {
+    delete result.stripeCustomerId;
+  }
+  return result;
+}
+
+function assertGenericCollectionPath(collectionPath: string, write = false): void {
+  const pathSegments = collectionPath.split('/');
+  if (pathSegments.includes('checkoutPayments')) {
+    throw new HttpsError('permission-denied', 'Checkout payment records are private');
+  }
+  if (write && ['shops', 'items', 'orders'].includes(pathSegments[0])) {
+    throw new HttpsError(
+      'permission-denied',
+      'Use the validated domain-specific operation for this collection'
+    );
+  }
+}
+
+function assertGenericDataDoesNotContainStripeIds(data: DocumentData): void {
+  if (
+    Object.keys(data).some((key) =>
+      ['stripeCustomerId', 'stripeConnectedAccountId'].some(
+        (field) => key === field || key.startsWith(`${field}.`)
+      )
+    )
+  ) {
+    throw new HttpsError('permission-denied', 'Stripe account IDs are managed by the server');
+  }
 }
 
 function sanitizeValue(value: unknown, visited: WeakSet<object>): unknown {
@@ -267,13 +304,14 @@ export const getDocument = onCall(async (request: CallableRequest<GetDocumentReq
   if (!collectionPath || !docId) {
     throw new HttpsError('invalid-argument', 'Collection path and document ID are required');
   }
+  assertGenericCollectionPath(collectionPath);
 
   try {
     const docRef = db.collection(collectionPath).doc(docId);
     const snapshot = await docRef.get();
 
     if (snapshot.exists) {
-      return { id: snapshot.id, ...sanitizeFirestoreData(snapshot.data()) };
+      return { id: snapshot.id, ...sanitizeGenericDocument(collectionPath, snapshot.data()) };
     } else {
       return null;
     }
@@ -293,11 +331,15 @@ export const getAllDocuments = onCall(async (request: CallableRequest<GetAllDocu
   if (!collectionPath) {
     throw new HttpsError('invalid-argument', 'Collection path is required');
   }
+  assertGenericCollectionPath(collectionPath);
 
   try {
     const collectionRef = db.collection(collectionPath);
     const snapshot = await collectionRef.get();
-    return snapshot.docs.map((doc) => ({ id: doc.id, ...sanitizeFirestoreData(doc.data()) }));
+    return snapshot.docs.map((doc) => ({
+      id: doc.id,
+      ...sanitizeGenericDocument(collectionPath, doc.data()),
+    }));
   } catch (error) {
     console.error('Error getting all documents:', error);
     throw new HttpsError('internal', 'Error getting documents');
@@ -315,12 +357,19 @@ export const getDocumentsWhere = onCall(
     if (!collectionPath || !field || !operator) {
       throw new HttpsError('invalid-argument', 'Collection path, field, and operator are required');
     }
+    assertGenericCollectionPath(collectionPath);
+    if (field === 'stripeCustomerId') {
+      throw new HttpsError('permission-denied', 'Stripe customer IDs are private');
+    }
 
     try {
       const collectionRef = db.collection(collectionPath);
       const q = collectionRef.where(field, operator, value);
       const snapshot = await q.get();
-      return snapshot.docs.map((doc) => ({ id: doc.id, ...sanitizeFirestoreData(doc.data()) }));
+      return snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...sanitizeGenericDocument(collectionPath, doc.data()),
+      }));
     } catch (error) {
       console.error('Error getting documents with condition:', error);
       throw new HttpsError('internal', 'Error getting documents');
@@ -338,11 +387,17 @@ export const addDocument = onCall(async (request: CallableRequest<AddDocumentReq
   if (!collectionPath || !data) {
     throw new HttpsError('invalid-argument', 'Collection path and data are required');
   }
+  assertGenericCollectionPath(collectionPath, true);
+  assertGenericDataDoesNotContainStripeIds(data);
 
   try {
     if (id) {
       const docRef = db.collection(collectionPath).doc(id);
-      await docRef.set(data);
+      if (collectionPath.split('/')[0] === 'users') {
+        await docRef.create(data);
+      } else {
+        await docRef.set(data);
+      }
       return id;
     } else {
       const collectionRef = db.collection(collectionPath);
@@ -365,6 +420,8 @@ export const updateDocument = onCall(async (request: CallableRequest<UpdateDocum
   if (!collectionPath || !docId || !data) {
     throw new HttpsError('invalid-argument', 'Collection path, document ID, and data are required');
   }
+  assertGenericCollectionPath(collectionPath, true);
+  assertGenericDataDoesNotContainStripeIds(data);
 
   try {
     const docRef = db.collection(collectionPath).doc(docId);
@@ -385,6 +442,13 @@ export const deleteDocument = onCall(async (request: CallableRequest<DeleteDocum
 
   if (!collectionPath || !docId) {
     throw new HttpsError('invalid-argument', 'Collection path and document ID are required');
+  }
+  assertGenericCollectionPath(collectionPath, true);
+  if (collectionPath.split('/')[0] === 'users') {
+    throw new HttpsError(
+      'permission-denied',
+      'User profiles cannot be deleted through generic CRUD'
+    );
   }
 
   try {
@@ -987,97 +1051,178 @@ export const updateItemDetails = onCall(
 /**
  * Create an order
  */
-export const createOrder = onCall(async (request: CallableRequest<CreateOrderRequest>) => {
-  verifyAuth(request);
-  const { orderData } = request.data;
+export const createOrder = onCall(
+  { secrets: [stripeSecretKey] },
+  async (request: CallableRequest<CreateOrderRequest>) => {
+    verifyAuth(request);
+    const { orderData } = request.data;
 
-  if (!orderData) {
-    throw new HttpsError('invalid-argument', 'Order data is required');
-  }
-
-  // Verify the authenticated user matches the userId in the order
-  if (orderData.userId && orderData.userId !== request.auth?.uid) {
-    throw new HttpsError('permission-denied', 'User can only create orders for themselves');
-  }
-
-  try {
-    if (orderData.status === 'trade') {
-      const shopId = orderData.shopId;
-      const tradeItems = orderData.tradeItems;
-      if (
-        typeof shopId !== 'string' ||
-        !shopId ||
-        orderData.userId !== request.auth!.uid ||
-        orderData.deliveryOption !== 'pickup' ||
-        !Array.isArray(orderData.items) ||
-        orderData.items.length === 0 ||
-        !Array.isArray(tradeItems) ||
-        tradeItems.length === 0 ||
-        tradeItems.length > 100 ||
-        tradeItems.some(
-          (item) => !item || typeof item.itemId !== 'string' || item.itemId.trim().length === 0
-        ) ||
-        new Set(tradeItems.map((item) => item.itemId)).size !== tradeItems.length
-      ) {
-        throw new HttpsError('invalid-argument', 'Trade order and offered items are invalid');
-      }
-
-      const orderRef = db.collection('orders').doc();
-      const itemRefs = tradeItems.map((item) => db.collection('items').doc(item.itemId));
-      await db.runTransaction(async (transaction) => {
-        const shopSnapshot = await transaction.get(db.collection('shops').doc(shopId));
-        if (!shopSnapshot.exists || shopSnapshot.data()?.allowPickup !== true) {
-          throw new HttpsError(
-            'failed-precondition',
-            'Trade offers are only available for pickup-enabled shops'
-          );
-        }
-        const itemSnapshots = await Promise.all(
-          itemRefs.map((itemRef) => transaction.get(itemRef))
-        );
-        const verifiedTradeItems = itemSnapshots.map((itemSnapshot) => {
-          const itemData = itemSnapshot.data();
-          if (
-            !itemSnapshot.exists ||
-            !itemData ||
-            itemData.userId !== request.auth!.uid ||
-            !Number.isInteger(itemData.quantity) ||
-            itemData.quantity <= 0
-          ) {
-            throw new HttpsError(
-              'invalid-argument',
-              'Each offered item must be available in your inventory'
-            );
-          }
-          return {
-            itemId: itemSnapshot.id,
-            name: itemData.name,
-            imageUrl: itemData.imageUrl || '',
-          };
-        });
-        transaction.create(orderRef, {
-          ...orderData,
-          tradeItems: verifiedTradeItems,
-          createdAt: FieldValue.serverTimestamp(),
-        });
-      });
-      return orderRef.id;
+    if (!orderData) {
+      throw new HttpsError('invalid-argument', 'Order data is required');
     }
 
-    const ordersCollectionRef = db.collection('orders');
-    const docRef = await ordersCollectionRef.add({
-      ...orderData,
-      createdAt: FieldValue.serverTimestamp(),
-    });
+    // Verify the authenticated user matches the userId in the order
+    if (orderData.userId && orderData.userId !== request.auth?.uid) {
+      throw new HttpsError('permission-denied', 'User can only create orders for themselves');
+    }
 
-    console.log('Order created with ID:', docRef.id);
-    return docRef.id;
-  } catch (error) {
-    if (error instanceof HttpsError) throw error;
-    console.error('Error creating order:', error);
-    throw new HttpsError('internal', 'Error creating order');
+    try {
+      if (orderData.status === 'trade') {
+        const shopId = orderData.shopId;
+        const tradeItems = orderData.tradeItems;
+        if (
+          typeof shopId !== 'string' ||
+          !shopId ||
+          orderData.userId !== request.auth!.uid ||
+          orderData.deliveryOption !== 'pickup' ||
+          !Array.isArray(orderData.items) ||
+          orderData.items.length === 0 ||
+          !Array.isArray(tradeItems) ||
+          tradeItems.length === 0 ||
+          tradeItems.length > 100 ||
+          tradeItems.some(
+            (item) => !item || typeof item.itemId !== 'string' || item.itemId.trim().length === 0
+          ) ||
+          new Set(tradeItems.map((item) => item.itemId)).size !== tradeItems.length
+        ) {
+          throw new HttpsError('invalid-argument', 'Trade order and offered items are invalid');
+        }
+
+        const orderRef = db.collection('orders').doc();
+        const itemRefs = tradeItems.map((item) => db.collection('items').doc(item.itemId));
+        await db.runTransaction(async (transaction) => {
+          const shopSnapshot = await transaction.get(db.collection('shops').doc(shopId));
+          if (!shopSnapshot.exists || shopSnapshot.data()?.allowPickup !== true) {
+            throw new HttpsError(
+              'failed-precondition',
+              'Trade offers are only available for pickup-enabled shops'
+            );
+          }
+          const itemSnapshots = await Promise.all(
+            itemRefs.map((itemRef) => transaction.get(itemRef))
+          );
+          const verifiedTradeItems = itemSnapshots.map((itemSnapshot) => {
+            const itemData = itemSnapshot.data();
+            if (
+              !itemSnapshot.exists ||
+              !itemData ||
+              itemData.userId !== request.auth!.uid ||
+              !Number.isInteger(itemData.quantity) ||
+              itemData.quantity <= 0
+            ) {
+              throw new HttpsError(
+                'invalid-argument',
+                'Each offered item must be available in your inventory'
+              );
+            }
+            return {
+              itemId: itemSnapshot.id,
+              name: itemData.name,
+              imageUrl: itemData.imageUrl || '',
+            };
+          });
+          transaction.create(orderRef, {
+            ...orderData,
+            tradeItems: verifiedTradeItems,
+            createdAt: FieldValue.serverTimestamp(),
+          });
+        });
+        return orderRef.id;
+      }
+
+      const orderId = orderData.id;
+      const shopId = orderData.shopId;
+      const paymentIntentId = orderData.paymentIntentId;
+      if (
+        typeof orderId !== 'string' ||
+        typeof shopId !== 'string' ||
+        typeof paymentIntentId !== 'string'
+      ) {
+        throw new HttpsError(
+          'invalid-argument',
+          'A paid checkout ID, shop, and payment are required'
+        );
+      }
+
+      const checkoutRef = getCheckoutPaymentRef(request.auth!.uid, orderId, shopId);
+      const checkoutSnapshot = await checkoutRef.get();
+      if (!checkoutSnapshot.exists) {
+        throw new HttpsError('failed-precondition', 'Checkout payment was not initialized');
+      }
+      const checkoutData = checkoutSnapshot.data()!;
+      const stripe = new Stripe(stripeSecretKey.value(), {
+        apiVersion: '2026-01-28.clover',
+      });
+      await verifyCheckoutPaymentIntent(stripe, request.auth!.uid, checkoutData, paymentIntentId);
+
+      const orderRef = db.collection('orders').doc(checkoutRef.id);
+      const createdOrderId = await db.runTransaction(async (transaction) => {
+        const currentCheckout = await transaction.get(checkoutRef);
+        const currentOrder = await transaction.get(orderRef);
+        const currentCheckoutData = currentCheckout.data();
+        if (
+          !currentCheckout.exists ||
+          currentCheckoutData?.userId !== request.auth!.uid ||
+          currentCheckoutData.paymentIntentId !== paymentIntentId
+        ) {
+          throw new HttpsError('failed-precondition', 'Checkout payment is no longer available');
+        }
+        if (currentCheckoutData.status === 'completed') {
+          return currentCheckoutData.orderDocumentId as string;
+        }
+        if (currentOrder.exists) {
+          if (currentOrder.data()?.paymentIntentId === paymentIntentId) {
+            transaction.update(checkoutRef, {
+              status: 'completed',
+              orderDocumentId: orderRef.id,
+              updatedAt: FieldValue.serverTimestamp(),
+            });
+            return orderRef.id;
+          }
+          throw new HttpsError('already-exists', 'An order already exists for this checkout');
+        }
+
+        const trustedOrderData = currentCheckoutData.orderData as CheckoutOrderSnapshot;
+        const deliveryAddress =
+          typeof orderData.deliveryAddress === 'string'
+            ? orderData.deliveryAddress.trim()
+            : trustedOrderData.deliveryAddress;
+        if (trustedOrderData.deliveryOption === 'delivery' && !deliveryAddress) {
+          throw new HttpsError('invalid-argument', 'A delivery address is required');
+        }
+        transaction.create(orderRef, {
+          ...trustedOrderData,
+          deliveryAddress:
+            trustedOrderData.deliveryOption === 'delivery' ? deliveryAddress : 'Pickup',
+          contactPhone:
+            typeof orderData.contactPhone === 'string'
+              ? orderData.contactPhone.trim()
+              : trustedOrderData.contactPhone,
+          specialInstructions:
+            typeof orderData.specialInstructions === 'string'
+              ? orderData.specialInstructions.trim()
+              : trustedOrderData.specialInstructions,
+          paymentIntentId,
+          createdAt: FieldValue.serverTimestamp(),
+          updatedAt: FieldValue.serverTimestamp(),
+        });
+        transaction.update(checkoutRef, {
+          status: 'completed',
+          orderDocumentId: orderRef.id,
+          updatedAt: FieldValue.serverTimestamp(),
+        });
+        return orderRef.id;
+      });
+
+      console.log('Paid order created with ID:', createdOrderId);
+      return createdOrderId;
+    } catch (error) {
+      if (error instanceof HttpsError) throw error;
+      console.error('Error creating order:', error);
+      throw new HttpsError('internal', 'Error creating order');
+    }
   }
-});
+);
 
 /**
  * Get orders from a user (orders placed by user)
@@ -2198,12 +2343,6 @@ interface CreateSetupIntentRequest {
   userId: string;
 }
 
-interface CreatePaymentIntentRequest {
-  amount: number; // in cents
-  currency?: string;
-  paymentMethodId?: string;
-}
-
 interface GetPaymentMethodsRequest {
   userId: string;
 }
@@ -2216,30 +2355,280 @@ interface SetDefaultPaymentMethodRequest {
   paymentMethodId: string;
 }
 
+interface CheckoutItemRequest {
+  itemId: string;
+  quantity: number;
+}
+
+interface CreatePaymentSheetParamsRequest {
+  orderId: string;
+  shopId: string;
+  items: CheckoutItemRequest[];
+  deliveryOption: 'pickup' | 'delivery';
+  deliveryAddress: string;
+  contactPhone: string;
+  specialInstructions: string;
+}
+
+interface CheckoutOrderSnapshot {
+  id: string;
+  userId: string;
+  shopId: string;
+  shopName: string;
+  shopPhotoURL: string;
+  items: {
+    itemId: string;
+    name: string;
+    photoURL: string;
+    price: number;
+    quantity: number;
+  }[];
+  subtotal: number;
+  tax: number;
+  deliveryFee: number;
+  platformFee: number;
+  tip: number;
+  total: number;
+  status: 'pending';
+  estimatedDeliveryTime: Date;
+  paymentMethod: 'card';
+  deliveryAddress: string;
+  contactPhone: string;
+  deliveryOption: 'pickup' | 'delivery';
+  specialInstructions: string;
+}
+
 /**
  * Helper to get or create a Stripe customer for a user
  */
 async function getOrCreateStripeCustomer(stripe: Stripe, userId: string): Promise<string> {
-  const userDoc = await db.collection('users').doc(userId).get();
+  const userRef = db.collection('users').doc(userId);
+  const userDoc = await userRef.get();
   const userData = userDoc.data();
 
   if (userData?.stripeCustomerId) {
+    const customer = await stripe.customers.retrieve(userData.stripeCustomerId);
+    if ('deleted' in customer || customer.metadata.firebaseUserId !== userId) {
+      throw new HttpsError('permission-denied', 'Stripe customer does not belong to this user');
+    }
     return userData.stripeCustomerId;
   }
 
-  // Create a new Stripe customer
-  const customer = await stripe.customers.create({
-    metadata: { firebaseUserId: userId },
-    email: userData?.email || undefined,
-    name: userData?.first && userData?.last ? `${userData.first} ${userData.last}` : undefined,
+  const escapedUserId = userId.replace(/'/g, (character) => `\\${character}`);
+  const search = await stripe.customers.search({
+    query: `metadata['firebaseUserId']:'${escapedUserId}'`,
+    limit: 1,
+  });
+  const customer =
+    search.data[0] ||
+    (await stripe.customers.create(
+      {
+        metadata: { firebaseUserId: userId },
+        email: userData?.email || undefined,
+        name: userData?.first && userData?.last ? `${userData.first} ${userData.last}` : undefined,
+      },
+      { idempotencyKey: `firebase-user-${userId}` }
+    ));
+  if (customer.metadata.firebaseUserId !== userId) {
+    throw new HttpsError('permission-denied', 'Stripe customer does not belong to this user');
+  }
+
+  let customerId = customer.id;
+  await db.runTransaction(async (transaction) => {
+    const currentUser = await transaction.get(userRef);
+    const existingCustomerId = currentUser.data()?.stripeCustomerId;
+    if (existingCustomerId) {
+      customerId = existingCustomerId;
+    } else {
+      transaction.update(userRef, { stripeCustomerId: customer.id });
+    }
   });
 
-  // Save the Stripe customer ID to the user's profile
-  await db.collection('users').doc(userId).update({
-    stripeCustomerId: customer.id,
+  if (customerId !== customer.id) {
+    const existingCustomer = await stripe.customers.retrieve(customerId);
+    if ('deleted' in existingCustomer || existingCustomer.metadata.firebaseUserId !== userId) {
+      throw new HttpsError('permission-denied', 'Stripe customer does not belong to this user');
+    }
+  }
+  return customerId;
+}
+
+async function getStripeCustomerIdForUser(stripe: Stripe, userId: string): Promise<string> {
+  const userDoc = await db.collection('users').doc(userId).get();
+  const customerId = userDoc.data()?.stripeCustomerId;
+  if (!customerId) {
+    throw new HttpsError('not-found', 'No Stripe customer found');
+  }
+
+  const customer = await stripe.customers.retrieve(customerId);
+  if ('deleted' in customer || customer.metadata.firebaseUserId !== userId) {
+    throw new HttpsError('permission-denied', 'Stripe customer does not belong to this user');
+  }
+  return customerId;
+}
+
+function checkoutPaymentDocumentId(userId: string, orderId: string, shopId: string): string {
+  return createHash('sha256').update(`${userId}:${orderId}:${shopId}`).digest('hex');
+}
+
+function getCheckoutPaymentRef(userId: string, orderId: string, shopId: string) {
+  return db.collection('checkoutPayments').doc(checkoutPaymentDocumentId(userId, orderId, shopId));
+}
+
+async function verifyCheckoutPaymentIntent(
+  stripe: Stripe,
+  userId: string,
+  checkoutData: FirebaseFirestore.DocumentData,
+  paymentIntentId: string
+): Promise<Stripe.PaymentIntent> {
+  if (checkoutData.userId !== userId || checkoutData.paymentIntentId !== paymentIntentId) {
+    throw new HttpsError('permission-denied', 'Payment does not belong to this checkout');
+  }
+  const customerId = await getStripeCustomerIdForUser(stripe, userId);
+  const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+  const paymentCustomerId =
+    typeof paymentIntent.customer === 'string'
+      ? paymentIntent.customer
+      : paymentIntent.customer?.id;
+  const orderData = checkoutData.orderData as CheckoutOrderSnapshot;
+  if (
+    paymentIntent.status !== 'succeeded' ||
+    paymentIntent.amount !== Math.round(orderData.total * 100) ||
+    paymentIntent.currency !== 'usd' ||
+    paymentIntent.metadata.orderId !== checkoutData.orderId ||
+    paymentIntent.metadata.shopId !== checkoutData.shopId ||
+    paymentIntent.metadata.userId !== userId ||
+    paymentCustomerId !== customerId
+  ) {
+    throw new HttpsError('failed-precondition', 'Payment does not match this checkout');
+  }
+  return paymentIntent;
+}
+
+function checkoutRequestFingerprint(
+  userId: string,
+  request: CreatePaymentSheetParamsRequest
+): string {
+  const {
+    orderId,
+    shopId,
+    items,
+    deliveryOption,
+    deliveryAddress,
+    contactPhone,
+    specialInstructions,
+  } = request;
+  if (
+    !/^[0-9a-f-]{36}$/i.test(orderId) ||
+    !shopId ||
+    !Array.isArray(items) ||
+    items.length === 0 ||
+    items.length > 100 ||
+    !['pickup', 'delivery'].includes(deliveryOption) ||
+    typeof deliveryAddress !== 'string' ||
+    typeof contactPhone !== 'string' ||
+    typeof specialInstructions !== 'string' ||
+    items.some(
+      (item) =>
+        !item ||
+        typeof item.itemId !== 'string' ||
+        !item.itemId ||
+        !Number.isInteger(item.quantity) ||
+        item.quantity <= 0
+    ) ||
+    new Set(items.map((item) => item.itemId)).size !== items.length
+  ) {
+    throw new HttpsError('invalid-argument', 'Checkout details are invalid');
+  }
+  if (deliveryOption === 'delivery' && !deliveryAddress.trim()) {
+    throw new HttpsError('invalid-argument', 'A delivery address is required');
+  }
+
+  const canonicalRequest = {
+    userId,
+    orderId,
+    shopId,
+    items: [...items].sort((a, b) => a.itemId.localeCompare(b.itemId)),
+    deliveryOption,
+  };
+  return createHash('sha256').update(JSON.stringify(canonicalRequest)).digest('hex');
+}
+
+async function buildCheckoutOrder(
+  userId: string,
+  request: CreatePaymentSheetParamsRequest
+): Promise<CheckoutOrderSnapshot> {
+  const {
+    orderId,
+    shopId,
+    items,
+    deliveryOption,
+    deliveryAddress,
+    contactPhone,
+    specialInstructions,
+  } = request;
+  const shopSnapshot = await db.collection('shops').doc(shopId).get();
+  const shop = shopSnapshot.data();
+  if (!shopSnapshot.exists || (deliveryOption === 'pickup' && shop?.allowPickup !== true)) {
+    throw new HttpsError(
+      'failed-precondition',
+      'This shop does not support the selected delivery option'
+    );
+  }
+  if (deliveryOption === 'delivery' && shop?.localDelivery !== true) {
+    throw new HttpsError('failed-precondition', 'This shop does not offer local delivery');
+  }
+
+  const itemSnapshots = await Promise.all(
+    items.map((item) => db.collection('items').doc(item.itemId).get())
+  );
+  const verifiedItems = itemSnapshots.map((snapshot, index) => {
+    const itemData = snapshot.data();
+    const requested = items[index];
+    if (
+      !snapshot.exists ||
+      itemData?.shopId !== shopId ||
+      !Number.isFinite(itemData.price) ||
+      itemData.price < 0 ||
+      !Number.isInteger(itemData.quantity) ||
+      itemData.quantity < requested.quantity
+    ) {
+      throw new HttpsError('failed-precondition', 'One or more items are unavailable');
+    }
+    return {
+      itemId: snapshot.id,
+      name: String(itemData.name || ''),
+      photoURL: String(itemData.imageUrl || ''),
+      price: itemData.price as number,
+      quantity: requested.quantity,
+    };
   });
 
-  return customer.id;
+  const subtotal = verifiedItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const tax = subtotal * 0.08;
+  const deliveryFee = deliveryOption === 'delivery' ? 3.99 : 0;
+  const platformFee = Math.min(subtotal * 0.1, 1);
+  return {
+    id: orderId,
+    userId,
+    shopId,
+    shopName: String(shop?.name || ''),
+    shopPhotoURL: String(shop?.backgroundImageUrl || ''),
+    items: verifiedItems,
+    subtotal,
+    tax,
+    deliveryFee,
+    platformFee,
+    tip: 0,
+    total: subtotal + tax + deliveryFee + platformFee,
+    status: 'pending',
+    estimatedDeliveryTime: new Date(Date.now() + 45 * 60 * 1000),
+    paymentMethod: 'card',
+    deliveryAddress: deliveryOption === 'delivery' ? deliveryAddress.trim() : 'Pickup',
+    contactPhone: contactPhone.trim(),
+    deliveryOption,
+    specialInstructions: specialInstructions.trim(),
+  };
 }
 
 /**
@@ -2268,6 +2657,7 @@ export const createSetupIntent = onCall(
         customerId,
       };
     } catch (error) {
+      if (error instanceof HttpsError) throw error;
       console.error('Error creating setup intent:', error);
       throw new HttpsError('internal', 'Failed to create setup intent');
     }
@@ -2275,114 +2665,131 @@ export const createSetupIntent = onCall(
 );
 
 /**
- * Create a PaymentIntent for charging during checkout
- */
-export const createPaymentIntent = onCall(
-  { secrets: [stripeSecretKey] },
-  async (request: CallableRequest<CreatePaymentIntentRequest>) => {
-    verifyAuth(request);
-    const userId = request.auth!.uid;
-    const { amount, currency = 'usd', paymentMethodId } = request.data;
-
-    if (!amount || amount <= 0) {
-      throw new HttpsError('invalid-argument', 'A valid amount is required');
-    }
-
-    try {
-      const stripe = new Stripe(stripeSecretKey.value(), {
-        apiVersion: '2026-01-28.clover',
-      });
-
-      const customerId = await getOrCreateStripeCustomer(stripe, userId);
-
-      const intentData: Stripe.PaymentIntentCreateParams = {
-        amount: Math.round(amount),
-        currency,
-        customer: customerId,
-        automatic_payment_methods: { enabled: true },
-      };
-
-      if (paymentMethodId) {
-        intentData.payment_method = paymentMethodId;
-      }
-
-      const paymentIntent = await stripe.paymentIntents.create(intentData);
-
-      return {
-        clientSecret: paymentIntent.client_secret,
-        paymentIntentId: paymentIntent.id,
-      };
-    } catch (error) {
-      console.error('Error creating payment intent:', error);
-      throw new HttpsError('internal', 'Failed to create payment intent');
-    }
-  }
-);
-
-/**
  * Create parameters for the PaymentSheet (PaymentIntent + EphemeralKey + Customer)
- * Uses direct charges when a connected account is specified.
+ * Creates a destination charge using server-validated checkout details.
  */
-interface CreatePaymentSheetParamsRequest {
-  amount: number; // in cents
-  platformFee?: number; // in cents — application fee for platform
-  connectedAccountId?: string; // merchant's Stripe connected account
-  orderId?: string;
-  currency?: string;
-}
-
 export const createPaymentSheetParams = onCall(
   { secrets: [stripeSecretKey] },
   async (request: CallableRequest<CreatePaymentSheetParamsRequest>) => {
     verifyAuth(request);
     const userId = request.auth!.uid;
-    const { amount, platformFee, connectedAccountId, orderId, currency = 'usd' } = request.data;
-
-    if (!amount || amount <= 0) {
-      throw new HttpsError('invalid-argument', 'A valid amount is required');
-    }
+    const checkoutRequest = request.data;
 
     try {
       const stripe = new Stripe(stripeSecretKey.value(), {
         apiVersion: '2026-01-28.clover',
       });
-
       const customerId = await getOrCreateStripeCustomer(stripe, userId);
+      const checkoutRef = getCheckoutPaymentRef(
+        userId,
+        checkoutRequest.orderId,
+        checkoutRequest.shopId
+      );
+      const requestFingerprint = checkoutRequestFingerprint(userId, checkoutRequest);
+      let checkoutData = (await checkoutRef.get()).data();
+      if (checkoutData) {
+        if (
+          checkoutData.userId !== userId ||
+          checkoutData.requestFingerprint !== requestFingerprint
+        ) {
+          throw new HttpsError('failed-precondition', 'Checkout details changed; restart checkout');
+        }
+      } else {
+        const requestedOrder = await buildCheckoutOrder(userId, checkoutRequest);
+        const shop = await db.collection('shops').doc(checkoutRequest.shopId).get();
+        const shopOwnerId = shop.data()?.userId;
+        const ownerData = shopOwnerId
+          ? (await db.collection('users').doc(shopOwnerId).get()).data()
+          : undefined;
+        const connectedAccountId = ownerData?.stripeConnectedAccountId;
+        const amount = Math.round(requestedOrder.total * 100);
+        const intentParams: Stripe.PaymentIntentCreateParams = {
+          amount,
+          currency: 'usd',
+          customer: customerId,
+          automatic_payment_methods: { enabled: true },
+          metadata: {
+            orderId: checkoutRequest.orderId,
+            shopId: checkoutRequest.shopId,
+            userId,
+          },
+        };
+        if (typeof connectedAccountId === 'string' && connectedAccountId) {
+          const connectedAccount = await stripe.accounts.retrieve(connectedAccountId);
+          if (
+            !shopOwnerId ||
+            connectedAccount.metadata?.firebaseUserId !== shopOwnerId ||
+            !connectedAccount.charges_enabled
+          ) {
+            throw new HttpsError(
+              'failed-precondition',
+              'The shop is not configured to receive payments'
+            );
+          }
+          intentParams.transfer_data = { destination: connectedAccountId };
+          intentParams.application_fee_amount = Math.round(requestedOrder.platformFee * 100);
+        }
+        const paymentIntent = await stripe.paymentIntents.create(intentParams, {
+          idempotencyKey: `neighborfood:${userId}:${checkoutRequest.orderId}:${checkoutRequest.shopId}`,
+        });
+        await db.runTransaction(async (transaction) => {
+          const current = await transaction.get(checkoutRef);
+          if (current.exists) {
+            const currentData = current.data();
+            if (
+              currentData?.userId !== userId ||
+              currentData.requestFingerprint !== requestFingerprint
+            ) {
+              throw new HttpsError(
+                'failed-precondition',
+                'Checkout details changed; restart checkout'
+              );
+            }
+            checkoutData = currentData;
+            return;
+          }
+          transaction.create(checkoutRef, {
+            userId,
+            orderId: checkoutRequest.orderId,
+            shopId: checkoutRequest.shopId,
+            paymentIntentId: paymentIntent.id,
+            requestFingerprint,
+            orderData: requestedOrder,
+            status: 'pending',
+            createdAt: FieldValue.serverTimestamp(),
+          });
+          checkoutData = {
+            userId,
+            orderId: checkoutRequest.orderId,
+            shopId: checkoutRequest.shopId,
+            paymentIntentId: paymentIntent.id,
+            requestFingerprint,
+            orderData: requestedOrder,
+            status: 'pending',
+          };
+        });
+      }
 
+      const paymentIntentId = checkoutData!.paymentIntentId as string;
+      const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
       const ephemeralKey = await stripe.ephemeralKeys.create(
         { customer: customerId },
         { apiVersion: '2026-01-28.clover' }
       );
-
-      const intentParams: Stripe.PaymentIntentCreateParams = {
-        amount: Math.round(amount),
-        currency,
-        customer: customerId,
-        automatic_payment_methods: { enabled: true },
-        ...(orderId ? { metadata: { orderId, userId } } : {}),
-      };
-
-      // For direct charges: set application fee so the platform collects its cut
-      if (connectedAccountId && platformFee && platformFee > 0) {
-        intentParams.application_fee_amount = Math.round(platformFee);
-      }
-
-      // Create PaymentIntent on the connected account (direct charge) or platform
-      const stripeAccountOpts: Stripe.RequestOptions | undefined = connectedAccountId
-        ? { stripeAccount: connectedAccountId }
-        : undefined;
-
-      const paymentIntent = await stripe.paymentIntents.create(intentParams, stripeAccountOpts);
-
       return {
         paymentIntent: paymentIntent.client_secret,
         paymentIntentId: paymentIntent.id,
         ephemeralKey: ephemeralKey.secret,
         customer: customerId,
+        paymentIntentSucceeded: paymentIntent.status === 'succeeded',
+        testEnv:
+          stripeSecretKey.value().startsWith('sk_test_') ||
+          stripeSecretKey.value().startsWith('rk_test_'),
         publishableKey:
           process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY || process.env.STRIPE_TEST_KEY || '',
       };
     } catch (error) {
+      if (error instanceof HttpsError) throw error;
       console.error('Error creating payment sheet params:', error);
       throw new HttpsError('internal', 'Failed to create payment sheet params');
     }
@@ -2418,97 +2825,93 @@ export const completeTradePurchase = onCall(
       }
       const orderRef = orderSnapshot.docs[0].ref;
       const orderData = orderSnapshot.docs[0].data();
-      if (orderData.userId !== request.auth!.uid || orderData.status !== 'trade') {
+      if (
+        orderData.userId !== request.auth!.uid ||
+        (orderData.status !== 'trade' &&
+          !(orderData.status === 'pending' && orderData.paymentIntentId === paymentIntentId))
+      ) {
         throw new HttpsError(
           'failed-precondition',
           'This trade is no longer available to purchase'
         );
       }
 
-      const orderItems = orderData.items;
-      if (
-        !Array.isArray(orderItems) ||
-        orderItems.length === 0 ||
-        orderItems.some(
-          (item: any) =>
-            !Number.isFinite(item.price) ||
-            item.price < 0 ||
-            !Number.isInteger(item.quantity) ||
-            item.quantity <= 0
-        )
-      ) {
-        throw new HttpsError('failed-precondition', 'The trade contains invalid shop items');
+      const checkoutRef = getCheckoutPaymentRef(request.auth!.uid, orderId, shopId);
+      const checkoutSnapshot = await checkoutRef.get();
+      if (!checkoutSnapshot.exists) {
+        throw new HttpsError('failed-precondition', 'Checkout payment was not initialized');
       }
-      const subtotal = orderItems.reduce(
-        (sum: number, item: any) => sum + item.price * item.quantity,
-        0
-      );
-      const tax = subtotal * 0.08;
-      const platformFee = Math.min(subtotal * 0.1, 1);
-      const total = subtotal + tax + platformFee;
-
-      const shopDoc = await db.collection('shops').doc(shopId).get();
-      const shop = shopDoc.data();
-      if (!shopDoc.exists || shop?.allowPickup !== true) {
-        throw new HttpsError('failed-precondition', 'This shop does not support pickup trades');
+      const checkoutData = checkoutSnapshot.data()!;
+      const paidOrderData = checkoutData.orderData as CheckoutOrderSnapshot;
+      if (paidOrderData.deliveryOption !== 'pickup') {
+        throw new HttpsError('failed-precondition', 'Trade purchases must be picked up');
       }
-      const shopOwner = shop?.userId;
-      const ownerDoc = shopOwner ? await db.collection('users').doc(shopOwner).get() : null;
-      const connectedAccountId = ownerDoc?.data()?.stripeConnectedAccountId;
       const stripe = new Stripe(stripeSecretKey.value(), {
         apiVersion: '2026-01-28.clover',
       });
-      const paymentIntent = await stripe.paymentIntents.retrieve(
-        paymentIntentId,
-        connectedAccountId ? { stripeAccount: connectedAccountId } : undefined
-      );
+      await verifyCheckoutPaymentIntent(stripe, request.auth!.uid, checkoutData, paymentIntentId);
+
+      const itemKeys = (items: DocumentData[]) =>
+        items
+          .map((item) => `${item.itemId}:${item.quantity}`)
+          .sort()
+          .join('|');
       if (
-        paymentIntent.status !== 'succeeded' ||
-        paymentIntent.amount !== Math.round(total * 100) ||
-        paymentIntent.currency !== 'usd' ||
-        paymentIntent.metadata.orderId !== orderId ||
-        paymentIntent.metadata.userId !== request.auth!.uid
+        !Array.isArray(orderData.items) ||
+        itemKeys(orderData.items) !== itemKeys(paidOrderData.items)
       ) {
-        throw new HttpsError('failed-precondition', 'Payment does not match this trade order');
+        throw new HttpsError(
+          'failed-precondition',
+          'Trade items changed after payment was started'
+        );
       }
 
       await db.runTransaction(async (transaction) => {
         const currentOrderSnapshot = await transaction.get(orderRef);
+        const currentCheckoutSnapshot = await transaction.get(checkoutRef);
         const currentOrder = currentOrderSnapshot.data();
+        const currentCheckout = currentCheckoutSnapshot.data();
         if (
           !currentOrderSnapshot.exists ||
           currentOrder?.userId !== request.auth!.uid ||
-          currentOrder?.status !== 'trade'
+          !currentCheckoutSnapshot.exists ||
+          currentCheckout?.paymentIntentId !== paymentIntentId
         ) {
+          throw new HttpsError('failed-precondition', 'This trade payment is no longer available');
+        }
+        if (currentOrder.status === 'pending' && currentOrder.paymentIntentId === paymentIntentId) {
+          transaction.update(checkoutRef, { status: 'completed' });
+          return;
+        }
+        if (currentOrder.status !== 'trade') {
           throw new HttpsError('failed-precondition', 'This trade has already been updated');
         }
-        const currentSubtotal = currentOrder.items.reduce(
-          (sum: number, item: any) => sum + item.price * item.quantity,
-          0
-        );
-        if (
-          Math.round(
-            (currentSubtotal + currentSubtotal * 0.08 + Math.min(currentSubtotal * 0.1, 1)) * 100
-          ) !== paymentIntent.amount
-        ) {
-          throw new HttpsError(
-            'failed-precondition',
-            'Trade items changed after payment was started'
-          );
-        }
+
         transaction.update(orderRef, {
           status: 'pending',
-          subtotal,
-          tax,
+          items: paidOrderData.items,
+          subtotal: paidOrderData.subtotal,
+          tax: paidOrderData.tax,
           deliveryFee: 0,
-          platformFee,
-          total,
+          platformFee: paidOrderData.platformFee,
+          total: paidOrderData.total,
           paymentMethod: 'card',
           paymentIntentId,
           deliveryOption: 'pickup',
           deliveryAddress: 'Pickup',
-          contactPhone: contactPhone || '',
-          specialInstructions: specialInstructions || '',
+          contactPhone:
+            typeof contactPhone === 'string'
+              ? contactPhone.trim()
+              : paidOrderData.contactPhone || '',
+          specialInstructions:
+            typeof specialInstructions === 'string'
+              ? specialInstructions.trim()
+              : paidOrderData.specialInstructions || '',
+          updatedAt: FieldValue.serverTimestamp(),
+        });
+        transaction.update(checkoutRef, {
+          status: 'completed',
+          orderDocumentId: orderRef.id,
           updatedAt: FieldValue.serverTimestamp(),
         });
       });
@@ -2542,19 +2945,25 @@ export const getPaymentMethods = onCall(
         return { paymentMethods: [], defaultPaymentMethodId: null };
       }
 
-      const customerId = userData.stripeCustomerId;
-
-      const paymentMethods = await stripe.paymentMethods.list({
+      const customerId = await getStripeCustomerIdForUser(stripe, userId);
+      const paymentMethods: Stripe.PaymentMethod[] = [];
+      for await (const paymentMethod of stripe.paymentMethods.list({
         customer: customerId,
         type: 'card',
-      });
+      })) {
+        paymentMethods.push(paymentMethod);
+      }
 
       // Get customer to find default payment method
-      const customer = (await stripe.customers.retrieve(customerId)) as Stripe.Customer;
+      const customerResult = await stripe.customers.retrieve(customerId);
+      if ('deleted' in customerResult) {
+        throw new HttpsError('not-found', 'Stripe customer not found');
+      }
+      const customer = customerResult;
       const defaultPmId = customer.invoice_settings?.default_payment_method as string | null;
 
       return {
-        paymentMethods: paymentMethods.data.map((pm) => ({
+        paymentMethods: paymentMethods.map((pm) => ({
           id: pm.id,
           brand: pm.card?.brand || 'unknown',
           last4: pm.card?.last4 || '****',
@@ -2564,6 +2973,7 @@ export const getPaymentMethods = onCall(
         defaultPaymentMethodId: defaultPmId,
       };
     } catch (error) {
+      if (error instanceof HttpsError) throw error;
       console.error('Error getting payment methods:', error);
       throw new HttpsError('internal', 'Failed to retrieve payment methods');
     }
@@ -2590,14 +3000,10 @@ export const deletePaymentMethod = onCall(
       });
 
       // Verify this payment method belongs to the user
-      const userDoc = await db.collection('users').doc(userId).get();
-      const userData = userDoc.data();
-      if (!userData?.stripeCustomerId) {
-        throw new HttpsError('not-found', 'No Stripe customer found');
-      }
+      const customerId = await getStripeCustomerIdForUser(stripe, userId);
 
       const pm = await stripe.paymentMethods.retrieve(paymentMethodId);
-      if (pm.customer !== userData.stripeCustomerId) {
+      if (pm.customer !== customerId) {
         throw new HttpsError('permission-denied', 'Payment method does not belong to this user');
       }
 
@@ -2630,19 +3036,15 @@ export const setDefaultPaymentMethod = onCall(
         apiVersion: '2026-01-28.clover',
       });
 
-      const userDoc = await db.collection('users').doc(userId).get();
-      const userData = userDoc.data();
-      if (!userData?.stripeCustomerId) {
-        throw new HttpsError('not-found', 'No Stripe customer found');
-      }
+      const customerId = await getStripeCustomerIdForUser(stripe, userId);
 
       // Verify ownership
       const pm = await stripe.paymentMethods.retrieve(paymentMethodId);
-      if (pm.customer !== userData.stripeCustomerId) {
+      if (pm.customer !== customerId) {
         throw new HttpsError('permission-denied', 'Payment method does not belong to this user');
       }
 
-      await stripe.customers.update(userData.stripeCustomerId, {
+      await stripe.customers.update(customerId, {
         invoice_settings: { default_payment_method: paymentMethodId },
       });
 

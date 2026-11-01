@@ -1194,20 +1194,6 @@ class FirebaseService {
     );
   }
 
-  async createPaymentIntent(
-    amount: number,
-    paymentMethodId?: string
-  ): Promise<{ clientSecret: string; paymentIntentId: string }> {
-    return await this.callFunction<
-      { amount: number; currency: string; paymentMethodId?: string },
-      { clientSecret: string; paymentIntentId: string }
-    >('createPaymentIntent', {
-      amount,
-      currency: 'usd',
-      paymentMethodId,
-    });
-  }
-
   async getPaymentMethods(): Promise<{
     paymentMethods: {
       id: string;
@@ -1250,40 +1236,43 @@ class FirebaseService {
   // PaymentSheet
   // =========================================================================
 
-  async createPaymentSheetParams(
-    amount: number,
-    platformFee?: number,
-    connectedAccountId?: string,
-    orderId?: string
-  ): Promise<{
+  async createPaymentSheetParams(checkout: {
+    orderId: string;
+    shopId: string;
+    items: { itemId: string; quantity: number }[];
+    deliveryOption: 'pickup' | 'delivery';
+    deliveryAddress: string;
+    contactPhone: string;
+    specialInstructions: string;
+  }): Promise<{
     paymentIntent: string;
     paymentIntentId: string;
     ephemeralKey: string;
     customer: string;
+    paymentIntentSucceeded: boolean;
+    testEnv: boolean;
     publishableKey: string;
   }> {
     return await this.callFunction<
       {
-        amount: number;
-        currency: string;
-        platformFee?: number;
-        connectedAccountId?: string;
-        orderId?: string;
+        orderId: string;
+        shopId: string;
+        items: { itemId: string; quantity: number }[];
+        deliveryOption: 'pickup' | 'delivery';
+        deliveryAddress: string;
+        contactPhone: string;
+        specialInstructions: string;
       },
       {
         paymentIntent: string;
         paymentIntentId: string;
         ephemeralKey: string;
         customer: string;
+        paymentIntentSucceeded: boolean;
+        testEnv: boolean;
         publishableKey: string;
       }
-    >('createPaymentSheetParams', {
-      amount,
-      currency: 'usd',
-      platformFee,
-      connectedAccountId,
-      orderId,
-    });
+    >('createPaymentSheetParams', checkout);
   }
 
   async completeTradePurchase(

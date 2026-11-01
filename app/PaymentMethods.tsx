@@ -17,17 +17,7 @@ import Toast from 'react-native-toast-message';
 import firebaseService from '@/handlers/firebaseService';
 import { useUser } from '@/store/reduxHooks';
 import { useAppColors } from '@/hooks/useAppColors';
-
-// Conditionally import Stripe components (native only)
-let useStripe: () => { confirmSetupIntent: any } = () => ({ confirmSetupIntent: null });
-let CardField: React.ComponentType<any> | null = null;
-if (Platform.OS !== 'web') {
-  /* eslint-disable @typescript-eslint/no-require-imports */
-  const StripeModule = require('@stripe/stripe-react-native');
-  useStripe = StripeModule.useStripe;
-  CardField = StripeModule.CardField;
-  /* eslint-enable @typescript-eslint/no-require-imports */
-}
+import { CardField, useStripe } from '@/components/StripeNative';
 
 type PaymentMethodCard = {
   id: string;
