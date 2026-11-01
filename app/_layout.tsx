@@ -104,6 +104,7 @@ export default function RootLayout() {
                   />
                   <Stack.Screen name="EditDetails" options={{ headerShown: false }} />
                   <Stack.Screen name="PaymentMethods" options={{ headerShown: false }} />
+                  <Stack.Screen name="DeleteAccount" options={{ headerShown: false }} />
                   <Stack.Screen
                     name="Settings"
                     options={{

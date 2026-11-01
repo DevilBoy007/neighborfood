@@ -14,6 +14,8 @@ import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   signOut,
+  EmailAuthProvider,
+  reauthenticateWithCredential,
   Auth,
   UserCredential,
   Persistence,
@@ -216,6 +218,32 @@ class FirebaseService {
       console.error('Error logging out from Firebase:', error);
       throw error;
     }
+  }
+
+  /**
+   * Re-authenticates with the user's password, then permanently deletes the account
+   * and its data server-side.
+   */
+  async deleteAccount(password: string): Promise<void> {
+    await this.connect();
+    const user = this.auth?.currentUser;
+    if (!user?.email) {
+      throw new Error('Please sign in again to delete your account');
+    }
+    try {
+      await reauthenticateWithCredential(user, EmailAuthProvider.credential(user.email, password));
+    } catch (error) {
+      const code = (error as { code?: string }).code;
+      if (code === 'auth/invalid-credential' || code === 'auth/wrong-password') {
+        throw new Error('Incorrect password');
+      }
+      throw error;
+    }
+    await this.callFunction<{ confirm: boolean }, { deleted: boolean }>('deleteAccount', {
+      confirm: true,
+    });
+    this.clearCache();
+    await signOut(this.auth!).catch(() => undefined);
   }
 
   async login(email: string, password: string): Promise<UserCredential> {

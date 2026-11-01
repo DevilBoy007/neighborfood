@@ -5,10 +5,12 @@ import firebaseService from '@/handlers/firebaseService';
 import notificationService from '@/handlers/notificationService';
 import { useUser } from '@/store/reduxHooks';
 import { useAppColors } from '@/hooks/useAppColors';
+import { useSessionReset } from '@/hooks/useSessionReset';
 
 const Settings = () => {
   // Use the user context for logout and to get user data
-  const { clearUserData, userData } = useUser();
+  const { userData } = useUser();
+  const resetSession = useSessionReset();
   const colors = useAppColors();
 
   const handleLogout = async () => {
@@ -17,13 +19,12 @@ const Settings = () => {
       if (userData?.uid) {
         await notificationService.removeTokenFromUser(userData.uid);
       }
-      notificationService.cleanup();
 
       // First logout from Firebase
       await firebaseService.logout();
 
-      // Then clear user data from context and storage
-      await clearUserData();
+      // Then clear user data, cart and listeners from the device
+      await resetSession();
 
       // Navigate back to home
       router.back();
@@ -89,6 +90,17 @@ const Settings = () => {
           onPress={handleLogout}
         >
           <Text style={[styles.menuText, { color: colors.buttonText }]}>Logout</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.menuItem, { backgroundColor: colors.error }]}
+          onPress={() => {
+            router.back();
+            router.push('/DeleteAccount');
+          }}
+          accessibilityRole="button"
+        >
+          <Text style={[styles.menuText, { color: '#ffffff' }]}>Delete Account</Text>
         </TouchableOpacity>
       </View>
     </View>
