@@ -1,7 +1,7 @@
 name: 'Copilot Setup Steps'
 
-# Automatically run the setup steps when they are changed to allow for easy validation, and
-# allow manual testing through the repository's "Actions" tab
+# Provisions the GitHub Copilot coding agent's environment. Keep tool versions in sync
+# with .devcontainer/devcontainer.json and .devcontainer/post-create.sh.
 on:
   workflow_dispatch:
   push:
@@ -15,55 +15,47 @@ jobs:
   # The job MUST be called `copilot-setup-steps` or it will not be picked up by Copilot.
   copilot-setup-steps:
     runs-on: ubuntu-latest
-
-    # Set the permissions to the lowest permissions possible needed for your steps.
-    # Copilot will be given its own token for its operations.
+    timeout-minutes: 30
     permissions:
-      # Clone the repository to install dependencies
       contents: read
 
-    # You can define any steps you want, and they will run before the agent starts.
-    # If you do not check out your code, Copilot will do this for you.
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Node.js
+      - name: Set up Node.js (app toolchain)
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
-          cache: 'npm'
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            functions/package-lock.json
 
-      - name: Set up Python
+      - name: Set up Java (Firebase emulators)
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Set up Python (pre-commit)
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
 
-      - name: Install pre-commit
+      - name: Install app dependencies
+        run: npm ci
+
+      - name: Install Cloud Functions dependencies
+        run: npm ci --prefix functions
+
+      - name: Install CLIs
+        run: npm install --global firebase-tools@15 eas-cli
+
+      - name: Install pre-commit hooks
         run: |
           pip install pre-commit
           pre-commit install
 
-      - name: Install JavaScript dependencies
-        run: npm ci
-
-      - name: Install Expo SDK dependencies
-        run: npx expo install
-
-      - name: Install Firebase Tools
-        run: npm install -g firebase-tools eas-cli
-
-      - name: Run linting
-        run: npm run lint
-        continue-on-error: true
-
-      - name: Verify TypeScript compilation
-        run: npm run typecheck
-        continue-on-error: true
-
-      - name: Check formatting
-        run: npm run format:check
-        continue-on-error: true
-
-      - name: Verify Expo config
-        run: npx expo config --type public
+      - name: Pre-download Firebase emulators
+        run: firebase setup:emulators:firestore && firebase setup:emulators:storage

@@ -1,60 +1,50 @@
 # Neighborfood Development Container
 
-This development container provides a complete environment for developing the Neighborfood Expo application.
+This development container provides a complete environment for developing the Neighborfood Expo
+app and its Firebase Cloud Functions. The GitHub Copilot coding agent is provisioned with the same
+tools by `.github/workflows/copilot-setup-steps.yml`; keep the two in sync.
 
 ## What's Included
 
-- **Node.js 22**: Latest LTS version
-- **npm**: Node package manager
-- **Python 3.12**: For pre-commit hooks
-- **pre-commit**: Git hooks framework for code quality
-- **Expo CLI**: Automatically installed via postCreateCommand
-- **VS Code Extensions**:
-  - TypeScript
-  - Expo Tools
-  - GitHub Copilot
+| Tool                | Version       | Used for                                              |
+| ------------------- | ------------- | ----------------------------------------------------- |
+| Node.js             | 26 (`.nvmrc`) | Expo SDK 58 app tooling (functions deploy to Node 22) |
+| Java (Temurin)      | 21            | Firebase Firestore/Storage emulators                  |
+| Python + pre-commit | 3.12          | Git hooks (`.pre-commit-config.yaml`)                 |
+| firebase-tools      | 15            | Emulators, deploys, secrets                           |
+| eas-cli             | latest        | EAS Build/Submit/Update and workflows                 |
+| GitHub CLI          | latest        | PRs, issues, security alerts                          |
+
+Optional: install the [Stripe CLI](https://docs.stripe.com/stripe-cli) to forward test-mode
+webhooks to the emulator (see `functions/README.md`).
 
 ## Getting Started
 
 1. Open this repository in VS Code
-2. When prompted, click "Reopen in Container" (or use Command Palette: "Dev Containers: Reopen in Container")
-3. Wait for the container to build and dependencies to install
-4. Run `npx expo start` to start the development server
+2. Run "Dev Containers: Reopen in Container"
+3. Copy `.env.example` to `.env` and fill in test values
+4. `npx expo start` for the app, `npm run emulators` for local Firebase
 
-## Pre-commit Hooks
-
-The container automatically installs pre-commit hooks that run on every commit:
-
-- **ESLint**: Linting for TypeScript/JavaScript
-- **Prettier**: Code formatting
-- **TypeScript**: Type checking
-- File hygiene (trailing whitespace, end-of-file fixes, etc.)
-
-To manually run hooks on all files:
+## Common Commands
 
 ```bash
+npm run lint && npm run format:check && npm run typecheck
+npm test                 # app unit/component tests
+npm run test:functions   # Cloud Functions tests against the emulators
 pre-commit run --all-files
 ```
 
 ## Ports
 
-The following ports are automatically forwarded:
-
-- **19000**: Expo DevTools
-- **19001**: Expo Metro Bundler
-- **19002**: Expo Web (opens browser automatically)
-- **8081**: Metro Bundler (alternative port)
+| Port | Service            |
+| ---- | ------------------ |
+| 8081 | Metro bundler      |
+| 9099 | Auth emulator      |
+| 8080 | Firestore emulator |
+| 5001 | Functions emulator |
+| 9199 | Storage emulator   |
 
 ## Post-Create Setup
 
-The container automatically runs:
-
-```bash
-npm install && npx expo install && pip install pre-commit && pre-commit install
-```
-
-This ensures all dependencies are installed, Expo SDK versions are aligned, and git hooks are configured.
-
-## Usage with GitHub Copilot
-
-This environment is optimized for use with GitHub Copilot coding agents and can be used to provision cloud-based development environments.
+`.devcontainer/post-create.sh` installs app and functions dependencies with `npm ci`, installs
+firebase-tools and eas-cli, and sets up the pre-commit hooks.
