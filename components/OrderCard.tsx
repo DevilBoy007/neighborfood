@@ -79,12 +79,10 @@ const OrderCard = ({ order, onPress }) => {
   }, [order.customerId, order.originalOrder?.shopId, userData?.uid]);
 
   const handleStatusPress = (order) => {
-    console.log(order);
     const orderToSet =
       allOrders.find((o) => o.id === order.id && o.shopName === order.shops[0]) || null;
     setSelectedOrder(orderToSet);
     setIsPressed((prev) => !prev);
-    console.log('selected order:', orderToSet);
   };
 
   return (
@@ -154,6 +152,11 @@ const OrderCard = ({ order, onPress }) => {
                   pathname: '/Checkout',
                   params: { orderId: selectedOrder.id },
                 });
+                setIsPressed(false);
+                return;
+              }
+              if (newStatus === 'contact') {
+                router.push('/(home)/(messages)' as any);
                 setIsPressed(false);
                 return;
               }

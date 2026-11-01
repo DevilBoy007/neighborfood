@@ -44,7 +44,6 @@ export const useOrderStatus = () => {
   };
 
   const getStatusOptions = (status: string, shopOwnerView: boolean = false) => {
-    console.log('SHOP OWNER VIEW:', shopOwnerView);
     if (shopOwnerView) {
       switch (status) {
         case 'pending':
@@ -70,7 +69,10 @@ export const useOrderStatus = () => {
             { label: 'Cancel', targetStatus: 'cancelled', color: '#f44336' },
           ];
         case 'in-delivery':
-          return [{ label: 'Complete', targetStatus: 'completed', color: '#00bfff' }];
+          return [
+            { label: 'Complete', targetStatus: 'completed', color: '#00bfff' },
+            { label: 'Cancel', targetStatus: 'cancelled', color: '#f44336' },
+          ];
         default:
           return [];
       }
@@ -86,13 +88,13 @@ export const useOrderStatus = () => {
             { label: 'Revoke', targetStatus: 'cancelled', color: '#f44336' },
           ];
         case 'preparing':
-          return [{ label: 'Cancel', targetStatus: 'cancelled', color: '#f44336' }];
+          return [{ label: 'Contact', targetStatus: 'contact', color: '#9C27B0' }];
         case 'ready':
-          return [{ label: 'Contact', targetStatus: 'ready', color: '#00bfff' }];
         case 'in-delivery':
-          return [{ label: 'Contact', targetStatus: 'in-delivery', color: 'orchid' }];
-        case 'completed':
-          return [{ label: 'Complete', targetStatus: 'completed', color: '#4CAF50' }];
+          return [
+            { label: 'Received', targetStatus: 'completed', color: '#4CAF50' },
+            { label: 'Contact', targetStatus: 'contact', color: '#00bfff' },
+          ];
         default:
           return [];
       }

@@ -11,13 +11,7 @@ type OrderItem = {
 };
 
 export type OrderStatus =
-  | 'pending'
-  | 'trade'
-  | 'preparing'
-  | 'ready'
-  | 'in-delivery'
-  | 'completed'
-  | 'cancelled';
+  'pending' | 'trade' | 'preparing' | 'ready' | 'in-delivery' | 'completed' | 'cancelled';
 
 export type TradeItem = {
   itemId: string;
@@ -155,19 +149,7 @@ export const updateOrderStatusAsync = createAsyncThunk(
         return rejectWithValue('Order not found');
       }
 
-      // Handle item quantity updates when accepting an order
-      if (order.status === 'pending' && status === 'preparing') {
-        console.log('Updating item quantities for accepted order:', orderId);
-        for (const orderItem of order.items) {
-          try {
-            await firebaseService.updateItemQuantity(orderItem.itemId, -orderItem.quantity);
-            console.log(`Decreased quantity for item ${orderItem.name} by ${orderItem.quantity}`);
-          } catch (itemError) {
-            console.error(`Error updating quantity for item ${orderItem.itemId}:`, itemError);
-          }
-        }
-      }
-
+      // Stock is reserved and restored server-side as the order changes status.
       await firebaseService.updateOrderStatus(orderId, shopId, status);
       console.log('Order status updated successfully:', orderId, status);
 

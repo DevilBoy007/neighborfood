@@ -940,32 +940,24 @@ export const updateItemQuantity = onCall(
     verifyAuth(request);
     const { itemId, quantityChange } = request.data;
 
-    if (!itemId || quantityChange === undefined) {
+    if (!itemId || !Number.isInteger(quantityChange)) {
       throw new HttpsError('invalid-argument', 'Item ID and quantity change are required');
     }
 
     try {
-      const itemDoc = await db.collection('items').doc(itemId).get();
-
-      if (!itemDoc.exists) {
-        throw new HttpsError('not-found', `Item with ID ${itemId} not found`);
-      }
-
-      const itemData = itemDoc.data();
-      const currentQuantity = itemData?.quantity || 0;
-      const newQuantity = currentQuantity + quantityChange;
-
-      // Don't allow negative quantities
-      const finalQuantity = newQuantity < 0 ? 0 : newQuantity;
-
-      if (newQuantity < 0) {
-        console.warn(
-          `Cannot set negative quantity for item ${itemId}. Current: ${currentQuantity}, Change: ${quantityChange}`
-        );
-      }
-
-      await db.collection('items').doc(itemId).update({ quantity: finalQuantity });
-      console.log(`Updated item ${itemId} quantity: ${currentQuantity} -> ${finalQuantity}`);
+      const itemRef = db.collection('items').doc(itemId);
+      const finalQuantity = await db.runTransaction(async (transaction) => {
+        const itemDoc = await transaction.get(itemRef);
+        if (!itemDoc.exists) {
+          throw new HttpsError('not-found', `Item with ID ${itemId} not found`);
+        }
+        if (itemDoc.data()?.userId !== request.auth!.uid) {
+          throw new HttpsError('permission-denied', 'User can only update their own items');
+        }
+        const nextQuantity = Math.max(0, Number(itemDoc.data()?.quantity || 0) + quantityChange);
+        transaction.update(itemRef, { quantity: nextQuantity });
+        return nextQuantity;
+      });
 
       return { success: true, newQuantity: finalQuantity };
     } catch (error) {
@@ -1463,6 +1455,75 @@ async function processOrderRefund(
   return { refundId: refund.id, completed };
 }
 
+const SELLER_TRANSITIONS: Record<string, string[]> = {
+  pending: ['preparing', 'cancelled'],
+  trade: ['preparing', 'cancelled'],
+  preparing: ['ready', 'in-delivery', 'cancelled'],
+  ready: ['in-delivery', 'completed', 'cancelled'],
+  'in-delivery': ['completed', 'cancelled'],
+};
+
+// Buyers may back out until the seller accepts, and confirm handoff afterwards.
+const BUYER_TRANSITIONS: Record<string, string[]> = {
+  pending: ['cancelled'],
+  trade: ['cancelled'],
+  ready: ['completed'],
+  'in-delivery': ['completed'],
+};
+
+interface InventoryReservation {
+  itemId: string;
+  quantity: number;
+}
+
+function getReservedInventory(order: FirebaseFirestore.DocumentData): InventoryReservation[] {
+  if (order.inventoryRestocked) return [];
+  if (Array.isArray(order.inventoryReserved)) return order.inventoryReserved;
+  // Orders accepted before reservations were recorded had stock decremented client-side.
+  if (['preparing', 'ready', 'in-delivery'].includes(order.status) && Array.isArray(order.items)) {
+    return order.items.map((item: InventoryReservation) => ({
+      itemId: item.itemId,
+      quantity: item.quantity,
+    }));
+  }
+  return [];
+}
+
+async function restockOrderInventory(
+  orderRef: FirebaseFirestore.DocumentReference,
+  reserved: InventoryReservation[]
+): Promise<void> {
+  if (!reserved.length) return;
+  await db.runTransaction(async (transaction) => {
+    const orderSnapshot = await transaction.get(orderRef);
+    if (!orderSnapshot.exists || orderSnapshot.data()?.inventoryRestocked) return;
+    const itemRefs = reserved.map((entry) => db.collection('items').doc(entry.itemId));
+    const itemSnapshots = await Promise.all(itemRefs.map((ref) => transaction.get(ref)));
+    itemSnapshots.forEach((snapshot, index) => {
+      if (snapshot.exists) {
+        transaction.update(snapshot.ref, {
+          quantity: FieldValue.increment(reserved[index].quantity),
+        });
+      }
+    });
+    transaction.update(orderRef, {
+      inventoryRestocked: true,
+      updatedAt: FieldValue.serverTimestamp(),
+    });
+  });
+}
+
+async function cancelOrder(
+  stripe: Stripe,
+  orderRef: FirebaseFirestore.DocumentReference,
+  orderData: FirebaseFirestore.DocumentData
+): Promise<{ refundId: string | null; alreadyRefunded?: boolean; completed: boolean }> {
+  const reserved = getReservedInventory(orderData);
+  const result = await processOrderRefund(stripe, orderRef, orderData);
+  if (result.completed) await restockOrderInventory(orderRef, reserved);
+  return result;
+}
+
 export const updateOrderStatus = onCall(
   { secrets: [stripeSecretKey] },
   async (request: CallableRequest<UpdateOrderStatusRequest>) => {
@@ -1506,8 +1567,59 @@ export const updateOrderStatus = onCall(
       ) {
         throw new HttpsError('invalid-argument', 'Invalid order status');
       }
-      if (orderData.status === 'trade' && !['preparing', 'cancelled'].includes(status)) {
-        throw new HttpsError('failed-precondition', 'This trade status transition is not allowed');
+      const allowedBySeller = isShopOwner && SELLER_TRANSITIONS[orderData.status]?.includes(status);
+      const allowedByBuyer = isCustomer && BUYER_TRANSITIONS[orderData.status]?.includes(status);
+      if (!allowedBySeller && !allowedByBuyer) {
+        throw new HttpsError(
+          'failed-precondition',
+          `You cannot move this order from ${orderData.status} to ${status}`
+        );
+      }
+      if (orderData.status === 'pending' && status === 'preparing') {
+        await db.runTransaction(async (transaction) => {
+          const currentOrderSnapshot = await transaction.get(orderDoc.ref);
+          const currentOrder = currentOrderSnapshot.data();
+          if (!currentOrderSnapshot.exists || currentOrder?.status !== 'pending') {
+            throw new HttpsError('failed-precondition', 'This order is no longer pending');
+          }
+          const quantities = new Map<string, number>();
+          for (const item of currentOrder.items || []) {
+            if (
+              typeof item.itemId !== 'string' ||
+              !Number.isInteger(item.quantity) ||
+              item.quantity <= 0
+            ) {
+              throw new HttpsError('failed-precondition', 'The order contains invalid items');
+            }
+            quantities.set(item.itemId, (quantities.get(item.itemId) || 0) + item.quantity);
+          }
+          const entries = Array.from(quantities.entries());
+          const itemSnapshots = await Promise.all(
+            entries.map(([itemId]) => transaction.get(db.collection('items').doc(itemId)))
+          );
+          itemSnapshots.forEach((snapshot, index) => {
+            const item = snapshot.data();
+            const amount = entries[index][1];
+            if (
+              !snapshot.exists ||
+              item?.shopId !== shopId ||
+              !Number.isInteger(item?.quantity) ||
+              item.quantity < amount
+            ) {
+              throw new HttpsError(
+                'failed-precondition',
+                'Not enough stock to accept this order. Cancel it to refund the buyer.'
+              );
+            }
+            transaction.update(snapshot.ref, { quantity: item.quantity - amount });
+          });
+          transaction.update(orderDoc.ref, {
+            status: 'preparing',
+            inventoryReserved: entries.map(([itemId, quantity]) => ({ itemId, quantity })),
+            updatedAt: FieldValue.serverTimestamp(),
+          });
+        });
+        return true;
       }
       if (orderData.status === 'trade' && status === 'preparing') {
         if (!isShopOwner) {
@@ -1577,6 +1689,7 @@ export const updateOrderStatus = onCall(
           }
           transaction.update(orderDoc.ref, {
             status: 'preparing',
+            inventoryReserved: itemEntries.map(([itemId, quantity]) => ({ itemId, quantity })),
             updatedAt: FieldValue.serverTimestamp(),
           });
         });
@@ -1586,7 +1699,7 @@ export const updateOrderStatus = onCall(
         const stripe = new Stripe(stripeSecretKey.value(), {
           apiVersion: '2026-01-28.clover',
         });
-        const result = await processOrderRefund(stripe, orderDoc.ref, orderData);
+        const result = await cancelOrder(stripe, orderDoc.ref, orderData);
         if (!result.completed) {
           throw new HttpsError('failed-precondition', 'Refund is still processing');
         }
@@ -3612,12 +3725,18 @@ export const refundOrder = onCall(
     if (!isBuyer && !isSeller) {
       throw new HttpsError('permission-denied', 'Not authorised to refund this order');
     }
+    if (!isSeller && orderData.status !== 'pending') {
+      throw new HttpsError(
+        'failed-precondition',
+        'The seller has accepted this order. Contact them to request a refund.'
+      );
+    }
 
     try {
       const stripe = new Stripe(stripeSecretKey.value(), {
         apiVersion: '2026-01-28.clover',
       });
-      const result = await processOrderRefund(stripe, orderDoc.ref, orderData);
+      const result = await cancelOrder(stripe, orderDoc.ref, orderData);
       if (!result.completed) {
         throw new HttpsError('failed-precondition', 'Refund is still processing');
       }
@@ -3707,25 +3826,26 @@ export const stripeWebhook = onRequest(
             if (!snapshot.empty) {
               const orderRef = snapshot.docs[0].ref;
               const orderData = snapshot.docs[0].data();
+              const reserved = getReservedInventory(orderData);
               const paymentRef =
                 typeof orderData.checkoutPaymentId === 'string'
                   ? db.collection('checkoutPayments').doc(orderData.checkoutPaymentId)
                   : null;
-              await db.runTransaction(async (transaction) => {
+              const cancelled = await db.runTransaction(async (transaction) => {
                 const orderSnapshot = await transaction.get(orderRef);
                 const paymentSnapshot = paymentRef ? await transaction.get(paymentRef) : null;
-                if (!orderSnapshot.exists) return;
+                if (!orderSnapshot.exists) return false;
                 const current = orderSnapshot.data()!;
                 const fullyRefunded = charge.refunded || charge.amount_refunded >= charge.amount;
                 const updates: DocumentData = {
                   refundedAmountCents: charge.amount_refunded,
                   updatedAt: FieldValue.serverTimestamp(),
                 };
-                if (
+                const cancelsOrder =
                   fullyRefunded &&
                   current.escrowStatus !== 'released' &&
-                  current.escrowStatus !== 'releasing'
-                ) {
+                  current.escrowStatus !== 'releasing';
+                if (cancelsOrder) {
                   updates.escrowStatus = 'refunded';
                   updates.status = 'cancelled';
                   updates.escrowRefundedAt = FieldValue.serverTimestamp();
@@ -3742,7 +3862,9 @@ export const stripeWebhook = onRequest(
                   }
                   transaction.update(paymentRef, paymentUpdates);
                 }
+                return cancelsOrder;
               });
+              if (cancelled) await restockOrderInventory(orderRef, reserved);
             }
           }
           break;
