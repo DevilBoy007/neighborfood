@@ -8,7 +8,9 @@
     "shell": "npm run build && firebase functions:shell",
     "start": "npm run shell",
     "deploy": "firebase deploy --only functions",
-    "logs": "firebase functions:log"
+    "logs": "firebase functions:log",
+    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
+    "test:emulators": "npx --yes firebase-tools@15 emulators:exec --only auth,firestore,storage --project demo-neighborfood \"npm test\""
   },
   "engines": {
     "node": "22"
@@ -20,7 +22,14 @@
     "stripe": "~20.3.1"
   },
   "devDependencies": {
+    "@types/jest": "^30.0.0",
+    "jest": "^30.5.2",
+    "ts-jest": "^29.4.15",
     "typescript": "~6.0.3"
   },
-  "private": true
+  "private": true,
+  "overrides": {
+    "glob@>=10.0.0 <14.0.2": "^14.0.3",
+    "minimatch@>=9.0.0 <11.0.1": "^11.0.3"
+  }
 }

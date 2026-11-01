@@ -13,7 +13,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "typecheck": "tsc --noEmit",
-    "emulators": "npm --prefix functions run build && firebase emulators:start",
+    "emulators": "npm --prefix functions run build && npx --yes firebase-tools@15 emulators:start",
     "stripe:listen": "stripe listen --events payment_intent.succeeded,payment_intent.payment_failed,charge.refunded,transfer.created --forward-to",
     "validate": "npm run lint && npm run typecheck && npm run format:check"
   },
