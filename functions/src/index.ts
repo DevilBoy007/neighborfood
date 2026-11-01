@@ -10,15 +10,21 @@
  *   - Centralized business logic
  */
 
-import * as admin from 'firebase-admin';
+import { initializeApp } from 'firebase-admin/app';
 import { onCall, onRequest, HttpsError, CallableRequest } from 'firebase-functions/v2/https';
 import { defineSecret } from 'firebase-functions/params';
-import { FieldValue } from 'firebase-admin/firestore';
+import {
+  DocumentReference,
+  FieldValue,
+  GeoPoint,
+  Timestamp,
+  getFirestore,
+} from 'firebase-admin/firestore';
 import Stripe from 'stripe';
 
 // Initialize Firebase Admin SDK
-admin.initializeApp();
-const db = admin.firestore();
+initializeApp();
+const db = getFirestore();
 
 // Define Stripe secret key from Firebase environment secrets
 const stripeSecretKey = defineSecret('STRIPE_SECRET_KEY');
@@ -61,7 +67,7 @@ function sanitizeValue(value: unknown, visited: WeakSet<object>): unknown {
   }
 
   // Handle Firestore Timestamp
-  if (value instanceof admin.firestore.Timestamp) {
+  if (value instanceof Timestamp) {
     return {
       seconds: value.seconds,
       nanoseconds: value.nanoseconds,
@@ -69,12 +75,12 @@ function sanitizeValue(value: unknown, visited: WeakSet<object>): unknown {
   }
 
   // Handle Firestore DocumentReference - convert to path string
-  if (value instanceof admin.firestore.DocumentReference) {
+  if (value instanceof DocumentReference) {
     return value.path;
   }
 
   // Handle Firestore GeoPoint
-  if (value instanceof admin.firestore.GeoPoint) {
+  if (value instanceof GeoPoint) {
     return {
       latitude: value.latitude,
       longitude: value.longitude,
