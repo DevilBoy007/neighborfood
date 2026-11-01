@@ -13,6 +13,7 @@
 import { initializeApp } from 'firebase-admin/app';
 import { onCall, onRequest, HttpsError, CallableRequest } from 'firebase-functions/v2/https';
 import { defineSecret } from 'firebase-functions/params';
+import { onSchedule } from 'firebase-functions/v2/scheduler';
 import {
   DocumentReference,
   FieldValue,
@@ -3564,6 +3565,109 @@ interface ReleaseEscrowRequest {
   shopId: string;
 }
 
+/**
+ * Transfer the held funds (minus platform fee and refunds) to the seller.
+ * Callers must check who is allowed to trigger settlement.
+ */
+async function settleEscrow(
+  stripe: Stripe,
+  orderDoc: FirebaseFirestore.QueryDocumentSnapshot
+): Promise<{ alreadyReleased: true } | { transferId: string; amountReleased: number }> {
+  const orderData = orderDoc.data();
+  const { id: orderId, shopId } = orderData;
+  const verifiedPayment = await getVerifiedOrderPayment(stripe, orderDoc.ref, orderData);
+  if (!verifiedPayment) {
+    throw new HttpsError(
+      'failed-precondition',
+      'No verified payment is associated with this order'
+    );
+  }
+  const { recordRef, record, paymentIntent } = verifiedPayment;
+  const sellerId = record.sellerId as string;
+  const connectedAccountId = await getVerifiedConnectedAccountId(stripe, sellerId);
+  if (!connectedAccountId) {
+    throw new HttpsError(
+      'failed-precondition',
+      'Seller has not completed Stripe Connect onboarding'
+    );
+  }
+
+  const settlementState = await db.runTransaction(async (transaction) => {
+    const current = await transaction.get(orderDoc.ref);
+    if (!current.exists) throw new HttpsError('not-found', 'Order not found');
+    const currentData = current.data()!;
+    if (currentData.escrowStatus === 'released') {
+      return {
+        alreadyReleased: true,
+        refundedAmountCents: Number(currentData.refundedAmountCents || 0),
+      };
+    }
+    if (!['ready', 'in-delivery', 'completed'].includes(currentData.status)) {
+      throw new HttpsError('failed-precondition', 'Order is not eligible for receipt confirmation');
+    }
+    if (currentData.escrowStatus === 'refunded' || currentData.escrowStatus === 'refunding') {
+      throw new HttpsError('failed-precondition', 'Order is being refunded or was refunded');
+    }
+    if (currentData.escrowStatus !== 'held' && currentData.escrowStatus !== 'releasing') {
+      throw new HttpsError('failed-precondition', 'Escrow is not held');
+    }
+    if (currentData.escrowStatus === 'held') {
+      transaction.update(orderDoc.ref, { escrowStatus: 'releasing' });
+      transaction.update(recordRef, { status: 'releasing' });
+    }
+    return {
+      alreadyReleased: false,
+      refundedAmountCents: Number(currentData.refundedAmountCents || 0),
+    };
+  });
+  if (settlementState.alreadyReleased) return { alreadyReleased: true };
+
+  const latestChargeId =
+    typeof paymentIntent.latest_charge === 'string'
+      ? paymentIntent.latest_charge
+      : paymentIntent.latest_charge?.id;
+  if (!latestChargeId) {
+    throw new HttpsError('failed-precondition', 'Payment has no captured charge');
+  }
+  const totalCents = paymentIntent.amount_received;
+  const refundedAmountCents = settlementState.refundedAmountCents;
+  const pendingOrder = record.pendingOrder as Record<string, unknown>;
+  const platformFeeCents = Math.round(Number(pendingOrder.platformFee) * 100);
+  const sellerAmountCents = totalCents - refundedAmountCents - platformFeeCents;
+  if (sellerAmountCents <= 0) {
+    throw new HttpsError('failed-precondition', 'No remaining funds are available for settlement');
+  }
+
+  const transfer = await stripe.transfers.create(
+    {
+      amount: sellerAmountCents,
+      currency: paymentIntent.currency,
+      destination: connectedAccountId,
+      source_transaction: latestChargeId,
+      metadata: { orderId, shopId, paymentIntentId: paymentIntent.id },
+    },
+    { idempotencyKey: `neighborfood-release-${orderDoc.id}` }
+  );
+
+  await db.runTransaction(async (transaction) => {
+    const current = await transaction.get(orderDoc.ref);
+    if (current.data()?.escrowStatus === 'released') return;
+    if (current.data()?.escrowStatus !== 'releasing') {
+      throw new HttpsError('failed-precondition', 'Escrow settlement state changed unexpectedly');
+    }
+    transaction.update(orderDoc.ref, {
+      escrowStatus: 'released',
+      escrowReleasedAt: FieldValue.serverTimestamp(),
+      stripeTransferId: transfer.id,
+      updatedAt: FieldValue.serverTimestamp(),
+    });
+    transaction.update(recordRef, { status: 'released' });
+  });
+
+  console.log(`Escrow released for order ${orderId}: transfer ${transfer.id}`);
+  return { transferId: transfer.id, amountReleased: transfer.amount };
+}
+
 export const releaseEscrow = onCall(
   { secrets: [stripeSecretKey] },
   async (request: CallableRequest<ReleaseEscrowRequest>) => {
@@ -3604,110 +3708,36 @@ export const releaseEscrow = onCall(
         );
       }
 
-      const verifiedPayment = await getVerifiedOrderPayment(stripe, orderDoc.ref, orderData);
-      if (!verifiedPayment) {
-        throw new HttpsError(
-          'failed-precondition',
-          'No verified payment is associated with this order'
-        );
-      }
-      const { recordRef, record, paymentIntent } = verifiedPayment;
-      const sellerId = record.sellerId as string;
-      const connectedAccountId = await getVerifiedConnectedAccountId(stripe, sellerId);
-      if (!connectedAccountId) {
-        throw new HttpsError(
-          'failed-precondition',
-          'Seller has not completed Stripe Connect onboarding'
-        );
-      }
-
-      const settlementState = await db.runTransaction(async (transaction) => {
-        const current = await transaction.get(orderDoc.ref);
-        if (!current.exists) throw new HttpsError('not-found', 'Order not found');
-        const currentData = current.data()!;
-        if (currentData.escrowStatus === 'released') {
-          return {
-            alreadyReleased: true,
-            refundedAmountCents: Number(currentData.refundedAmountCents || 0),
-          };
-        }
-        if (!['ready', 'in-delivery', 'completed'].includes(currentData.status)) {
-          throw new HttpsError(
-            'failed-precondition',
-            'Order is not eligible for receipt confirmation'
-          );
-        }
-        if (currentData.escrowStatus === 'refunded' || currentData.escrowStatus === 'refunding') {
-          throw new HttpsError('failed-precondition', 'Order is being refunded or was refunded');
-        }
-        if (currentData.escrowStatus !== 'held' && currentData.escrowStatus !== 'releasing') {
-          throw new HttpsError('failed-precondition', 'Escrow is not held');
-        }
-        if (currentData.escrowStatus === 'held') {
-          transaction.update(orderDoc.ref, { escrowStatus: 'releasing' });
-          transaction.update(recordRef, { status: 'releasing' });
-        }
-        return {
-          alreadyReleased: false,
-          refundedAmountCents: Number(currentData.refundedAmountCents || 0),
-        };
-      });
-      if (settlementState.alreadyReleased) return { alreadyReleased: true };
-
-      const latestChargeId =
-        typeof paymentIntent.latest_charge === 'string'
-          ? paymentIntent.latest_charge
-          : paymentIntent.latest_charge?.id;
-      if (!latestChargeId) {
-        throw new HttpsError('failed-precondition', 'Payment has no captured charge');
-      }
-      const totalCents = paymentIntent.amount_received;
-      const refundedAmountCents = settlementState.refundedAmountCents;
-      const pendingOrder = record.pendingOrder as Record<string, unknown>;
-      const platformFeeCents = Math.round(Number(pendingOrder.platformFee) * 100);
-      const sellerAmountCents = totalCents - refundedAmountCents - platformFeeCents;
-      if (sellerAmountCents <= 0) {
-        throw new HttpsError(
-          'failed-precondition',
-          'No remaining funds are available for settlement'
-        );
-      }
-
-      const transfer = await stripe.transfers.create(
-        {
-          amount: sellerAmountCents,
-          currency: paymentIntent.currency,
-          destination: connectedAccountId,
-          source_transaction: latestChargeId,
-          metadata: { orderId, shopId, paymentIntentId: paymentIntent.id },
-        },
-        { idempotencyKey: `neighborfood-release-${orderDoc.id}` }
-      );
-
-      await db.runTransaction(async (transaction) => {
-        const current = await transaction.get(orderDoc.ref);
-        if (current.data()?.escrowStatus === 'released') return;
-        if (current.data()?.escrowStatus !== 'releasing') {
-          throw new HttpsError(
-            'failed-precondition',
-            'Escrow settlement state changed unexpectedly'
-          );
-        }
-        transaction.update(orderDoc.ref, {
-          escrowStatus: 'released',
-          escrowReleasedAt: FieldValue.serverTimestamp(),
-          stripeTransferId: transfer.id,
-          updatedAt: FieldValue.serverTimestamp(),
-        });
-        transaction.update(recordRef, { status: 'released' });
-      });
-
-      console.log(`Escrow released for order ${orderId}: transfer ${transfer.id}`);
-      return { transferId: transfer.id, amountReleased: transfer.amount };
+      return await settleEscrow(stripe, orderDoc);
     } catch (error) {
       if (error instanceof HttpsError) throw error;
       console.error('Error releasing escrow:', error);
       throw new HttpsError('internal', 'Failed to release escrow');
+    }
+  }
+);
+
+// Buyers who never confirm receipt shouldn't block payouts indefinitely.
+const ESCROW_AUTO_RELEASE_DAYS = 7;
+
+export const autoReleaseEscrow = onSchedule(
+  { schedule: 'every 24 hours', secrets: [stripeSecretKey] },
+  async () => {
+    const stripe = new Stripe(stripeSecretKey.value(), {
+      apiVersion: '2026-01-28.clover',
+    });
+    const cutoffMs = Date.now() - ESCROW_AUTO_RELEASE_DAYS * 24 * 60 * 60 * 1000;
+    const heldOrders = await db.collection('orders').where('escrowStatus', '==', 'held').get();
+    for (const orderDoc of heldOrders.docs) {
+      const order = orderDoc.data();
+      const completedAt = order.updatedAt?.toMillis?.() ?? Number.POSITIVE_INFINITY;
+      if (order.status !== 'completed' || completedAt > cutoffMs) continue;
+      try {
+        await settleEscrow(stripe, orderDoc);
+        console.log(`Auto-released escrow for order ${order.id}`);
+      } catch (error) {
+        console.error(`Auto-release failed for order ${order.id}:`, error);
+      }
     }
   }
 );
