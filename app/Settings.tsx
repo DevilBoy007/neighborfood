@@ -77,6 +77,16 @@ const Settings = () => {
           <Text style={[styles.menuText, { color: colors.buttonText }]}>Appearance</Text>
         </TouchableOpacity>
 
+        <TouchableOpacity
+          style={[styles.menuItem, { backgroundColor: colors.buttonPrimary }]}
+          onPress={() => {
+            router.back();
+            router.push('/BlockedUsers');
+          }}
+        >
+          <Text style={[styles.menuText, { color: colors.buttonText }]}>Blocked Users</Text>
+        </TouchableOpacity>
+
         <TouchableOpacity style={[styles.menuItem, { backgroundColor: colors.buttonPrimary }]}>
           <Text style={[styles.menuText, { color: colors.buttonText }]}>About</Text>
         </TouchableOpacity>

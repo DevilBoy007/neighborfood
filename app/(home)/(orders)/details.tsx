@@ -18,6 +18,7 @@ import { useOrder, useUser } from '@/store/reduxHooks';
 import { useOrderStatus } from '@/hooks/useOrderStatus';
 import { useAppColors } from '@/hooks/useAppColors';
 import firebaseService from '@/handlers/firebaseService';
+import { ReportButton } from '@/components/ReportProvider';
 
 const { height } = Dimensions.get('window');
 
@@ -172,6 +173,15 @@ const OrderDetailScreen = () => {
           <Ionicons name="chevron-back" size={24} color={colors.icon} />
         </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: colors.navText }]}>order details</Text>
+        {selectedOrder?.id && (
+          <View style={{ marginLeft: 'auto', paddingHorizontal: 12 }}>
+            <ReportButton
+              target={{ targetType: 'order', targetId: selectedOrder.id, label: 'this order' }}
+              color={colors.icon}
+              size={22}
+            />
+          </View>
+        )}
       </View>
 
       <Animated.ScrollView

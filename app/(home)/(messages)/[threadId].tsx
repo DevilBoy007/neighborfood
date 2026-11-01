@@ -20,6 +20,7 @@ import { useMessage, useUser, useOrder, MessageData } from '@/store/reduxHooks';
 
 import firebaseService from '@/handlers/firebaseService';
 import { useAppColors } from '@/hooks/useAppColors';
+import { ReportButton } from '@/components/ReportProvider';
 import { useOrderStatus } from '@/hooks/useOrderStatus';
 
 const formatMessageTime = (timestamp: { seconds: number; nanoseconds: number } | undefined) => {
@@ -306,6 +307,16 @@ export default function MessageThreadScreen() {
             <Text style={[styles.headerTitle, { color: colors.text }]} numberOfLines={1}>
               {otherUserInfo?.username || 'Unknown User'}
             </Text>
+            {otherUserId && (
+              <ReportButton
+                target={{
+                  targetType: 'user',
+                  targetId: otherUserId,
+                  label: otherUserInfo?.username,
+                }}
+                color={colors.icon}
+              />
+            )}
           </View>
           <TouchableOpacity
             style={styles.backButton}

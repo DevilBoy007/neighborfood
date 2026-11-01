@@ -4,6 +4,7 @@ import { View, Text, StyleSheet, Image, TouchableOpacity, Alert, Platform } from
 import { Ionicons } from '@expo/vector-icons';
 import { useCart, useItem, ItemData } from '@/store/reduxHooks';
 import { useAppColors } from '@/hooks/useAppColors';
+import { ReportButton } from '@/components/ReportProvider';
 
 interface ItemCardProps {
   item: ItemData;
@@ -135,7 +136,15 @@ const ItemCard = ({
   // Render common item content
   const renderItemContent = () => (
     <>
-      <Text style={[styles.itemName, { color: colors.text }]}>{item.name}</Text>
+      <View style={styles.nameRow}>
+        <Text style={[styles.itemName, { color: colors.text, flexShrink: 1 }]}>{item.name}</Text>
+        {!isShopOwner && (
+          <ReportButton
+            target={{ targetType: 'item', targetId: item.id, label: item.name }}
+            size={16}
+          />
+        )}
+      </View>
 
       {useManagerStyle && deleteLabel === 'Delete' && (
         <Text style={[styles.itemShop, { color: colors.textMuted }]}>
@@ -235,6 +244,12 @@ const ItemCard = ({
 };
 
 const styles = StyleSheet.create({
+  nameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
   // Base card styles
   itemCard: {
     borderRadius: 8,

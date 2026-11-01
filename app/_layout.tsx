@@ -11,6 +11,7 @@ import { StripeProvider } from '@stripe/stripe-react-native';
 import { store, persistor } from '@/store';
 import { GoogleMapsLoader } from '@/components/GoogleMapsLoader';
 import { NotificationProvider } from '@/components/NotificationProvider';
+import { ReportProvider } from '@/components/ReportProvider';
 import { View, Text, LogBox, Platform } from 'react-native';
 
 // Ignore specific warnings about text nodes
@@ -93,35 +94,38 @@ export default function RootLayout() {
           <GoogleMapsLoader>
             <KeyboardProvider>
               <GestureHandlerRootView style={{ flex: 1 }}>
-                <Stack>
-                  <Stack.Screen name="index" options={{ headerShown: false }} />
-                  <Stack.Screen name="Register" options={{ headerShown: false }} />
-                  <Stack.Screen name="Login" options={{ headerShown: false }} />
-                  <Stack.Screen name="+not-found" options={{ headerShown: false }} />
-                  <Stack.Screen
-                    name="success"
-                    options={{ headerShown: false, animation: 'fade' }}
-                  />
-                  <Stack.Screen name="EditDetails" options={{ headerShown: false }} />
-                  <Stack.Screen name="PaymentMethods" options={{ headerShown: false }} />
-                  <Stack.Screen name="DeleteAccount" options={{ headerShown: false }} />
-                  <Stack.Screen
-                    name="Settings"
-                    options={{
-                      headerShown: false,
-                      presentation: 'modal',
-                      animation: 'slide_from_bottom',
-                    }}
-                  />
-                  <Stack.Screen
-                    name="Appearance"
-                    options={{
-                      headerShown: false,
-                      presentation: 'modal',
-                      animation: 'slide_from_bottom',
-                    }}
-                  />
-                </Stack>
+                <ReportProvider>
+                  <Stack>
+                    <Stack.Screen name="index" options={{ headerShown: false }} />
+                    <Stack.Screen name="Register" options={{ headerShown: false }} />
+                    <Stack.Screen name="Login" options={{ headerShown: false }} />
+                    <Stack.Screen name="+not-found" options={{ headerShown: false }} />
+                    <Stack.Screen
+                      name="success"
+                      options={{ headerShown: false, animation: 'fade' }}
+                    />
+                    <Stack.Screen name="EditDetails" options={{ headerShown: false }} />
+                    <Stack.Screen name="PaymentMethods" options={{ headerShown: false }} />
+                    <Stack.Screen name="DeleteAccount" options={{ headerShown: false }} />
+                    <Stack.Screen name="BlockedUsers" options={{ headerShown: false }} />
+                    <Stack.Screen
+                      name="Settings"
+                      options={{
+                        headerShown: false,
+                        presentation: 'modal',
+                        animation: 'slide_from_bottom',
+                      }}
+                    />
+                    <Stack.Screen
+                      name="Appearance"
+                      options={{
+                        headerShown: false,
+                        presentation: 'modal',
+                        animation: 'slide_from_bottom',
+                      }}
+                    />
+                  </Stack>
+                </ReportProvider>
                 <Toast config={toastConfig} />
               </GestureHandlerRootView>
             </KeyboardProvider>

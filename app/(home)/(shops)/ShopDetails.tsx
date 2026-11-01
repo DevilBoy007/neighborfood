@@ -15,6 +15,7 @@ import Toast from 'react-native-toast-message';
 
 import ParallaxScrollView from '@/components/ParallaxScrollView';
 import ItemCard from '@/components/ItemCard';
+import { ReportButton } from '@/components/ReportProvider';
 import firebaseService from '@/handlers/firebaseService';
 
 import { useLocation, useUser, useShop, useMessage, ItemData } from '@/store/reduxHooks';
@@ -366,6 +367,12 @@ export default function ShopDetails() {
                   : 'Loading...'}
             </Text>
             {/* Message button - only show if not the shop owner */}
+            {selectedShop.userId !== userData?.uid && (
+              <ReportButton
+                target={{ targetType: 'shop', targetId: selectedShop.id, label: selectedShop.name }}
+                size={Platform.OS === 'web' ? 28 : 18}
+              />
+            )}
             {selectedShop.userId !== userData?.uid && (
               <TouchableOpacity
                 style={styles.messageOwnerButton}

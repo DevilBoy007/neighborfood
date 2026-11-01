@@ -12,6 +12,7 @@ import {
 import { useRouter } from 'expo-router';
 import { useLocation } from '@/store/reduxHooks';
 import { useAppColors } from '@/hooks/useAppColors';
+import { useReport } from '@/components/ReportProvider';
 
 import shopIcon from '@/assets/images/shop.png';
 import receiptIcon from '@/assets/images/receipt.png';
@@ -23,16 +24,21 @@ const MenuScreen = () => {
   const router = useRouter();
   const { locationData } = useLocation();
   const colors = useAppColors();
+  const report = useReport();
 
   const MenuButton = ({
     icon,
     title,
     destination,
+    onPress,
   }: {
     icon: ImageSourcePropType | string;
     title: string;
     destination: string | null;
+    onPress?: () => void;
   }) => {
+    const handlePress =
+      onPress ?? (() => destination && router.navigate(`/(home)/${destination}` as any));
     if (typeof icon !== 'string') {
       return (
         <TouchableOpacity
@@ -40,7 +46,7 @@ const MenuScreen = () => {
             styles.menuButton,
             { backgroundColor: colors.surface, borderColor: colors.border },
           ]}
-          onPress={() => router.navigate(`/(home)/${destination}`)}
+          onPress={handlePress}
         >
           <Image source={icon} style={styles.icon} />
           <Text style={[styles.menuButtonText, { color: colors.textMuted }]}>{title}</Text>
@@ -53,7 +59,7 @@ const MenuScreen = () => {
             styles.menuButton,
             { backgroundColor: colors.surface, borderColor: colors.border },
           ]}
-          onPress={() => destination && router.navigate(`/(home)/${destination}`)}
+          onPress={handlePress}
         >
           <Text style={[styles.menuButtonIcon, { color: colors.textMuted }]}>{icon}</Text>
           <Text style={[styles.menuButtonText, { color: colors.textMuted }]}>{title}</Text>
@@ -109,6 +115,12 @@ const MenuScreen = () => {
               icon={dashboardIcon}
               title="dashboard"
               destination={'./(dashboard)/Dashboard'}
+            />
+            <MenuButton
+              icon="⚑"
+              title="report a problem"
+              destination={null}
+              onPress={() => report({ targetType: 'other' })}
             />
           </View>
         </ScrollView>

@@ -45,6 +45,10 @@ const {
  *   - Reduced client-side bundle size
  *   - Centralized business logic
  */
+export type ReportTargetType = 'shop' | 'item' | 'user' | 'order' | 'message' | 'other';
+export type ReportReason =
+  'spam' | 'scam' | 'offensive' | 'harassment' | 'prohibited_item' | 'safety' | 'other';
+
 class FirebaseService {
   private static instance: FirebaseService;
   private firebaseConfig: {
@@ -400,6 +404,42 @@ class FirebaseService {
       console.error('Error creating shop or updating user:', error);
       throw error;
     }
+  }
+
+  // =========================================================================
+  // Moderation (via Cloud Functions)
+  // =========================================================================
+
+  async submitReport(report: {
+    targetType: ReportTargetType;
+    targetId?: string;
+    reason: ReportReason;
+    details?: string;
+    alsoBlock?: boolean;
+  }): Promise<{ reportId: string }> {
+    const result = await this.callFunction<typeof report, { reportId: string }>(
+      'submitReport',
+      report
+    );
+    if (report.alsoBlock) this.clearShopsCache();
+    return result;
+  }
+
+  async blockUser(userId: string): Promise<void> {
+    await this.callFunction<{ userId: string }, boolean>('blockUser', { userId });
+    this.clearShopsCache();
+  }
+
+  async unblockUser(userId: string): Promise<void> {
+    await this.callFunction<{ userId: string }, boolean>('unblockUser', { userId });
+    this.clearShopsCache();
+  }
+
+  async getBlockedUsers(): Promise<{ id: string; username: string; photoURL: string | null }[]> {
+    return await this.callFunction<
+      Record<string, never>,
+      { id: string; username: string; photoURL: string | null }[]
+    >('getBlockedUsers', {});
   }
 
   async getUserById(userId: string, skipCache = false) {
