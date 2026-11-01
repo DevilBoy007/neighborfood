@@ -23,6 +23,9 @@ import {
 } from 'firebase-admin/firestore';
 import Stripe from 'stripe';
 import { assertAccountDeletable, deleteUserData } from './accountDeletion';
+import { getBlockedUserIds, isBlockedBetween } from './moderation';
+
+export { submitReport, blockUser, unblockUser, getBlockedUsers } from './moderation';
 
 // Initialize Firebase Admin SDK
 initializeApp();
@@ -588,7 +591,8 @@ export const getShopsByZipCodePrefix = onCall(
       const shops = shopsSnapshot.docs.map(
         (doc) => ({ id: doc.id, ...sanitizeFirestoreData(doc.data()) }) as DocumentData
       );
-      return shops.filter((shop) => shop.userId !== userId);
+      const blocked = await getBlockedUserIds(request.auth!.uid);
+      return shops.filter((shop) => shop.userId !== userId && !blocked.has(shop.userId as string));
     } catch (error) {
       console.error('Error getting shops by zip code prefix:', error);
       throw new HttpsError('internal', 'Error getting shops');
@@ -617,9 +621,10 @@ export const getShopsWithItems = onCall(
         .where('marketId', '<=', zipPrefix + '\uf8ff')
         .get();
 
+      const blocked = await getBlockedUserIds(request.auth!.uid);
       const shops = shopsSnapshot.docs
         .map((doc) => ({ id: doc.id, ...sanitizeFirestoreData(doc.data()) }) as DocumentData)
-        .filter((shop) => shop.userId !== userId);
+        .filter((shop) => shop.userId !== userId && !blocked.has(shop.userId as string));
 
       if (shops.length === 0) {
         return [];
@@ -2097,6 +2102,9 @@ export const createOrGetThread = onCall(
     if (!participantIds.includes(request.auth!.uid)) {
       throw new HttpsError('permission-denied', 'User must be a participant in the thread');
     }
+    if (await isBlockedBetween(participantIds[0], participantIds[1])) {
+      throw new HttpsError('permission-denied', 'You cannot message this user');
+    }
 
     try {
       // Sort participant IDs to ensure consistent ordering for queries
@@ -2239,10 +2247,13 @@ export const getThreadsForUser = onCall(
         .orderBy('updatedAt', 'desc')
         .get();
 
-      const threads = threadsSnapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...sanitizeFirestoreData(doc.data()),
-      }));
+      const blocked = await getBlockedUserIds(userId);
+      const threads = threadsSnapshot.docs
+        .filter((doc) => (doc.data().participantIds || []).every((id: string) => !blocked.has(id)))
+        .map((doc) => ({
+          id: doc.id,
+          ...sanitizeFirestoreData(doc.data()),
+        }));
 
       return threads;
     } catch (error) {
@@ -2318,6 +2329,10 @@ export const sendMessage = onCall(async (request: CallableRequest<SendMessageReq
     const threadData = threadDoc.data();
     if (!threadData?.participantIds?.includes(request.auth!.uid)) {
       throw new HttpsError('permission-denied', 'User is not a participant of this thread');
+    }
+    const [firstParticipant, secondParticipant] = threadData.participantIds;
+    if (await isBlockedBetween(firstParticipant, secondParticipant)) {
+      throw new HttpsError('permission-denied', 'You cannot message this user');
     }
 
     // Add the message
@@ -2598,6 +2613,7 @@ export const sendMessageNotification = onCall(
       ) {
         throw new HttpsError('permission-denied', 'You cannot notify this user');
       }
+      if (await isBlockedBetween(request.auth!.uid, recipientId)) return false;
 
       const safeSender = String(senderName).slice(0, 60);
       const safePreview = String(messagePreview || '').slice(0, 140);
