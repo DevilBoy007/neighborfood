@@ -47,6 +47,7 @@ jobs:
     name: Publish Preview Update
     if: ${{ inputs.include_update }}
     type: update
+    environment: preview
     params:
       branch: ${{ github.ref_name }}
       message: ${{ inputs.message || 'Preview update' }}
