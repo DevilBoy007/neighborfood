@@ -11,12 +11,7 @@ type OrderItem = {
 };
 
 export type OrderStatus =
-  | 'pending'
-  | 'preparing'
-  | 'ready'
-  | 'in-delivery'
-  | 'completed'
-  | 'cancelled';
+  'pending' | 'preparing' | 'ready' | 'in-delivery' | 'completed' | 'cancelled';
 
 export type OrderData = {
   id: string;
