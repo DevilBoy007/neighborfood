@@ -133,12 +133,8 @@ export const useNotifications = () => {
 
     return () => {
       // Clean up listeners
-      if (foregroundListener.current) {
-        Notifications.removeNotificationSubscription(foregroundListener.current);
-      }
-      if (responseListener.current) {
-        Notifications.removeNotificationSubscription(responseListener.current);
-      }
+      foregroundListener.current?.remove();
+      responseListener.current?.remove();
       subscription.remove();
     };
   }, [userData?.uid, handleForegroundNotification, handleNotificationResponse]);
@@ -146,7 +142,7 @@ export const useNotifications = () => {
   // Handle app coming to foreground - refresh badge count
   const handleAppStateChange = useCallback(
     async (nextAppState: AppStateStatus) => {
-      if (appState.current.match(/inactive|background/) && nextAppState === 'active') {
+      if (appState.current?.match(/inactive|background/) && nextAppState === 'active') {
         // App has come to the foreground
         // Refresh threads to get latest unread counts
         if (userData?.uid) {

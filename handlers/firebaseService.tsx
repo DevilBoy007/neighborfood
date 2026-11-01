@@ -11,7 +11,6 @@ import { Analytics, getAnalytics } from 'firebase/analytics';
 import {
   initializeAuth,
   getAuth,
-  browserLocalPersistence,
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   signOut,
@@ -28,7 +27,10 @@ import type { ItemData } from '@/store/slices/itemSlice';
 // Type declaration for getReactNativePersistence which is available in firebase/auth but not well-typed
 declare function getReactNativePersistence(storage: typeof AsyncStorage): Persistence;
 
-const { getReactNativePersistence: getReactNativePersistenceImpl } = require('firebase/auth');
+const {
+  getReactNativePersistence: getReactNativePersistenceImpl,
+  browserLocalPersistence,
+} = require('firebase/auth');
 
 /**
  * FirebaseService - Refactored to use Cloud Functions for Firestore operations

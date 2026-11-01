@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect } from 'expo-router';
 
 import firebaseService from '@/handlers/firebaseService';
 import { useUser, useItem, useShop, ItemData } from '@/store/reduxHooks';

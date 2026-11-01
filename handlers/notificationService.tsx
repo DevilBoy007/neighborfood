@@ -307,11 +307,11 @@ class NotificationService {
    */
   cleanup(): void {
     if (this.notificationListener) {
-      Notifications.removeNotificationSubscription(this.notificationListener);
+      this.notificationListener.remove();
       this.notificationListener = null;
     }
     if (this.responseListener) {
-      Notifications.removeNotificationSubscription(this.responseListener);
+      this.responseListener.remove();
       this.responseListener = null;
     }
   }

@@ -81,10 +81,7 @@ export default function RootLayout() {
   return (
     <>
       <View style={styles.container}>
-        <Stack.Screen
-          options={{ headerShown: false }}
-          initialParams={{ toggleSettings: toggleSettings }}
-        />
+        <Stack.Screen options={{ headerShown: false }} />
         {Platform.OS !== 'web' && (
           <SoundTouchableOpacity
             onPress={toggleSettings}

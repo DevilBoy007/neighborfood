@@ -1,6 +1,6 @@
 import { createSlice, createAsyncThunk, PayloadAction, createSelector } from '@reduxjs/toolkit';
 import firebaseService from '../../handlers/firebaseService';
-import type { RootState } from '../store';
+import type { RootState } from '../index';
 
 /**
  * Helper function to compute unread count for threads
