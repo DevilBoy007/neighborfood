@@ -13,6 +13,7 @@ import { User } from 'firebase/auth';
 import CartFAB from '@/components/CartFAB';
 import NotificationBadge from '@/components/NotificationBadge';
 import { useMessage } from '@/store/reduxHooks';
+import { identifySubscriber } from '@/handlers/subscriptionService';
 
 // Helper to get storage - lazily evaluated with guard for bundling
 const getStorage = () => {
@@ -55,6 +56,9 @@ export default function RootLayout() {
 
         setUser(DATA);
         console.log('Loaded user data:', DATA.uid);
+        identifySubscriber(DATA.uid).catch((error) =>
+          console.error('Error configuring subscriptions:', error)
+        );
 
         // Pre-load message threads in the background
         loadThreads(DATA.uid);

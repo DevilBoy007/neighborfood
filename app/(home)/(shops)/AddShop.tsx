@@ -16,7 +16,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { GeoPoint } from 'firebase/firestore';
 import Toast from 'react-native-toast-message';
 
-import firebaseService from '@/handlers/firebaseService';
+import firebaseService, { isPlanLimitError } from '@/handlers/firebaseService';
 import { useUser, useShop } from '@/store/reduxHooks';
 import { useAppColors } from '@/hooks/useAppColors';
 
@@ -259,7 +259,16 @@ export default function ShopRegistrationScreen() {
             router.back();
           }, 2000);
         }
-      } catch {
+      } catch (error) {
+        if (isPlanLimitError(error)) {
+          Toast.show({
+            type: 'info',
+            text1: 'Shop limit reached',
+            text2: (error as Error).message,
+          });
+          router.push('/Subscription');
+          return;
+        }
         Toast.show({
           type: 'error',
           text1: 'Error',

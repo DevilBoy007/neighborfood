@@ -70,6 +70,16 @@ const Settings = () => {
           <Text style={[styles.menuText, { color: colors.buttonText }]}>Edit Details</Text>
         </TouchableOpacity>
 
+        <TouchableOpacity
+          style={[styles.menuItem, { backgroundColor: colors.buttonPrimary }]}
+          onPress={() => {
+            router.back();
+            router.push('/Subscription');
+          }}
+        >
+          <Text style={[styles.menuText, { color: colors.buttonText }]}>Neighborfood Pro</Text>
+        </TouchableOpacity>
+
         {/* Add other menu items */}
         <TouchableOpacity
           style={[styles.menuItem, { backgroundColor: colors.buttonPrimary }]}

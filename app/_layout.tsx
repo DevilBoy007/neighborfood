@@ -111,6 +111,7 @@ export default function RootLayout() {
                     <Stack.Screen name="DeleteAccount" options={{ headerShown: false }} />
                     <Stack.Screen name="BlockedUsers" options={{ headerShown: false }} />
                     <Stack.Screen name="Legal" options={{ headerShown: false }} />
+                    <Stack.Screen name="Subscription" options={{ headerShown: false }} />
                     <Stack.Screen
                       name="Settings"
                       options={{

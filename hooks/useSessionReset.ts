@@ -1,5 +1,6 @@
 import { useCallback } from 'react';
 import notificationService from '@/handlers/notificationService';
+import { resetSubscriber } from '@/handlers/subscriptionService';
 import { useCart, useUser } from '@/store/reduxHooks';
 
 /**
@@ -12,6 +13,7 @@ export function useSessionReset() {
 
   return useCallback(async () => {
     notificationService.cleanup();
+    await resetSubscriber();
     clearCart();
     await clearUserData();
   }, [clearCart, clearUserData]);

@@ -20,7 +20,7 @@ import * as ImagePicker from 'expo-image-picker';
 import 'react-native-get-random-values';
 import { v4 as uuidv4 } from 'uuid';
 
-import firebaseService from '@/handlers/firebaseService';
+import firebaseService, { isPlanLimitError } from '@/handlers/firebaseService';
 import { useUser, useItem, useShop } from '@/store/reduxHooks';
 import { useAppColors } from '@/hooks/useAppColors';
 
@@ -391,8 +391,17 @@ export default function AddItemScreen() {
             }, 2000);
           }
         }
-      } catch {
+      } catch (error) {
         setIsLoadingItem(false);
+        if (isPlanLimitError(error)) {
+          Toast.show({
+            type: 'info',
+            text1: 'Item limit reached',
+            text2: (error as Error).message,
+          });
+          router.push('/Subscription');
+          return;
+        }
         Toast.show({
           type: 'error',
           text1: 'Error',

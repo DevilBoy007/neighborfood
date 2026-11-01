@@ -118,6 +118,12 @@ const MenuScreen = () => {
               destination={'./(dashboard)/Dashboard'}
             />
             <MenuButton
+              icon="★"
+              title="go pro"
+              destination={null}
+              onPress={() => router.push('/Subscription')}
+            />
+            <MenuButton
               icon="⚑"
               title="report a problem"
               destination={null}

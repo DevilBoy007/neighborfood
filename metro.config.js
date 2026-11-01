@@ -7,7 +7,12 @@ config.resolver.sourceExts.push('cjs');
 config.resolver.unstable_enablePackageExports = false;
 
 // Native-only modules that should resolve to empty on web
-const NATIVE_ONLY = ['@stripe/stripe-react-native', 'react-native-maps', 'react-native-purchases'];
+const NATIVE_ONLY = [
+  '@stripe/stripe-react-native',
+  'react-native-maps',
+  'react-native-purchases',
+  'react-native-purchases-ui',
+];
 
 config.resolver.resolveRequest = (context, moduleName, platform) => {
   if (platform === 'web') {

@@ -56,6 +56,8 @@
     "react-native-google-places-autocomplete": "^2.6.5",
     "react-native-keyboard-controller": "1.22.7",
     "react-native-maps": "1.29.11",
+    "react-native-purchases": "^11.0.0",
+    "react-native-purchases-ui": "^11.0.0",
     "react-native-reanimated": "4.7.1",
     "react-native-safe-area-context": "~5.10.1",
     "react-native-screens": "~4.30.1",

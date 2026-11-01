@@ -59,6 +59,18 @@ const EMULATOR_HOST =
   process.env.EXPO_PUBLIC_FIREBASE_EMULATOR_HOST ||
   (Platform.OS === 'android' ? '10.0.2.2' : 'localhost');
 
+export type SellerPlanStatus = {
+  plan: 'free' | 'pro';
+  limits: { maxShops: number; maxItems: number; platformFeeWaived: boolean };
+  shopCount: number;
+  itemCount: number;
+  expiresAt: number | null;
+};
+
+/** True when a callable failed because the seller hit their plan's shop/item limit. */
+export const isPlanLimitError = (error: unknown): boolean =>
+  (error as { code?: string; details?: { reason?: string } })?.details?.reason === 'plan-limit';
+
 export type ReportTargetType = 'shop' | 'item' | 'user' | 'order' | 'message' | 'other';
 export type ReportReason =
   'spam' | 'scam' | 'offensive' | 'harassment' | 'prohibited_item' | 'safety' | 'other';
@@ -454,6 +466,17 @@ class FirebaseService {
   async unblockUser(userId: string): Promise<void> {
     await this.callFunction<{ userId: string }, boolean>('unblockUser', { userId });
     this.clearShopsCache();
+  }
+
+  async getSellerPlanStatus(): Promise<SellerPlanStatus> {
+    return await this.callFunction<Record<string, never>, SellerPlanStatus>(
+      'getSellerPlanStatus',
+      {}
+    );
+  }
+
+  async syncSubscription(): Promise<SellerPlanStatus> {
+    return await this.callFunction<Record<string, never>, SellerPlanStatus>('syncSubscription', {});
   }
 
   async getCommunityStats(zipPrefix: string): Promise<{
