@@ -74,6 +74,9 @@ export interface ThemePreset {
     navIcon: string;
     navText: string;
     stickyBackButton: string;
+    // Screen titles (TitanOne) are drawn with an outline for contrast
+    titleText: string;
+    titleStroke: string;
   };
 }
 
@@ -95,7 +98,7 @@ export const ThemePresets: Record<ThemePresetName, ThemePreset> = {
       text: '#000000',
       textSecondary: '#333333',
       textMuted: '#333',
-      textOnPrimary: '#00bfff',
+      textOnPrimary: '#00648a',
       // State colors
       success: '#4CAF50',
       warning: '#FF9800',
@@ -108,19 +111,21 @@ export const ThemePresets: Record<ThemePresetName, ThemePreset> = {
       iconMuted: '#687076',
       // Interactive elements
       buttonText: '#ffffff',
-      buttonPrimary: '#00bfff',
+      buttonPrimary: '#0087b5',
       buttonPrimaryAlternate: '#87cefa',
       buttonSecondary: '#b7ffb0',
       buttonDisabled: '#cccccc',
       // Input elements
       inputBackground: '#ffffff',
       inputBorder: '#000000',
-      placeholder: '#999',
+      placeholder: '#767676',
       // Navigation elements
       navBackground: '#87CEFA',
       navIcon: '#000000',
-      navText: '#00bfff',
+      navText: '#00648a',
       stickyBackButton: '#ffffffb3',
+      titleText: '#ffffff',
+      titleStroke: '#00648a',
     },
   },
   simpleDark: {
@@ -139,12 +144,12 @@ export const ThemePresets: Record<ThemePresetName, ThemePreset> = {
       // Text colors
       text: '#F9FAFB',
       textSecondary: '#E5E7EB',
-      textMuted: '#3b83f6',
+      textMuted: '#7db3ff',
       textOnPrimary: '#fff',
       // State colors
       success: '#10B981',
       warning: '#F59E0B',
-      error: '#EF4444',
+      error: '#F87171',
       info: '#3B82F6',
       // UI elements
       border: '#4B5563',
@@ -166,6 +171,8 @@ export const ThemePresets: Record<ThemePresetName, ThemePreset> = {
       navIcon: '#E5E7EB',
       navText: '#E5E7EB',
       stickyBackButton: '#666666b3',
+      titleText: '#F9FAFB',
+      titleStroke: '#111827',
     },
   },
   lilac: {
@@ -183,8 +190,8 @@ export const ThemePresets: Record<ThemePresetName, ThemePreset> = {
       card: '#FFFFFF',
       // Text colors
       text: '#1C1917',
-      textSecondary: '#44403C',
-      textMuted: '#78716C',
+      textSecondary: '#292524',
+      textMuted: '#4c1d95',
       textOnPrimary: '#FFFFFF',
       // State colors
       success: '#22C55E',
@@ -211,6 +218,8 @@ export const ThemePresets: Record<ThemePresetName, ThemePreset> = {
       navIcon: '#44403C',
       navText: '#1C1917',
       stickyBackButton: '#ffffffb3',
+      titleText: '#FFFFFF',
+      titleStroke: '#26066F',
     },
   },
   midnight: {
@@ -256,6 +265,8 @@ export const ThemePresets: Record<ThemePresetName, ThemePreset> = {
       navIcon: '#58A6FF',
       navText: '#F0F6FC',
       stickyBackButton: '#79C0FFb3',
+      titleText: '#58A6FF',
+      titleStroke: '#010409',
     },
   },
   fall: {
@@ -301,6 +312,8 @@ export const ThemePresets: Record<ThemePresetName, ThemePreset> = {
       navIcon: '#78350F',
       navText: '#451A03',
       stickyBackButton: '#ffffffb3',
+      titleText: '#FB923C',
+      titleStroke: '#451A03',
     },
   },
 };

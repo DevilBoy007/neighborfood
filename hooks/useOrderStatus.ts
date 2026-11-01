@@ -1,22 +1,35 @@
+// Darker shades so the white status label stays readable (>= 4.5:1).
+const STATUS = {
+  pending: '#b45309',
+  trade: '#a21caf',
+  preparing: '#7b1fa2',
+  ready: '#00739a',
+  delivering: '#8e24aa',
+  done: '#2e7d32',
+  danger: '#c62828',
+  neutral: '#4f6549',
+};
+
 export const useOrderStatus = () => {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'pending':
-        return '#FF9800';
+        return STATUS.pending;
       case 'trade':
-        return '#E040FB';
+        return STATUS.trade;
       case 'preparing':
-        return '#9C27B0';
+        return STATUS.preparing;
       case 'ready':
-        return '#00bfff';
+        return STATUS.ready;
       case 'in-delivery':
-        return 'orchid';
-      case 'delivered':
-        return '#4CAF50';
+        return STATUS.delivering;
+      case 'completed':
+        return STATUS.done;
+      case 'cancelled':
       case 'payment_failed':
-        return '#f44336';
+        return STATUS.danger;
       default:
-        return '#4f6549ff';
+        return STATUS.neutral;
     }
   };
 
@@ -48,30 +61,30 @@ export const useOrderStatus = () => {
       switch (status) {
         case 'pending':
           return [
-            { label: 'Accept', targetStatus: 'preparing', color: '#00bfff' },
-            { label: 'Deny', targetStatus: 'cancelled', color: '#f44336' },
+            { label: 'Accept', targetStatus: 'preparing', color: STATUS.ready },
+            { label: 'Deny', targetStatus: 'cancelled', color: STATUS.danger },
           ];
         case 'trade':
           return [
-            { label: 'Accept', targetStatus: 'preparing', color: '#00bfff' },
-            { label: 'Counteroffer', targetStatus: 'counteroffer', color: '#E040FB' },
-            { label: 'Deny', targetStatus: 'cancelled', color: '#f44336' },
+            { label: 'Accept', targetStatus: 'preparing', color: STATUS.ready },
+            { label: 'Counteroffer', targetStatus: 'counteroffer', color: STATUS.trade },
+            { label: 'Deny', targetStatus: 'cancelled', color: STATUS.danger },
           ];
         case 'preparing':
           return [
-            { label: 'Ready', targetStatus: 'ready', color: '#00bfff' },
-            { label: 'Delivering', targetStatus: 'in-delivery', color: 'orchid' },
-            { label: 'Cancel', targetStatus: 'cancelled', color: '#f44336' },
+            { label: 'Ready', targetStatus: 'ready', color: STATUS.ready },
+            { label: 'Delivering', targetStatus: 'in-delivery', color: STATUS.delivering },
+            { label: 'Cancel', targetStatus: 'cancelled', color: STATUS.danger },
           ];
         case 'ready':
           return [
-            { label: 'Complete', targetStatus: 'completed', color: '#00bfff' },
-            { label: 'Cancel', targetStatus: 'cancelled', color: '#f44336' },
+            { label: 'Complete', targetStatus: 'completed', color: STATUS.done },
+            { label: 'Cancel', targetStatus: 'cancelled', color: STATUS.danger },
           ];
         case 'in-delivery':
           return [
-            { label: 'Complete', targetStatus: 'completed', color: '#00bfff' },
-            { label: 'Cancel', targetStatus: 'cancelled', color: '#f44336' },
+            { label: 'Complete', targetStatus: 'completed', color: STATUS.done },
+            { label: 'Cancel', targetStatus: 'cancelled', color: STATUS.danger },
           ];
         default:
           return [];
@@ -80,20 +93,20 @@ export const useOrderStatus = () => {
       // Customer view
       switch (status) {
         case 'pending':
-          return [{ label: 'Cancel', targetStatus: 'cancelled', color: '#f44336' }];
+          return [{ label: 'Cancel', targetStatus: 'cancelled', color: STATUS.danger }];
         case 'trade':
           return [
-            { label: 'Update Offer', targetStatus: 'update_trade', color: '#E040FB' },
-            { label: 'Buy Instead', targetStatus: 'buy_instead', color: '#00bfff' },
-            { label: 'Revoke', targetStatus: 'cancelled', color: '#f44336' },
+            { label: 'Update Offer', targetStatus: 'update_trade', color: STATUS.trade },
+            { label: 'Buy Instead', targetStatus: 'buy_instead', color: STATUS.ready },
+            { label: 'Revoke', targetStatus: 'cancelled', color: STATUS.danger },
           ];
         case 'preparing':
-          return [{ label: 'Contact', targetStatus: 'contact', color: '#9C27B0' }];
+          return [{ label: 'Contact', targetStatus: 'contact', color: STATUS.preparing }];
         case 'ready':
         case 'in-delivery':
           return [
-            { label: 'Received', targetStatus: 'completed', color: '#4CAF50' },
-            { label: 'Contact', targetStatus: 'contact', color: '#00bfff' },
+            { label: 'Received', targetStatus: 'completed', color: STATUS.done },
+            { label: 'Contact', targetStatus: 'contact', color: STATUS.ready },
           ];
         default:
           return [];

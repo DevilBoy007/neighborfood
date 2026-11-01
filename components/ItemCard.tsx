@@ -159,7 +159,7 @@ const ItemCard = ({
       )}
 
       <View style={useManagerStyle ? null : styles.priceRow}>
-        <Text style={styles.itemPrice}>
+        <Text style={[styles.itemPrice, { color: colors.text }]}>
           {formatPrice(item.price)} {item.unit === 'each' ? item.unit : `per ${item.unit}`}
         </Text>
       </View>
@@ -171,7 +171,12 @@ const ItemCard = ({
       )}
 
       {item.negotiable && (
-        <Text style={useManagerStyle ? styles.negotiableTag : styles.itemNegotiable}>
+        <Text
+          style={[
+            useManagerStyle ? styles.negotiableTag : styles.itemNegotiable,
+            { color: colors.textSecondary },
+          ]}
+        >
           Price negotiable
         </Text>
       )}
@@ -192,7 +197,11 @@ const ItemCard = ({
             },
           ]}
         >
-          <Ionicons name="remove" size={Platform.OS === 'web' ? 28 : 16} color="#00bfff" />
+          <Ionicons
+            name="remove"
+            size={Platform.OS === 'web' ? 28 : 16}
+            color={colors.buttonPrimary}
+          />
         </TouchableOpacity>
         <Text style={[styles.quantityText, { color: colors.text }]}>
           {Math.min(quantity, item.quantity)}
@@ -207,12 +216,19 @@ const ItemCard = ({
             },
           ]}
         >
-          <Ionicons name="add" size={Platform.OS === 'web' ? 28 : 16} color="#00bfff" />
+          <Ionicons
+            name="add"
+            size={Platform.OS === 'web' ? 28 : 16}
+            color={colors.buttonPrimary}
+          />
         </TouchableOpacity>
       </View>
-      <TouchableOpacity style={styles.addButton} onPress={handleAddToCart}>
-        <Ionicons name="cart" size={Platform.OS === 'web' ? 28 : 16} color="white" />
-        <Text style={styles.addButtonText}>Add to Cart</Text>
+      <TouchableOpacity
+        style={[styles.addButton, { backgroundColor: colors.buttonPrimary }]}
+        onPress={handleAddToCart}
+      >
+        <Ionicons name="cart" size={Platform.OS === 'web' ? 28 : 16} color={colors.buttonText} />
+        <Text style={[styles.addButtonText, { color: colors.buttonText }]}>Add to Cart</Text>
       </TouchableOpacity>
     </View>
   );
@@ -220,8 +236,11 @@ const ItemCard = ({
   // Render item management actions
   const renderItemActions = () => (
     <View style={styles.itemActions}>
-      <TouchableOpacity style={styles.editButton} onPress={handleEdit}>
-        <Ionicons name="create-outline" size={24} color="white" />
+      <TouchableOpacity
+        style={[styles.editButton, { backgroundColor: colors.buttonPrimary }]}
+        onPress={handleEdit}
+      >
+        <Ionicons name="create-outline" size={24} color={colors.buttonText} />
       </TouchableOpacity>
       <TouchableOpacity style={styles.deleteButton} onPress={handleDelete}>
         <Ionicons name="trash-outline" size={24} color="white" />
