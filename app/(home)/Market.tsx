@@ -16,6 +16,7 @@ import ShopCard from '@/components/ShopCard';
 import { useUser, useLocation, ShopData } from '@/store/reduxHooks';
 import firebaseService from '@/handlers/firebaseService';
 import { useAppColors } from '@/hooks/useAppColors';
+import { OutlinedTitle } from '@/components/OutlinedTitle';
 import { useAppDispatch } from '@/store/hooks';
 import { initializeOrders } from '@/store/slices/orderSlice';
 
@@ -166,7 +167,7 @@ const MarketScreen = () => {
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={styles.header}>
-        <Text style={[styles.title, { color: colors.navText }]}>market</Text>
+        <OutlinedTitle style={styles.title}>market</OutlinedTitle>
       </View>
 
       <View style={styles.searchContainer}>

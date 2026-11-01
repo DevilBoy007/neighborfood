@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, Platform } from
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAppColors } from '@/hooks/useAppColors';
+import { OutlinedTitle } from '@/components/OutlinedTitle';
 
 const OrdersScreen = () => {
   const router = useRouter();
@@ -11,7 +12,7 @@ const OrdersScreen = () => {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={styles.header}>
-        <Text style={[styles.headerTitle, { color: colors.navText }]}>orders</Text>
+        <OutlinedTitle style={styles.headerTitle}>orders</OutlinedTitle>
         <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
           <Ionicons name="chevron-back" size={24} color={colors.icon} />
         </TouchableOpacity>

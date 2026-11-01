@@ -13,6 +13,7 @@ import { useRouter } from 'expo-router';
 import { useUser } from '@/store/reduxHooks';
 import { SoundTouchableOpacity } from '@/components/SoundTouchableOpacity';
 import { useAppColors } from '@/hooks/useAppColors';
+import { OutlinedTitle } from '@/components/OutlinedTitle';
 
 import firebaseService from '@/handlers/firebaseService';
 
@@ -110,7 +111,7 @@ const LoginScreen = () => {
       keyboardVerticalOffset={Platform.select({ ios: -350, android: -350 })}
     >
       <ScrollView scrollEnabled={false}>
-        <Text style={[styles.title, { color: colors.textOnPrimary }]}>Login</Text>
+        <OutlinedTitle style={styles.title}>Login</OutlinedTitle>
         <View style={styles.inputContainer}>
           <TextInput
             autoCapitalize="none"

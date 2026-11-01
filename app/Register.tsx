@@ -17,6 +17,7 @@ import { useUser, useLocation } from '@/store/reduxHooks';
 import { GeoPoint } from 'firebase/firestore';
 import { SoundTouchableOpacity } from '@/components/SoundTouchableOpacity';
 import { useAppColors } from '@/hooks/useAppColors';
+import { OutlinedTitle } from '@/components/OutlinedTitle';
 import { openLegalDocument } from '@/constants/Legal';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -460,7 +461,7 @@ const RegisterScreen = () => {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <Text style={[styles.title, { color: colors.textOnPrimary }]}>Register</Text>
+      <OutlinedTitle style={styles.title}>Register</OutlinedTitle>
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}

@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import firebaseService from '@/handlers/firebaseService';
+import { OutlinedTitle } from '@/components/OutlinedTitle';
 import { useAppColors } from '@/hooks/useAppColors';
 import { useLocation, useUser } from '@/store/reduxHooks';
 
@@ -62,7 +63,7 @@ export default function Community() {
       style={{ backgroundColor: colors.background }}
       contentContainerStyle={styles.container}
     >
-      <Text style={[styles.title, { color: colors.navText }]}>community</Text>
+      <OutlinedTitle style={styles.title}>community</OutlinedTitle>
       <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
         <Ionicons name="lock-closed-outline" size={48} color={colors.icon} />
         <Text style={[styles.headline, { color: colors.text }]}>

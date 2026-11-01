@@ -13,6 +13,7 @@ import { useRouter } from 'expo-router';
 import { useLocation } from '@/store/reduxHooks';
 import { useAppColors } from '@/hooks/useAppColors';
 import { useReport } from '@/components/ReportProvider';
+import { OutlinedTitle } from '@/components/OutlinedTitle';
 
 import shopIcon from '@/assets/images/shop.png';
 import receiptIcon from '@/assets/images/receipt.png';
@@ -72,7 +73,7 @@ const MenuScreen = () => {
     <>
       <View style={[styles.container, { backgroundColor: colors.background }]}>
         <View style={styles.header}>
-          <Text style={[styles.title, { color: colors.navText }]}>menu</Text>
+          <OutlinedTitle style={styles.title}>menu</OutlinedTitle>
           <View style={[styles.neighborhood, { borderColor: colors.border }]}>
             {(locationData.area && !locationData.loading && (
               <Text style={[styles.headerText, { color: colors.text }]}>

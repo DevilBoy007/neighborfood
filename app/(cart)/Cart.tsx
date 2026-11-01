@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useCart, ShopCart, CartItem, useUser } from '@/store/reduxHooks';
 import { SoundTouchableOpacity } from '@/components/SoundTouchableOpacity';
 import { useAppColors } from '@/hooks/useAppColors';
+import { OutlinedTitle } from '@/components/OutlinedTitle';
 import firebaseService from '@/handlers/firebaseService';
 
 const { height } = Dimensions.get('window');
@@ -192,7 +193,7 @@ const CartScreen = () => {
         >
           <Ionicons name="chevron-back" size={24} color={colors.text} />
         </SoundTouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.textOnPrimary }]}>your cart</Text>
+        <OutlinedTitle style={styles.headerTitle}>your cart</OutlinedTitle>
       </View>
 
       <Animated.ScrollView

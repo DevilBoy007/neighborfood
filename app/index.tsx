@@ -2,6 +2,7 @@ import { StyleSheet, Text, View, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 
 import { SoundPressable } from '@/components/SoundPressable';
+import { OutlinedTitle } from '@/components/OutlinedTitle';
 import { useAppColors } from '@/hooks/useAppColors';
 
 const LoginScreen = () => {
@@ -16,20 +17,9 @@ const LoginScreen = () => {
         Platform.OS === 'web' && styles.containerWeb,
       ]}
     >
-      <Text
-        style={[
-          styles.title,
-          {
-            color:
-              colors.textOnPrimary === '#00bfff'
-                ? '#fff'
-                : colors.textOnPrimary /* special case for default theme */,
-          },
-          Platform.OS === 'web' && styles.titleWeb,
-        ]}
-      >
+      <OutlinedTitle style={[styles.title, Platform.OS === 'web' && styles.titleWeb]}>
         neighborfood
-      </Text>
+      </OutlinedTitle>
       <View style={styles.buttonContainer}>
         <SoundPressable
           style={({ pressed }) => [
