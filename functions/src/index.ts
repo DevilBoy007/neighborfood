@@ -3107,8 +3107,6 @@ export const createPaymentSheetParams = onCall(
         ephemeralKey: ephemeralKey.secret,
         customer: customerId,
         alreadyPaid,
-        publishableKey:
-          process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY || process.env.STRIPE_TEST_KEY || '',
       };
     } catch (error) {
       if (error instanceof HttpsError) throw error;

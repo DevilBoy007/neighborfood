@@ -6,6 +6,7 @@ import {
   ref,
   uploadBytesResumable,
   getDownloadURL,
+  connectStorageEmulator,
 } from 'firebase/storage';
 import { Analytics, getAnalytics } from 'firebase/analytics';
 import {
@@ -14,6 +15,7 @@ import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   signOut,
+  connectAuthEmulator,
   EmailAuthProvider,
   reauthenticateWithCredential,
   Auth,
@@ -21,7 +23,13 @@ import {
   Persistence,
 } from 'firebase/auth';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { getFunctions, httpsCallable, Functions, HttpsCallableResult } from 'firebase/functions';
+import {
+  getFunctions,
+  httpsCallable,
+  connectFunctionsEmulator,
+  Functions,
+  HttpsCallableResult,
+} from 'firebase/functions';
 import type { OrderData } from '@/store/slices/orderSlice';
 import type { ShopData } from '@/store/slices/shopSlice';
 import type { ItemData } from '@/store/slices/itemSlice';
@@ -45,6 +53,12 @@ const {
  *   - Reduced client-side bundle size
  *   - Centralized business logic
  */
+// Local Firebase Emulator Suite (see functions/README.md). Never enabled in release builds.
+const USE_EMULATORS = __DEV__ && process.env.EXPO_PUBLIC_USE_FIREBASE_EMULATORS === 'true';
+const EMULATOR_HOST =
+  process.env.EXPO_PUBLIC_FIREBASE_EMULATOR_HOST ||
+  (Platform.OS === 'android' ? '10.0.2.2' : 'localhost');
+
 export type ReportTargetType = 'shop' | 'item' | 'user' | 'order' | 'message' | 'other';
 export type ReportReason =
   'spam' | 'scam' | 'offensive' | 'harassment' | 'prohibited_item' | 'safety' | 'other';
@@ -168,11 +182,17 @@ class FirebaseService {
             throw authError;
           }
         }
+        if (USE_EMULATORS) {
+          connectAuthEmulator(this.auth, `http://${EMULATOR_HOST}:9099`, {
+            disableWarnings: true,
+          });
+        }
       }
 
       if (!this.storage) {
         try {
           this.storage = getStorage(this.app, 'gs://neighborfoods');
+          if (USE_EMULATORS) connectStorageEmulator(this.storage, EMULATOR_HOST, 9199);
           console.log('Initialized Firebase storage');
         } catch (storageError) {
           console.error('Error initializing Firebase storage:', storageError);
@@ -183,6 +203,7 @@ class FirebaseService {
       // Initialize Cloud Functions
       if (!this.functions) {
         this.functions = getFunctions(this.app);
+        if (USE_EMULATORS) connectFunctionsEmulator(this.functions, EMULATOR_HOST, 5001);
         console.log('Initialized Firebase Cloud Functions');
       }
 

@@ -12,6 +12,11 @@ import { store, persistor } from '@/store';
 import { GoogleMapsLoader } from '@/components/GoogleMapsLoader';
 import { NotificationProvider } from '@/components/NotificationProvider';
 import { ReportProvider } from '@/components/ReportProvider';
+import {
+  STRIPE_MERCHANT_IDENTIFIER,
+  STRIPE_PUBLISHABLE_KEY,
+  STRIPE_URL_SCHEME,
+} from '@/constants/Stripe';
 import { View, Text, LogBox, Platform } from 'react-native';
 
 // Ignore specific warnings about text nodes
@@ -84,9 +89,6 @@ export default function RootLayout() {
     return null;
   }
 
-  const stripePublishableKey =
-    process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY || process.env.STRIPE_TEST_KEY || '';
-
   const appContent = (
     <Provider store={store}>
       <PersistGate loading={null} persistor={persistor}>
@@ -137,11 +139,12 @@ export default function RootLayout() {
   );
 
   // StripeProvider is only available on native platforms
-  if (Platform.OS !== 'web' && stripePublishableKey) {
+  if (Platform.OS !== 'web' && STRIPE_PUBLISHABLE_KEY) {
     return (
       <StripeProvider
-        publishableKey={stripePublishableKey}
-        merchantIdentifier="merchant.store.neighborfood"
+        publishableKey={STRIPE_PUBLISHABLE_KEY}
+        merchantIdentifier={STRIPE_MERCHANT_IDENTIFIER}
+        urlScheme={STRIPE_URL_SCHEME}
       >
         {appContent}
       </StripeProvider>

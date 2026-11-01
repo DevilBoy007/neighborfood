@@ -8,6 +8,7 @@ notes/
 .firebaserc
 functions/node_modules/
 functions/lib/
+functions/.secret.local
 .firebase/
 
 # build outputs

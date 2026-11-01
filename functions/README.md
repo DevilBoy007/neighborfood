@@ -84,12 +84,10 @@ npx firebase deploy --only functions
 
 ### Generic Document Operations
 
-- `getDocument` - Get a single document by ID
-- `getAllDocuments` - Get all documents from a collection
-- `getDocumentsWhere` - Query documents with a where clause
-- `addDocument` - Create a new document
-- `updateDocument` - Update an existing document
-- `deleteDocument` - Delete a document
+- `getDocument` - Get a shop or item by ID, or the caller's own profile
+- `isUsernameAvailable` - Check whether a username can be claimed
+- `addDocument` - Create the caller's profile (`users/{uid}`)
+- `updateDocument` - Update allowlisted fields on the caller's profile
 
 ### Shop Operations
 
@@ -119,23 +117,70 @@ npx firebase deploy --only functions
 
 ### User Operations
 
-- `getUserById` - Get user profile
+- `getUserById` - Get a user's public profile (username, first name, photo)
+- `deleteAccount` - Permanently delete the caller's account (requires a recent sign-in)
+
+### Moderation & Community
+
+- `submitReport` - Report a shop, item, user, order, message or general problem
+- `blockUser` / `unblockUser` / `getBlockedUsers` - Manage blocked users
+- `getCommunityStats` - Member count for a market (community unlock progress)
+
+### Scheduled
+
+- `autoReleaseEscrow` - Daily; pays sellers for orders completed 7+ days ago
 
 ## Development
 
 ### Local Testing (Emulators)
 
-```bash
-npm run serve
-```
-
-This will start the Firebase emulators for local testing.
-
-### Linting
+From the repo root:
 
 ```bash
-npm run lint
+npm run emulators
 ```
+
+This builds the functions and starts the Auth, Firestore, Functions and Storage
+emulators (ports in `firebase.json`). Point the app at them by setting
+`EXPO_PUBLIC_USE_FIREBASE_EMULATORS=true` in `.env` (debug builds only). On a physical
+device also set `EXPO_PUBLIC_FIREBASE_EMULATOR_HOST` to your computer's LAN IP. Emulated
+Auth/Firestore start empty, so register new test accounts.
+
+### Testing Stripe in development
+
+Use Stripe **test mode** keys everywhere outside production. No real money moves.
+
+1. **App:** set `EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_...` in `.env` (and in the
+   EAS `development` and `preview` environments). Debug builds refuse to start with a
+   `pk_live_` key, and checkout shows a test-mode banner.
+2. **Functions in the emulator:** copy `functions/.secret.local.example` to
+   `functions/.secret.local` and fill in `STRIPE_SECRET_KEY=sk_test_...`.
+3. **Webhooks:** install the [Stripe CLI](https://docs.stripe.com/stripe-cli), run
+   `stripe login`, then forward events to the emulated webhook:
+
+   ```bash
+   npm run stripe:listen -- http://localhost:5001/<project-id>/us-central1/stripeWebhook
+   ```
+
+   Copy the printed `whsec_...` into `STRIPE_WEBHOOK_SECRET` in `functions/.secret.local`
+   and restart the emulators.
+
+4. **Pay** with [test cards](https://docs.stripe.com/testing), e.g. `4242 4242 4242 4242`
+   (success), `4000 0025 0000 3155` (3D Secure), `4000 0000 0000 9995` (declined).
+5. **Seller onboarding:** with an `sk_test_` key, `createConnectedAccount` pre-fills
+   Stripe's test identity values so payouts work without real KYC details.
+
+For a shared staging backend, create a separate Firebase project (alias `dev` in
+`.firebaserc`, see `.firebaserc.example`) and set its secrets to test keys:
+
+```bash
+firebase functions:secrets:set STRIPE_SECRET_KEY --project dev       # sk_test_...
+firebase functions:secrets:set STRIPE_WEBHOOK_SECRET --project dev   # test endpoint whsec_...
+firebase deploy --only functions --project dev
+```
+
+Production (`--project prod`) uses the live `sk_live_`/`whsec_` values and the EAS
+`production` environment uses `pk_live_`.
 
 ### View Logs
 

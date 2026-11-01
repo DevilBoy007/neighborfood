@@ -17,6 +17,7 @@ import { useCart, useUser, useOrder, useMessage } from '@/store/reduxHooks';
 import firebaseService from '@/handlers/firebaseService';
 import { SoundTouchableOpacity } from '@/components/SoundTouchableOpacity';
 import { useAppColors } from '@/hooks/useAppColors';
+import { IS_STRIPE_TEST_MODE, STRIPE_RETURN_URL } from '@/constants/Stripe';
 const IS_WEB = Platform.OS === 'web';
 
 // Conditionally import Stripe PaymentSheet hooks (native only)
@@ -189,15 +190,11 @@ const Checkout = () => {
           customerEphemeralKeySecret: ephemeralKey,
           paymentIntentClientSecret: paymentIntent,
           allowsDelayedPaymentMethods: false,
-          returnURL: 'neighborfood://stripe-redirect',
+          returnURL: STRIPE_RETURN_URL,
           applePay: { merchantCountryCode: 'US' },
           googlePay: {
             merchantCountryCode: 'US',
-            testEnv: (
-              process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY ||
-              process.env.STRIPE_TEST_KEY ||
-              ''
-            ).startsWith('pk_test_'),
+            testEnv: IS_STRIPE_TEST_MODE,
           },
           defaultBillingDetails: {
             name:
@@ -523,15 +520,11 @@ const Checkout = () => {
             customerEphemeralKeySecret: ephemeralKey,
             paymentIntentClientSecret: paymentIntent,
             allowsDelayedPaymentMethods: false,
-            returnURL: 'neighborfood://stripe-redirect',
+            returnURL: STRIPE_RETURN_URL,
             applePay: { merchantCountryCode: 'US' },
             googlePay: {
               merchantCountryCode: 'US',
-              testEnv: (
-                process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY ||
-                process.env.STRIPE_TEST_KEY ||
-                ''
-              ).startsWith('pk_test_'),
+              testEnv: IS_STRIPE_TEST_MODE,
             },
             defaultBillingDetails: {
               name:
@@ -708,6 +701,15 @@ const Checkout = () => {
         </SoundTouchableOpacity>
         <Text style={[styles.headerTitle, { color: colors.buttonText }]}>checkout</Text>
       </View>
+
+      {IS_STRIPE_TEST_MODE && (
+        <View style={[styles.testModeBanner, { backgroundColor: colors.warning }]}>
+          <Text style={styles.testModeText}>
+            Stripe test mode: pay with 4242 4242 4242 4242, any future date and CVC. No real charges
+            are made.
+          </Text>
+        </View>
+      )}
 
       <ScrollView style={styles.content}>
         {/* Order Summary with Delivery Options */}
@@ -969,6 +971,16 @@ const Checkout = () => {
 };
 
 const styles = StyleSheet.create({
+  testModeBanner: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+  },
+  testModeText: {
+    color: '#000000',
+    fontFamily: 'TextMeOne',
+    fontSize: 14,
+    textAlign: 'center',
+  },
   container: {
     flex: 1,
     paddingTop: Platform.OS === 'ios' ? 60 : 0,
