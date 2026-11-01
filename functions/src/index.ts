@@ -2552,20 +2552,33 @@ export const sendMessageNotification = onCall(
     }
 
     try {
-      const title = messageType === 'order' ? `New order from ${senderName}` : senderName;
+      const threadDoc = await db.collection('threads').doc(threadId).get();
+      const participants: string[] = threadDoc.data()?.participantIds || [];
+      if (
+        !participants.includes(request.auth!.uid) ||
+        !participants.includes(recipientId) ||
+        recipientId === request.auth!.uid
+      ) {
+        throw new HttpsError('permission-denied', 'You cannot notify this user');
+      }
+
+      const safeSender = String(senderName).slice(0, 60);
+      const safePreview = String(messagePreview || '').slice(0, 140);
+      const title = messageType === 'order' ? `New order from ${safeSender}` : safeSender;
       const body =
-        messageType === 'order' ? 'You have a new order! Tap to view details.' : messagePreview;
+        messageType === 'order' ? 'You have a new order! Tap to view details.' : safePreview;
 
       await sendPushNotificationToUser(recipientId, title, body, {
         type: 'message',
         threadId,
         senderId: request.auth!.uid,
-        senderName,
-        messagePreview,
+        senderName: safeSender,
+        messagePreview: safePreview,
       });
 
       return true;
     } catch (error) {
+      if (error instanceof HttpsError) throw error;
       console.error('Error sending message notification:', error);
       // Don't throw - notification failure shouldn't break the message flow
       return false;
@@ -2596,24 +2609,39 @@ export const sendOrderStatusNotification = onCall(
     }
 
     try {
+      const orderSnapshot = await db.collection('orders').where('id', '==', orderId).get();
+      const order = await (async () => {
+        for (const doc of orderSnapshot.docs) {
+          const data = doc.data();
+          const shopOwner = (await db.collection('shops').doc(data.shopId).get()).data()?.userId;
+          const parties = [data.userId, shopOwner];
+          if (parties.includes(request.auth!.uid) && parties.includes(recipientId)) return data;
+        }
+        return null;
+      })();
+      if (!order || recipientId === request.auth!.uid) {
+        throw new HttpsError('permission-denied', 'You cannot send updates for this order');
+      }
+      const verifiedShopName = order.shopName || shopName;
       const statusMessages: Record<string, string> = {
-        preparing: `${shopName} is preparing your order!`,
-        ready: `Your order from ${shopName} is ready for pickup!`,
-        'in-delivery': `Your order from ${shopName} is on its way!`,
-        completed: `Your order from ${shopName} has been delivered!`,
-        cancelled: `Your order from ${shopName} has been cancelled.`,
+        preparing: `${verifiedShopName} is preparing your order!`,
+        ready: `Your order from ${verifiedShopName} is ready for pickup!`,
+        'in-delivery': `Your order from ${verifiedShopName} is on its way!`,
+        completed: `Your order from ${verifiedShopName} has been delivered!`,
+        cancelled: `Your order from ${verifiedShopName} has been cancelled.`,
       };
 
-      const body = statusMessages[newStatus] || `Order status updated to: ${newStatus}`;
+      const body = statusMessages[order.status] || `Order status updated to: ${order.status}`;
 
       await sendPushNotificationToUser(recipientId, 'Order Update', body, {
         type: 'order_update',
         orderId,
-        status: newStatus,
+        status: order.status,
       });
 
       return true;
     } catch (error) {
+      if (error instanceof HttpsError) throw error;
       console.error('Error sending order status notification:', error);
       return false;
     }
