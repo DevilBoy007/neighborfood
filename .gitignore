@@ -9,6 +9,7 @@ notes/
 functions/node_modules/
 functions/lib/
 functions/.secret.local
+*-debug.log
 .firebase/
 
 # build outputs
