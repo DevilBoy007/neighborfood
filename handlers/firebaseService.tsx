@@ -435,6 +435,15 @@ class FirebaseService {
     this.clearShopsCache();
   }
 
+  async getCommunityStats(zipPrefix: string): Promise<{
+    zipPrefix: string;
+    members: number;
+    threshold: number;
+    unlocked: boolean;
+  }> {
+    return await this.callFunction('getCommunityStats', { zipPrefix });
+  }
+
   async getBlockedUsers(): Promise<{ id: string; username: string; photoURL: string | null }[]> {
     return await this.callFunction<
       Record<string, never>,

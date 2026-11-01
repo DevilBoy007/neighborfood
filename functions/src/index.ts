@@ -26,6 +26,7 @@ import { assertAccountDeletable, deleteUserData } from './accountDeletion';
 import { getBlockedUserIds, isBlockedBetween } from './moderation';
 
 export { submitReport, blockUser, unblockUser, getBlockedUsers } from './moderation';
+export { getCommunityStats } from './community';
 
 // Initialize Firebase Admin SDK
 initializeApp();

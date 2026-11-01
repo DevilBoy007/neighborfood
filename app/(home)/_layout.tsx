@@ -119,7 +119,12 @@ export default function RootLayout() {
                   )}
                 </View>
               </SoundTouchableOpacity>
-              <SoundTouchableOpacity style={styles.iconButton} soundType="tap">
+              <SoundTouchableOpacity
+                style={styles.iconButton}
+                onPress={() => router.navigate('/Community')}
+                soundType="tap"
+                accessibilityLabel="Community"
+              >
                 <Ionicons name="stats-chart-outline" size={50} color={colors.navIcon} />
               </SoundTouchableOpacity>
               <SoundTouchableOpacity
@@ -143,6 +148,7 @@ export default function RootLayout() {
           <Stack>
             <Stack.Screen name="Market" options={{ headerShown: false }} />
             <Stack.Screen name="Menu" options={{ headerShown: false }} />
+            <Stack.Screen name="Community" options={{ headerShown: false }} />
             <Stack.Screen name="(messages)" options={{ headerShown: false }} />
             <Stack.Screen name="(dashboard)" options={{ headerShown: false }} />
           </Stack>
@@ -167,7 +173,12 @@ export default function RootLayout() {
               )}
             </View>
           </SoundTouchableOpacity>
-          <SoundTouchableOpacity style={styles.iconButton} soundType="tap">
+          <SoundTouchableOpacity
+            style={styles.iconButton}
+            onPress={() => router.navigate('/Community')}
+            soundType="tap"
+            accessibilityLabel="Community"
+          >
             <Ionicons name="stats-chart-outline" size={35} color={colors.navIcon} />
           </SoundTouchableOpacity>
           <SoundTouchableOpacity
