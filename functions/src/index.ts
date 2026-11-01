@@ -22,6 +22,7 @@ import {
   getFirestore,
 } from 'firebase-admin/firestore';
 import Stripe from 'stripe';
+import { assertAccountDeletable, deleteUserData } from './accountDeletion';
 
 // Initialize Firebase Admin SDK
 initializeApp();
@@ -2003,6 +2004,41 @@ export const getUserById = onCall(async (request: CallableRequest<GetUserByIdReq
     throw new HttpsError('internal', 'Error fetching user');
   }
 });
+
+const RECENT_LOGIN_SECONDS = 5 * 60;
+
+/**
+ * Permanently delete the signed-in user's account and personal data.
+ * The client must re-authenticate immediately before calling.
+ */
+export const deleteAccount = onCall(
+  { secrets: [stripeSecretKey], timeoutSeconds: 300 },
+  async (request: CallableRequest<{ confirm: boolean }>) => {
+    verifyAuth(request);
+    const uid = request.auth!.uid;
+    if (request.data?.confirm !== true) {
+      throw new HttpsError('invalid-argument', 'Deletion must be explicitly confirmed');
+    }
+    const authTime = Number(request.auth!.token.auth_time || 0);
+    if (Date.now() / 1000 - authTime > RECENT_LOGIN_SECONDS) {
+      throw new HttpsError('unauthenticated', 'Please sign in again to delete your account');
+    }
+
+    await assertAccountDeletable(uid);
+    try {
+      const stripe = new Stripe(stripeSecretKey.value(), {
+        apiVersion: '2026-01-28.clover',
+      });
+      const summary = await deleteUserData(uid, stripe);
+      console.log(`Deleted account ${uid}`, summary);
+      return { deleted: true };
+    } catch (error) {
+      if (error instanceof HttpsError) throw error;
+      console.error('Error deleting account:', error);
+      throw new HttpsError('internal', 'Failed to delete account');
+    }
+  }
+);
 
 // =============================================================================
 // Message Thread Operations
