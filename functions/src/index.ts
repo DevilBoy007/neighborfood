@@ -24,9 +24,26 @@ import {
 import Stripe from 'stripe';
 import { assertAccountDeletable, deleteUserData } from './accountDeletion';
 import { getBlockedUserIds, isBlockedBetween } from './moderation';
+import { PLAN_LIMITS, getSellerPlan } from './subscriptions';
 
 export { submitReport, blockUser, unblockUser, getBlockedUsers } from './moderation';
 export { getCommunityStats } from './community';
+export { getSellerPlanStatus, syncSubscription, revenueCatWebhook } from './subscriptions';
+
+async function assertWithinPlanLimit(uid: string, resource: 'shops' | 'items'): Promise<void> {
+  const plan = await getSellerPlan(uid);
+  const limit = resource === 'shops' ? PLAN_LIMITS[plan].maxShops : PLAN_LIMITS[plan].maxItems;
+  const existing = await db.collection(resource).where('userId', '==', uid).count().get();
+  if (existing.data().count >= limit) {
+    throw new HttpsError(
+      'resource-exhausted',
+      plan === 'free'
+        ? `Free sellers can have up to ${limit} ${resource}. Upgrade to Neighborfood Pro for more.`
+        : `You've reached the limit of ${limit} ${resource}.`,
+      { reason: 'plan-limit', resource, plan }
+    );
+  }
+}
 
 // Initialize Firebase Admin SDK
 initializeApp();
@@ -407,6 +424,7 @@ export const createShopForUser = onCall(async (request: CallableRequest<CreateSh
   if (request.auth?.uid !== userId) {
     throw new HttpsError('permission-denied', 'User can only create shops for themselves');
   }
+  await assertWithinPlanLimit(userId, 'shops');
 
   try {
     const shopsCollectionRef = db.collection('shops');
@@ -718,6 +736,7 @@ export const createItemForShop = onCall(async (request: CallableRequest<CreateIt
     if (shopOwner !== request.auth?.uid) {
       throw new HttpsError('permission-denied', 'User can only add items to their own shops');
     }
+    await assertWithinPlanLimit(request.auth!.uid, 'items');
 
     const itemsCollectionRef = db.collection('items');
     const dataToSave = {
@@ -2989,7 +3008,10 @@ export const createPaymentSheetParams = onCall(
 
       const taxCents = Math.round(subtotalCents * 0.08);
       const deliveryFeeCents = deliveryOption === 'delivery' ? 399 : 0;
-      const platformFeeCents = Math.min(Math.round(subtotalCents * 0.1), 100);
+      const sellerPlan = await getSellerPlan(sellerId);
+      const platformFeeCents = PLAN_LIMITS[sellerPlan].platformFeeWaived
+        ? 0
+        : Math.min(Math.round(subtotalCents * 0.1), 100);
       const amount = subtotalCents + taxCents + deliveryFeeCents + platformFeeCents;
       if (amount <= 0)
         throw new HttpsError('invalid-argument', 'Order total must be greater than zero');
