@@ -17,6 +17,10 @@ import { useUser, useLocation } from '@/store/reduxHooks';
 import { GeoPoint } from 'firebase/firestore';
 import { SoundTouchableOpacity } from '@/components/SoundTouchableOpacity';
 import { useAppColors } from '@/hooks/useAppColors';
+import { openLegalDocument } from '@/constants/Legal';
+import { Ionicons } from '@expo/vector-icons';
+
+const MINIMUM_AGE = 18;
 
 /* eslint-disable @typescript-eslint/no-require-imports */
 // Conditionally import problematic native-only modules
@@ -59,6 +63,7 @@ const RegisterScreen = () => {
   const [, setUser] = useState<User | null>(null);
   const { locationData, fetchCurrentLocation } = useLocation();
   const colors = useAppColors();
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -255,6 +260,23 @@ const RegisterScreen = () => {
       setErrorMsg({
         ...errorMsg,
         fields: 'All fields are required. If location is unavailable, please refresh the page.',
+      });
+      return false;
+    }
+    const birthDate = new Date(dob);
+    const adultCutoff = new Date();
+    adultCutoff.setFullYear(adultCutoff.getFullYear() - MINIMUM_AGE);
+    if (Number.isNaN(birthDate.getTime()) || birthDate > adultCutoff) {
+      setErrorMsg({
+        ...errorMsg,
+        fields: `You must be at least ${MINIMUM_AGE} to use Neighborfood.`,
+      });
+      return false;
+    }
+    if (!acceptedTerms) {
+      setErrorMsg({
+        ...errorMsg,
+        fields: 'Please agree to the Terms of Service and Privacy Policy.',
       });
       return false;
     }
@@ -649,6 +671,34 @@ const RegisterScreen = () => {
             />
           </View>
         </ScrollView>
+        <SoundTouchableOpacity
+          style={styles.consentRow}
+          onPress={() => setAcceptedTerms((value) => !value)}
+          soundType="tap"
+          accessibilityRole="checkbox"
+          accessibilityState={{ checked: acceptedTerms }}
+        >
+          <Ionicons
+            name={acceptedTerms ? 'checkbox' : 'square-outline'}
+            size={24}
+            color={colors.text}
+          />
+          <Text style={[styles.consentText, { color: colors.text }]}>
+            I am {MINIMUM_AGE} or older and agree to the{' '}
+            <Text style={styles.consentLink} onPress={() => openLegalDocument('terms')}>
+              Terms of Service
+            </Text>
+            ,{' '}
+            <Text style={styles.consentLink} onPress={() => openLegalDocument('guidelines')}>
+              Community Guidelines
+            </Text>{' '}
+            and{' '}
+            <Text style={styles.consentLink} onPress={() => openLegalDocument('privacy')}>
+              Privacy Policy
+            </Text>
+            .
+          </Text>
+        </SoundTouchableOpacity>
         <View style={[styles.buttonContainer, Platform.OS === 'ios' && styles.iosButtonContainer]}>
           <SoundTouchableOpacity
             style={[
@@ -677,6 +727,22 @@ const RegisterScreen = () => {
 };
 
 const styles = StyleSheet.create({
+  consentRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingHorizontal: 20,
+    paddingVertical: 8,
+  },
+  consentText: {
+    flex: 1,
+    fontFamily: 'TextMeOne',
+    fontSize: 14,
+  },
+  consentLink: {
+    textDecorationLine: 'underline',
+    fontWeight: 'bold',
+  },
   container: {
     flex: 1,
   },

@@ -1,6 +1,7 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Platform, Alert } from 'react-native';
 import { router } from 'expo-router';
+import Constants from 'expo-constants';
 import firebaseService from '@/handlers/firebaseService';
 import notificationService from '@/handlers/notificationService';
 import { useUser } from '@/store/reduxHooks';
@@ -87,11 +88,25 @@ const Settings = () => {
           <Text style={[styles.menuText, { color: colors.buttonText }]}>Blocked Users</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={[styles.menuItem, { backgroundColor: colors.buttonPrimary }]}>
+        <TouchableOpacity
+          style={[styles.menuItem, { backgroundColor: colors.buttonPrimary }]}
+          onPress={() =>
+            Alert.alert(
+              'Neighborfood',
+              `Version ${Constants.expoConfig?.version ?? ''}\n© Neighborfood, LLC`
+            )
+          }
+        >
           <Text style={[styles.menuText, { color: colors.buttonText }]}>About</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={[styles.menuItem, { backgroundColor: colors.buttonPrimary }]}>
+        <TouchableOpacity
+          style={[styles.menuItem, { backgroundColor: colors.buttonPrimary }]}
+          onPress={() => {
+            router.back();
+            router.push('/Legal');
+          }}
+        >
           <Text style={[styles.menuText, { color: colors.buttonText }]}>Legal</Text>
         </TouchableOpacity>
 
