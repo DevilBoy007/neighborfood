@@ -7,17 +7,9 @@
     "icon": "./assets/images/icon.png",
     "scheme": "neighborfood",
     "userInterfaceStyle": "automatic",
-    "splash": {
-      "image": "./assets/images/splash.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
-    },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.anonymous.neighborfood",
-      "entitlements": {
-        "aps-environment": "development"
-      },
+      "bundleIdentifier": "store.neighborfood",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }
@@ -29,21 +21,13 @@
       },
       "permissions": [
         "android.permission.ACCESS_COARSE_LOCATION",
-        "android.permission.ACCESS_FINE_LOCATION",
-        "android.permission.READ_EXTERNAL_STORAGE",
-        "android.permission.WRITE_EXTERNAL_STORAGE",
-        "android.permission.ACCESS_MEDIA_LOCATION",
-        "android.permission.RECORD_AUDIO",
-        "android.permission.MODIFY_AUDIO_SETTINGS",
-        "android.permission.ACCESS_COARSE_LOCATION",
-        "android.permission.ACCESS_FINE_LOCATION",
-        "android.permission.READ_EXTERNAL_STORAGE",
-        "android.permission.WRITE_EXTERNAL_STORAGE",
-        "android.permission.ACCESS_MEDIA_LOCATION",
-        "android.permission.RECORD_AUDIO",
-        "android.permission.MODIFY_AUDIO_SETTINGS"
+        "android.permission.ACCESS_FINE_LOCATION"
       ],
-      "package": "com.anonymous.neighborfood"
+      "blockedPermissions": [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.ACCESS_BACKGROUND_LOCATION"
+      ],
+      "package": "store.neighborfood"
     },
     "web": {
       "bundler": "metro",
@@ -52,6 +36,15 @@
     },
     "plugins": [
       "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/images/splash.png",
+          "resizeMode": "contain",
+          "backgroundColor": "#ffffff"
+        }
+      ],
+      "expo-status-bar",
       [
         "expo-notifications",
         {
@@ -62,25 +55,30 @@
       [
         "expo-location",
         {
-          "locationAlwaysAndWhenInUsePermission": "Allow $(PRODUCT_NAME) to use your location."
+          "locationWhenInUsePermission": "Neighborfood uses your location to show nearby shops and to set your local market."
         }
       ],
       [
-        "expo-media-library",
+        "expo-image-picker",
         {
-          "photosPermission": "Allow $(PRODUCT_NAME) to access your photos.",
-          "savePhotosPermission": "Allow $(PRODUCT_NAME) to save photos.",
-          "isAccessMediaLocationEnabled": true
+          "photosPermission": "Neighborfood accesses your photos so you can add pictures of your shop, items, and profile.",
+          "cameraPermission": false,
+          "microphonePermission": false
         }
       ],
       "expo-font",
-      "expo-audio",
+      [
+        "expo-audio",
+        {
+          "microphonePermission": false
+        }
+      ],
       "expo-web-browser",
       "@react-native-community/datetimepicker",
       [
         "@stripe/stripe-react-native",
         {
-          "merchantIdentifier": "merchant.com.anonymous.neighborfood",
+          "merchantIdentifier": "merchant.store.neighborfood",
           "enableGooglePay": true
         }
       ]

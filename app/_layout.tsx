@@ -135,7 +135,7 @@ export default function RootLayout() {
     return (
       <StripeProvider
         publishableKey={stripePublishableKey}
-        merchantIdentifier="merchant.com.anonymous.neighborfood"
+        merchantIdentifier="merchant.store.neighborfood"
       >
         {appContent}
       </StripeProvider>
